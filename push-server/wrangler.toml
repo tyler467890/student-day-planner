@@ -1,0 +1,21 @@
+name = "dayli-push"
+main = "src/index.js"
+compatibility_date = "2026-01-15"
+
+# Create the namespace, then paste its id here:
+#   npx wrangler kv namespace create REMINDERS
+[[kv_namespaces]]
+binding = "REMINDERS"
+id = "replace-with-kv-namespace-id"
+
+# Every minute. Free-plan cron granularity is one minute, which matches
+# "usually arrive on time" rather than to the second.
+[triggers]
+crons = ["* * * * *"]
+
+[vars]
+VAPID_SUBJECT = "mailto:you@example.com"
+# Optional. If set, POST /tick with header x-dayli-tick can send due reminders
+# when you want an external scheduler as well as the cron.
+# TICK_SECRET is better as a secret:
+#   npx wrangler secret put TICK_SECRET

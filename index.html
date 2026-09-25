@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#F6F6FB">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <!-- iOS reads this before JavaScript. Keep it in sync with PRODUCT_NAME in js/config.js and manifest.webmanifest. -->
+  <meta name="apple-mobile-web-app-title" content="Dayli">
+  <title>Dayli</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="sr-only" href="#app">Skip to planner</a>
+  <div class="backdrop" aria-hidden="true">
+    <div class="backdrop-photo" id="backdrop-photo"></div>
+    <div class="backdrop-scrim" id="backdrop-scrim"></div>
+  </div>
+  <div id="live" class="sr-only" aria-live="polite"></div>
+  <div id="app"></div>
+  <div id="overlay"></div>
+  <div id="celebrate" aria-hidden="true"></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
