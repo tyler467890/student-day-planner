@@ -612,9 +612,9 @@ test('photo crop stores an image at most 1600px and categories cap at 8', async 
   expect(Math.max(size.width, size.height)).toBeLessThanOrEqual(1600);
   expect(size.width).toBeGreaterThan(0);
 
-  await page.getByLabel('Scrim').selectOption('dark');
+  await page.getByLabel('Photo dimming').selectOption('dark');
   await expect(page.locator('html')).toHaveAttribute('data-scrim', 'dark');
-  await page.getByLabel('Scrim').selectOption('light');
+  await page.getByLabel('Photo dimming').selectOption('light');
   await expect(page.locator('html')).toHaveAttribute('data-scrim', 'light');
 
   const name = page.getByLabel('Category name Class');

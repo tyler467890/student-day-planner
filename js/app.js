@@ -350,7 +350,7 @@ async function completeInstance(inst, { fromUndo = false } = {}) {
   render();
   if (!fromUndo) {
     playComplete(inst, points, { ...day, ...level, streak: streak.streak, showDay });
-    showUndo('Undo', async () => {
+    showUndo(`Done! +${points}`, async () => {
       restore(snap);
       await persistAll();
       render();
@@ -494,7 +494,7 @@ async function moveInstance(inst) {
   refreshReminderRecords();
   await persistAll();
   render();
-  showUndo('Moved to tomorrow. Undo', async () => {
+  showUndo('Moved to tomorrow.', async () => {
     restore(snap);
     await persistAll();
     render();
@@ -529,7 +529,7 @@ async function deleteInstance(inst, scope) {
   await persistAll();
   closeSheet();
   render();
-  showUndo('Deleted. Undo', async () => {
+  showUndo('Deleted.', async () => {
     restore(snap);
     await persistAll();
     render();
@@ -673,7 +673,7 @@ async function saveDraft(draft, existing) {
   closeSheet();
   render();
   if (existing) {
-    showUndo('Undo', async () => {
+    showUndo('Saved.', async () => {
       restore(snap);
       await persistAll();
       render();
@@ -919,7 +919,7 @@ function renderSetup1() {
         'aria-label': `${id} theme`,
         'aria-checked': S.settings.theme === id ? 'true' : 'false',
         role: 'radio',
-        style: `background:${theme.bg}; color:${theme.accent}`,
+        style: `background:${theme.bg}; color:${theme.text}`,
       });
       btn.append(h('span', { class: 'swatch-dot', style: `background:${theme.accent}` }));
       btn.append(h('span', { class: 'swatch-name', text: id[0].toUpperCase() + id.slice(1) }));
@@ -1237,13 +1237,16 @@ function renderCard(inst) {
     inst.note ? h('span', { text: inst.note }) : null,
     earlier ? h('span', { class: 'earlier', text: 'earlier' }) : null));
   const tag = h('span', { class: `tag tag-${inst.difficulty}`, text: labelDifficulty(inst.difficulty) });
+  const move = earlier
+    ? h('button', { type: 'button', class: 'text-btn quiet move-link', onclick: (e) => { e.stopPropagation(); moveInstance(inst); } }, 'Move to tomorrow')
+    : null;
   const actions = h('div', { class: 'card-actions' },
     h('button', { type: 'button', class: 'text-btn', onclick: () => moveInstance(inst) }, 'Move to tomorrow'),
     h('button', { type: 'button', class: 'text-btn danger', onclick: () => deleteInstance(inst, 'day') }, 'Delete'));
   const card = h('article', {
     class: `card${earlier ? ' is-earlier' : ''}`,
     dataset: { instance: inst.instanceId },
-  }, check, h('span', { class: 'dot', style: `background:${cat?.color || '#4F46E5'}` }), main, tag, actions);
+  }, check, h('span', { class: 'dot', style: `background:${cat?.color || '#4F46E5'}` }), main, tag, move, actions);
   attachCardGestures(card);
   return card;
 }
@@ -1706,7 +1709,7 @@ function renderCustomize() {
       type: 'button',
       class: `swatch${s.theme === id ? ' is-selected' : ''}`,
       'aria-label': `${id} theme`,
-      style: `background:${theme.bg}`,
+      style: `background:${theme.bg}; color:${theme.text}`,
       onclick: async () => { s.theme = id; s.accent = theme.accent; await persistAll(); render(); },
     }, h('span', { class: 'swatch-dot', style: `background:${theme.accent}` })))),
     h('p', { class: 'field-label', text: 'Accent colour' }),
@@ -1748,14 +1751,14 @@ function renderCustomize() {
     if (f) openCropper(f);
     file.value = '';
   });
-  const scrim = h('select', { 'aria-label': 'Scrim' });
+  const scrim = h('select', { id: 'photo-dim', 'aria-label': 'Photo dimming' });
   for (const [val, label] of [['auto', 'Auto'], ['dark', 'Dark'], ['light', 'Light']]) {
     const opt = h('option', { value: val, text: label });
     if ((s.photoScrim || 'auto') === val) opt.selected = true;
     scrim.append(opt);
   }
   scrim.addEventListener('change', () => { s.photoScrim = scrim.value; persistAll(); applyChrome(); });
-  const blur = h('input', { type: 'range', min: '0', max: '12', step: '1', 'aria-label': 'Background blur', value: String(s.photoBlur || 0) });
+  const blur = h('input', { type: 'range', id: 'photo-blur', min: '0', max: '12', step: '1', 'aria-label': 'Background blur', value: String(s.photoBlur || 0) });
   const blurVal = h('span', { class: 'num', text: String(s.photoBlur || 0) });
   blur.addEventListener('input', () => {
     s.photoBlur = Number(blur.value);
@@ -1763,14 +1766,15 @@ function renderCustomize() {
     applyChrome();
     persistAll();
   });
-  page.append(h('section', {},
+  page.append(h('section', { class: 'photo-settings' },
     h('h2', { text: 'Background photo' }),
-    h('label', { class: 'btn secondary', for: 'bg-file' }, photoUrl ? 'Change photo' : 'Add a photo'),
-    file,
-    photoUrl ? h('button', { type: 'button', class: 'text-btn danger', onclick: removePhoto }, 'Remove photo') : null,
-    h('label', { class: 'field-label', text: 'Scrim' }),
+    h('div', { class: 'stack' },
+      h('label', { class: 'btn secondary', for: 'bg-file' }, photoUrl ? 'Change photo' : 'Add a photo'),
+      file,
+      photoUrl ? h('button', { type: 'button', class: 'text-btn danger', onclick: removePhoto }, 'Remove photo') : null),
+    h('label', { class: 'field-label', for: 'photo-dim', text: 'Photo dimming' }),
     scrim,
-    h('label', { class: 'field-label', text: 'Blur' }),
+    h('label', { class: 'field-label', for: 'photo-blur', text: 'Background blur' }),
     h('div', { class: 'split' }, blur, blurVal)));
 
   page.append(renderCategories());
