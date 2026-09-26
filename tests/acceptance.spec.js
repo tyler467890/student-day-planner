@@ -68,6 +68,7 @@ async function openCard(page, title) {
 }
 
 test('first launch shows 3 steps and step 1 cannot be skipped', async ({ page }) => {
+  await useClock(page, '2026-09-25T15:00:00-04:00');
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Make it yours' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Skip for now' })).toHaveCount(0);
@@ -475,6 +476,7 @@ test('open-app reminder banner, system notification, snooze and done', async ({ 
 });
 
 test('show task names off sends Coming up and never the title', async ({ context, page }) => {
+  await useClock(page, '2026-09-25T15:00:00-04:00');
   const posts = [];
   const publicKey = Buffer.alloc(65, 4).toString('base64url');
   await context.addInitScript((key) => {
@@ -806,4 +808,143 @@ test('screenshots', async ({ browser }) => {
   await addItem(wide, { title: 'Gym', time: '17:00' });
   await wide.screenshot({ path: `${ART}/today-desktop.png` });
   await desktop.close();
+});
+
+test('text and background colours, contrast fix, and v1 settings', async ({ page }) => {
+  await skipToToday(page);
+  await page.getByRole('button', { name: 'Customize' }).click();
+  await page.getByRole('button', { name: 'Background #C8FFE6' }).click();
+  await page.getByRole('button', { name: 'Text #4C1D95' }).click();
+  await expect(page.locator('#contrast-note')).toHaveCount(0);
+  await expect.poll(async () => page.evaluate(() => {
+    const style = getComputedStyle(document.documentElement);
+    return {
+      bg: style.getPropertyValue('--bg').trim().toUpperCase(),
+      text: style.getPropertyValue('--text').trim().toUpperCase(),
+    };
+  })).toEqual({ bg: '#C8FFE6', text: '#4C1D95' });
+
+  await page.getByLabel('Custom background colour').evaluate((el) => {
+    el.value = '#123abc';
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await expect.poll(async () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim().toUpperCase())).toBe('#123ABC');
+
+  await page.getByRole('button', { name: 'Text #FFF3B0' }).click();
+  await page.getByRole('button', { name: 'Background #FFF6D8' }).click();
+  await expect(page.locator('#contrast-note')).toContainText('hard to read');
+  await page.getByRole('button', { name: 'Fix it' }).click();
+  await expect(page.locator('#contrast-note')).toHaveCount(0);
+  const readable = await page.evaluate(() => {
+    const style = getComputedStyle(document.documentElement);
+    const text = style.getPropertyValue('--text').trim();
+    const bg = style.getPropertyValue('--bg').trim();
+    return {
+      bg: bg.toUpperCase(),
+      ratio: window.__dayli.model.contrastRatio(text, bg),
+    };
+  });
+  expect(readable.bg).toBe('#FFF6D8');
+  expect(readable.ratio).toBeGreaterThanOrEqual(4.5);
+
+  await page.reload();
+  await page.getByRole('button', { name: 'Customize' }).click();
+  const kept = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim().toUpperCase());
+  expect(kept).toBe('#FFF6D8');
+
+  const ymd = await page.evaluate(() => window.__dayli.getState().plannerToday);
+  await page.evaluate(async (date) => {
+    const settings = {
+      id: 'main',
+      title: 'Lab Day',
+      theme: 'ocean',
+      accent: '#1D63B8',
+      font: 'nunito',
+      schemaVersion: 1,
+      setupComplete: true,
+      setupStep: 3,
+      persistResult: true,
+      photoScrim: 'auto',
+      categories: [{ id: 'class', name: 'Lecture', emoji: '📚', color: '#1D63B8' }],
+    };
+    const task = {
+      id: 'v1-kept',
+      title: 'Kept from v1',
+      categoryId: 'class',
+      difficulty: 'medium',
+      time: '09:00',
+      durationMin: 50,
+      remindLeadMin: 10,
+      note: 'Room 12',
+      repeat: 'none',
+      days: [],
+      date,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+    await new Promise((resolve, reject) => {
+      const req = indexedDB.open('dayli', 1);
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const db = req.result;
+        const tx = db.transaction(['settings', 'tasks'], 'readwrite');
+        tx.objectStore('settings').put(settings);
+        tx.objectStore('tasks').put(task);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      };
+    });
+  }, ymd);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Lab Day' })).toBeVisible();
+  await expect(page.getByText('Kept from v1')).toBeVisible();
+  const migrated = await page.evaluate(() => {
+    const settings = window.__dayli.getState().settings;
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim().toUpperCase();
+    return { settings, bg };
+  });
+  expect(migrated.settings.schemaVersion).toBe(2);
+  expect(migrated.settings.textColor).toBeNull();
+  expect(migrated.settings.bgColor).toBeNull();
+  expect(migrated.settings.theme).toBe('ocean');
+  expect(migrated.settings.accent).toBe('#1D63B8');
+  expect(migrated.settings.categories[0].color).toBe('#1D63B8');
+  expect(migrated.bg).toBe('#D2EFFF');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'ocean');
+});
+
+test('bright colour screenshots', async ({ page }) => {
+  await useClock(page, '2026-09-25T15:00:00-04:00');
+  await skipToToday(page);
+  await addItem(page, { title: 'Biology 101', category: 'Class', time: '09:00' });
+  await addItem(page, { title: 'Chemistry lab', category: 'Class', time: '11:00', difficulty: 'Medium' });
+  await addItem(page, { title: 'Finish essay intro', difficulty: 'Hard' });
+  await addItem(page, { title: 'Gym', time: '17:00', category: 'Personal' });
+  await page.getByRole('button', { name: 'Customize' }).click();
+  await page.getByRole('button', { name: 'Blossom theme' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'blossom');
+  await page.screenshot({ path: `${ART}/today-bright.png` });
+
+  await page.getByRole('button', { name: 'Customize' }).click();
+  await page.getByRole('button', { name: 'Text #6A1040' }).click();
+  await page.getByRole('button', { name: 'Background #FFD4E8' }).click();
+  await expect(page.locator('#contrast-note')).toHaveCount(0);
+  await page.evaluate(() => {
+    for (const btn of document.querySelectorAll('.swatch.dot.is-selected')) {
+      btn.parentElement.scrollLeft = Math.max(0, btn.offsetLeft - 8);
+    }
+  });
+  await page.screenshot({ path: `${ART}/customize-colours.png` });
+
+  await page.getByRole('button', { name: 'Text #FFF3B0' }).click();
+  await page.getByRole('button', { name: 'Background #FFF6D8' }).click();
+  await expect(page.locator('#contrast-note')).toBeVisible();
+  await page.evaluate(() => {
+    for (const btn of document.querySelectorAll('.swatch.dot.is-selected')) {
+      btn.parentElement.scrollLeft = Math.max(0, btn.offsetLeft - 8);
+    }
+    window.scrollTo(0, 0);
+  });
+  await page.screenshot({ path: `${ART}/contrast-fix.png` });
 });

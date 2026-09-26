@@ -268,7 +268,7 @@ After setup → Today screen with a friendly empty state.
 - **Quick-add shortcut:** typing a title and pressing Enter saves with the defaults (fast path).
 #### 2.3 Customize (settings screen)
 Grouped, short list. Every change previews live.
-- **Look:** Title · Theme (6) · Accent colour (8 tested swatches) · Background photo (add/change/remove, crop, scrim Auto/Dark/Light, blur 0–12) · Font (4) · Format (List / Timeline) · Celebrations (Full / Subtle / Off) · Sound (on/off, **default off**).
+- **Look:** Title · Theme (6) · Text colour and background colour (20 swatches each, one scrolling row, plus a colour picker) · Accent colour (8 tested swatches) · Background photo (add/change/remove, crop, scrim Auto/Dark/Light, blur 0–12) · Font (4) · Format (List / Timeline) · Celebrations (Full / Subtle / Off) · Sound (on/off, **default off**).
 - **Plan:** Categories (rename, colour, emoji, add up to 8 total) · Daily goal (Off / number of tasks / points target) · Streak counts on (Every day / Weekdays only) · Day starts at (default 4:00 AM) · Week starts on (Mon/Sun) · 12h/24h.
 - **Reminders:** status line ("On", "Off", or "Needs Home Screen install") · Default lead time · Show task names in notifications (on/off) · Morning check-in (time) · Test reminder button.
 - **Your data:** Back up now (download file) · Restore from backup · Last backup date · Erase everything (double confirm).
@@ -480,12 +480,22 @@ A badge pops over the ring: **"Level 5 · Steady"** with a ring refill animation
 <tr>
 <td>**Theme**</td>
 <td>6 presets (6.1)</td>
-<td>Sets background, surface, text and accent.</td>
+<td>Sets background, surface, text and accent. Choosing a theme clears a custom text or background colour so the preset shows.</td>
+</tr>
+<tr>
+<td>**Text colour**</td>
+<td>20 swatches, plus a colour picker</td>
+<td>One horizontal row. Empty means the theme text. If text and background (or a photo plus its dimming) fall under 4.5:1, Customize shows “These colours are hard to read.” and **Fix it** stores the nearest readable shade.</td>
+</tr>
+<tr>
+<td>**Background colour**</td>
+<td>20 swatches, plus a colour picker</td>
+<td>Solid colour behind the day, in addition to a photo. One horizontal row. Empty means the theme background.</td>
 </tr>
 <tr>
 <td>**Accent colour**</td>
 <td>8 swatches</td>
-<td>Pre-tested for contrast. No free colour picker in MVP (keeps things readable).</td>
+<td>Pre-tested so the label on the accent clears 4.5:1 (white or #12131A).</td>
 </tr>
 <tr>
 <td>**Background photo**</td>
@@ -549,67 +559,67 @@ WCAG 2.2 AA requires **4.5:1** for normal text and **3:1** for large text (≥18
 </tr>
 <tr>
 <td>**Calm (default)**</td>
-<td>#F6F6FB</td>
+<td>#E4DEFF</td>
 <td>#FFFFFF</td>
-<td>#1E2030</td>
-<td>#565B6E</td>
-<td>#4F46E5</td>
+<td>#2A1860</td>
+<td>#533C86</td>
+<td>#6D4AFF</td>
 <td>#FFFFFF</td>
-<td>14.9 · 6.7 · 6.3</td>
+<td>11.6 · 8.9 · 5.2</td>
 </tr>
 <tr>
 <td>Mint</td>
-<td>#EFF8F4</td>
+<td>#C8FFE6</td>
 <td>#FFFFFF</td>
-<td>#14302A</td>
-<td>#44605A</td>
-<td>#0F766E</td>
-<td>#FFFFFF</td>
-<td>13.1 · 6.9 · 5.5</td>
+<td>#064536</td>
+<td>#1B6B56</td>
+<td>#00B894</td>
+<td>#12131A</td>
+<td>9.9 · 6.4 · 7.3</td>
 </tr>
 <tr>
 <td>Sunset</td>
-<td>#FFF4EC</td>
+<td>#FFE0C2</td>
 <td>#FFFFFF</td>
-<td>#3A1F14</td>
-<td>#6B4A3D</td>
-<td>#C2410C</td>
-<td>#FFFFFF</td>
-<td>14.0 · 7.9 · 5.2</td>
+<td>#5C2208</td>
+<td>#8A4030</td>
+<td>#FF4D1A</td>
+<td>#12131A</td>
+<td>9.9 · 7.4 · 5.6</td>
 </tr>
 <tr>
 <td>Ocean</td>
-<td>#EEF5FB</td>
+<td>#D2EFFF</td>
 <td>#FFFFFF</td>
-<td>#0F2438</td>
-<td>#48607A</td>
-<td>#1D63B8</td>
-<td>#FFFFFF</td>
-<td>14.4 · 6.5 · 6.0</td>
+<td>#062E52</td>
+<td>#1E5680</td>
+<td>#0084FF</td>
+<td>#12131A</td>
+<td>11.5 · 7.8 · 5.1</td>
 </tr>
 <tr>
 <td>Blossom</td>
-<td>#FCF1F5</td>
+<td>#FFD4E8</td>
 <td>#FFFFFF</td>
-<td>#3B1427</td>
-<td>#6E4A5B</td>
-<td>#BE185D</td>
-<td>#FFFFFF</td>
-<td>14.5 · 7.5 · 6.0</td>
+<td>#6A1040</td>
+<td>#8E3A62</td>
+<td>#FF2D87</td>
+<td>#12131A</td>
+<td>9.0 · 7.2 · 5.3</td>
 </tr>
 <tr>
 <td>Night (dark)</td>
+<td>#16142B</td>
+<td>#2A2744</td>
+<td>#F6F4FF</td>
+<td>#C8C2EE</td>
+<td>#38BDF8</td>
 <td>#12131A</td>
-<td>#1D1F2A</td>
-<td>#F2F3F8</td>
-<td>#A9ADBF</td>
-<td>#8B8CF6</td>
-<td>#12131A</td>
-<td>16.7 · 7.4 · 6.3</td>
+<td>16.5 · 8.4 · 8.7</td>
 </tr>
 </table>
-**Shared colours:** Done/success #15803D (5.0:1 on white; use #4ADE80 in Night). **Difficulty tags** (white text on the tag): Easy #15803D (5.0:1) · Medium #B45309 (5.0:1) · Hard #B91C1C (6.5:1). Always pair colour with the word (Easy/Medium/Hard), never colour alone.
-**Accent swatches:** use the 6 theme accents plus #7C3AED (violet) and #0E7490 (teal). The builder must check each one against white text (≥4.5:1) with a contrast tool before shipping.
+**Shared colours:** Done/success #15803D (5.0:1 on white; use #5DFFB0 in Night). **Difficulty tags** (white text on the tag): Easy #15803D (5.0:1) · Medium #B45309 (5.0:1) · Hard #B91C1C (6.5:1). Always pair colour with the word (Easy/Medium/Hard), never colour alone.
+**Accent swatches:** #6D4AFF, #00C2A8, #FF4D1A, #1A8CFF, #FF2D87, #38BDF8, #7C3AED, #00B4D8. Pair each with white or #12131A, whichever clears 4.5:1. **Text and background rows** are the 20 swatches in `TEXT_COLOURS` and `BG_COLOURS`, then a native colour input. A v1 settings row (schemaVersion 1, no text or background field) loads as schemaVersion 2 with those fields empty, so the saved theme id and accent stay.
 #### 6.2 Typography (all free, open-licence fonts from Google Fonts)
 <table header-row="true">
 <tr>

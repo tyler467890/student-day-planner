@@ -18,15 +18,31 @@ export const MILESTONES = [
 const LEVEL_STARTS = [0, 40, 100, 180, 280, 400, 550, 730, 940, 1180];
 
 export const THEMES = {
-  calm: { bg: '#F6F6FB', surface: '#FFFFFF', text: '#1E2030', muted: '#565B6E', accent: '#4F46E5', onAccent: '#FFFFFF', success: '#15803D' },
-  mint: { bg: '#EFF8F4', surface: '#FFFFFF', text: '#14302A', muted: '#44605A', accent: '#0F766E', onAccent: '#FFFFFF', success: '#15803D' },
-  sunset: { bg: '#FFF4EC', surface: '#FFFFFF', text: '#3A1F14', muted: '#6B4A3D', accent: '#C2410C', onAccent: '#FFFFFF', success: '#15803D' },
-  ocean: { bg: '#EEF5FB', surface: '#FFFFFF', text: '#0F2438', muted: '#48607A', accent: '#1D63B8', onAccent: '#FFFFFF', success: '#15803D' },
-  blossom: { bg: '#FCF1F5', surface: '#FFFFFF', text: '#3B1427', muted: '#6E4A5B', accent: '#BE185D', onAccent: '#FFFFFF', success: '#15803D' },
-  night: { bg: '#12131A', surface: '#1D1F2A', text: '#F2F3F8', muted: '#A9ADBF', accent: '#8B8CF6', onAccent: '#12131A', success: '#4ADE80' },
+  calm: { bg: '#E4DEFF', surface: '#FFFFFF', text: '#2A1860', muted: '#533C86', accent: '#6D4AFF', onAccent: '#FFFFFF', success: '#15803D' },
+  mint: { bg: '#C8FFE6', surface: '#FFFFFF', text: '#064536', muted: '#1B6B56', accent: '#00B894', onAccent: '#12131A', success: '#15803D' },
+  sunset: { bg: '#FFE0C2', surface: '#FFFFFF', text: '#5C2208', muted: '#8A4030', accent: '#FF4D1A', onAccent: '#12131A', success: '#15803D' },
+  ocean: { bg: '#D2EFFF', surface: '#FFFFFF', text: '#062E52', muted: '#1E5680', accent: '#0084FF', onAccent: '#12131A', success: '#15803D' },
+  blossom: { bg: '#FFD4E8', surface: '#FFFFFF', text: '#6A1040', muted: '#8E3A62', accent: '#FF2D87', onAccent: '#12131A', success: '#15803D' },
+  night: { bg: '#16142B', surface: '#2A2744', text: '#F6F4FF', muted: '#C8C2EE', accent: '#38BDF8', onAccent: '#12131A', success: '#5DFFB0' },
 };
 
-export const ACCENTS = ['#4F46E5', '#0F766E', '#C2410C', '#1D63B8', '#BE185D', '#8B8CF6', '#7C3AED', '#0E7490'];
+export const ACCENTS = ['#6D4AFF', '#00C2A8', '#FF4D1A', '#1A8CFF', '#FF2D87', '#38BDF8', '#7C3AED', '#00B4D8'];
+
+/** Solid background choices. The last control in the row is a native colour picker. */
+export const BG_COLOURS = [
+  '#FFFFFF', '#FFF6D8', '#FFE0C2', '#FFD4E8', '#FFD6D6', '#E4DEFF',
+  '#D2EFFF', '#C8FFE6', '#E8FFC2', '#FFE38A', '#FFC8A3', '#F5C8FF',
+  '#C6F3FF', '#FFE4F1', '#E7EEFF', '#FFF1D6', '#D8FFD6', '#FFD0F0',
+  '#16142B', '#2A1858',
+];
+
+/** Text choices, dark inks and bright lights. The last control is a native colour picker. */
+export const TEXT_COLOURS = [
+  '#2A1860', '#4C1D95', '#064536', '#14532D', '#5C2208', '#6A1040',
+  '#062E52', '#3B0764', '#1C1917', '#FFFFFF', '#FFF3B0', '#C8FFE6',
+  '#D2EFFF', '#FFD4E8', '#E4DEFF', '#FFE0C2', '#F6F4FF', '#B8FFF2',
+  '#FFD0D0', '#E7FFB0',
+];
 
 export const FONTS = [
   { id: 'nunito', label: 'Nunito' },
@@ -47,11 +63,11 @@ export const WEEKDAY_LABELS = [
 
 export function defaultCategories() {
   return [
-    { id: 'class', name: 'Class', emoji: '📚', color: '#1D63B8' },
+    { id: 'class', name: 'Class', emoji: '📚', color: '#1A8CFF' },
     { id: 'study', name: 'Study', emoji: '✏️', color: '#7C3AED' },
     { id: 'task', name: 'Task', emoji: '✅', color: '#15803D' },
-    { id: 'personal', name: 'Personal', emoji: '🌱', color: '#0F766E' },
-    { id: 'goal', name: 'Goal', emoji: '🎯', color: '#C2410C' },
+    { id: 'personal', name: 'Personal', emoji: '🌱', color: '#00C2A8' },
+    { id: 'goal', name: 'Goal', emoji: '🎯', color: '#FF4D1A' },
   ];
 }
 
@@ -60,7 +76,9 @@ export function defaultSettings() {
     id: 'main',
     title: 'My Day',
     theme: 'calm',
-    accent: '#4F46E5',
+    accent: '#6D4AFF',
+    textColor: null,
+    bgColor: null,
     font: 'nunito',
     format: 'list',
     celebrations: 'full',
@@ -88,7 +106,7 @@ export function defaultSettings() {
     photoScrim: 'auto',
     photoBlur: 0,
     categories: defaultCategories(),
-    schemaVersion: 1,
+    schemaVersion: 2,
   };
 }
 
@@ -521,6 +539,193 @@ export function cardContrast(theme, photoHex) {
     textRatio: contrastRatio(theme.text, surface),
     mutedRatio: contrastRatio(theme.muted, surface),
   };
+}
+
+export function normalizeHex(value) {
+  if (typeof value !== 'string') return null;
+  const raw = value.trim().replace(/^#/, '');
+  if (!/^[0-9a-fA-F]{6}$/.test(raw)) return null;
+  return `#${raw.toUpperCase()}`;
+}
+
+function clamp(n, lo, hi) {
+  return Math.min(hi, Math.max(lo, n));
+}
+
+export function hexToHsl(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  const R = r / 255;
+  const G = g / 255;
+  const B = b / 255;
+  const max = Math.max(R, G, B);
+  const min = Math.min(R, G, B);
+  const l = (max + min) / 2;
+  if (max === min) return { h: 0, s: 0, l: l * 100 };
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h = 0;
+  if (max === R) h = (G - B) / d + (G < B ? 6 : 0);
+  else if (max === G) h = (B - R) / d + 2;
+  else h = (R - G) / d + 4;
+  return { h: h * 60, s: s * 100, l: l * 100 };
+}
+
+function hue2rgb(p, q, t) {
+  let x = t;
+  if (x < 0) x += 1;
+  if (x > 1) x -= 1;
+  if (x < 1 / 6) return p + (q - p) * 6 * x;
+  if (x < 1 / 2) return q;
+  if (x < 2 / 3) return p + (q - p) * (2 / 3 - x) * 6;
+  return p;
+}
+
+export function hslToHex({ h, s, l }) {
+  const H = (((h % 360) + 360) % 360) / 360;
+  const S = clamp(s, 0, 100) / 100;
+  const L = clamp(l, 0, 100) / 100;
+  if (S === 0) {
+    const v = Math.round(L * 255);
+    return rgbToHex({ r: v, g: v, b: v });
+  }
+  const q = L < 0.5 ? L * (1 + S) : L + S - L * S;
+  const p = 2 * L - q;
+  return rgbToHex({
+    r: hue2rgb(p, q, H + 1 / 3) * 255,
+    g: hue2rgb(p, q, H) * 255,
+    b: hue2rgb(p, q, H - 1 / 3) * 255,
+  });
+}
+
+/** Gray whose WCAG relative luminance is as close as possible to `L`. */
+export function grayFromLuminance(L) {
+  const x = clamp(Number(L) || 0, 0, 1);
+  const s = x <= 0.0031308 ? 12.92 * x : 1.055 * (x ** (1 / 2.4)) - 0.055;
+  const c = Math.round(clamp(s, 0, 1) * 255);
+  return rgbToHex({ r: c, g: c, b: c });
+}
+
+function cardFill(surface, bg, photoHex) {
+  return photoHex ? composite(surface, 0.92, photoHex) : composite(surface, 0.92, bg);
+}
+
+function surfaceFor(text, ground, bg, photoHex) {
+  const lightText = relativeLuminance(text) >= 0.5;
+  const candidates = lightText
+    ? [composite('#FFFFFF', 0.08, ground), '#1A1730', '#000000']
+    : ['#FFFFFF', composite('#FFFFFF', 0.9, ground)];
+  for (const surface of candidates) {
+    if (contrastRatio(text, cardFill(surface, bg, photoHex)) >= 4.5) return surface;
+  }
+  return lightText ? '#000000' : '#FFFFFF';
+}
+
+function softerInk(text, grounds) {
+  const list = grounds.filter(Boolean);
+  if (!list.length) return text;
+  const passes = (hex) => list.every((g) => contrastRatio(hex, g) >= 4.5);
+  const base = list[0];
+  for (let a = 0.72; a <= 1.001; a += 0.04) {
+    const hex = composite(text, Math.min(a, 1), base);
+    if (passes(hex)) return hex;
+  }
+  return text;
+}
+
+/**
+ * Colours actually painted for a settings object.
+ * `photo` is `{ on, luminance, scrim }` when a background photo is showing.
+ * `scrim` should already be resolved to "dark" or "light".
+ */
+export function paintColors(settings, photo = null) {
+  const theme = THEMES[settings?.theme] || THEMES.calm;
+  const customBg = normalizeHex(settings?.bgColor);
+  const customText = normalizeHex(settings?.textColor);
+  const bg = customBg || theme.bg;
+  const text = customText || theme.text;
+  const accent = normalizeHex(settings?.accent) || theme.accent;
+  const photoOn = Boolean(photo?.on);
+  const scrim = photo?.scrim === 'light' ? 'light' : 'dark';
+  const photoHex = photoOn ? grayFromLuminance(photo?.luminance == null ? 0.5 : photo.luminance) : null;
+  const backdrop = photoOn ? headerContrast(photoHex, scrim).scrim : bg;
+  const custom = Boolean(customBg || customText);
+  const surface = custom ? surfaceFor(text, photoOn ? backdrop : bg, bg, photoHex) : theme.surface;
+  const card = cardFill(surface, bg, photoHex);
+  const mutedGrounds = [card];
+  if (!(photoOn && !customText)) mutedGrounds.push(photoOn ? backdrop : bg);
+  const muted = custom ? softerInk(text, mutedGrounds) : theme.muted;
+  const headerInk = photoOn && !customText ? headerContrast(photoHex, scrim).text : text;
+  const headerRatio = contrastRatio(headerInk, photoOn ? backdrop : bg);
+  const cardRatio = contrastRatio(text, card);
+  const mutedRatio = Math.min(...mutedGrounds.map((g) => contrastRatio(muted, g)));
+  const ratio = Math.min(headerRatio, cardRatio, mutedRatio);
+  return {
+    bg,
+    text,
+    surface,
+    muted,
+    accent,
+    success: theme.success,
+    backdrop,
+    card,
+    ratio,
+    ok: ratio >= 4.5,
+    customText: Boolean(customText),
+    customBg: Boolean(customBg),
+    headerInk,
+  };
+}
+
+/** Nearest lighter or darker shade of `textHex` that clears 4.5:1 on the painted grounds. */
+export function nearestReadable(textHex, settings, photo = null) {
+  const start = normalizeHex(textHex) || THEMES.calm.text;
+  const trial = (hex) => paintColors({ ...settings, textColor: hex }, photo);
+  if (trial(start).ok) return start;
+  const hsl = hexToHsl(start);
+  for (let step = 1; step <= 100; step += 1) {
+    for (const dir of [1, -1]) {
+      const hex = hslToHex({ h: hsl.h, s: hsl.s, l: clamp(hsl.l + dir * step, 0, 100) });
+      if (trial(hex).ok) return hex;
+    }
+  }
+  let best = '#12131A';
+  let bestScore = -1;
+  for (const hex of ['#FFFFFF', '#12131A', '#000000', '#F6F4FF']) {
+    const score = trial(hex).ratio;
+    if (score > bestScore) {
+      bestScore = score;
+      best = hex;
+    }
+  }
+  return best;
+}
+
+export function fixTextColor(settings, photo = null) {
+  const theme = THEMES[settings?.theme] || THEMES.calm;
+  const start = normalizeHex(settings?.textColor) || theme.text;
+  return nearestReadable(start, settings, photo);
+}
+
+/** Fill new colour fields without dropping a v1 save's theme, accent, or categories. */
+export function migrateSettings(saved) {
+  const base = defaultSettings();
+  if (!saved || typeof saved !== 'object') return base;
+  const version = Number(saved.schemaVersion) || 1;
+  const merged = {
+    ...base,
+    ...saved,
+    dailyGoal: { ...base.dailyGoal, ...(saved.dailyGoal || {}) },
+    morningCheckin: { ...base.morningCheckin, ...(saved.morningCheckin || {}) },
+    dayCompleteShown: { ...(saved.dayCompleteShown || {}) },
+    dayCompleteAwarded: { ...(saved.dayCompleteAwarded || {}) },
+    categories: Array.isArray(saved.categories) && saved.categories.length ? saved.categories : base.categories,
+    id: 'main',
+  };
+  if (version < 2) merged.schemaVersion = 2;
+  merged.textColor = normalizeHex(saved.textColor);
+  merged.bgColor = normalizeHex(saved.bgColor);
+  if (!THEMES[merged.theme]) merged.theme = base.theme;
+  return merged;
 }
 
 export function burstCount(difficulty) {

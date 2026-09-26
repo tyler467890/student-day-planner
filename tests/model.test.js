@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {
   addDays, plannerDate, levelForPoints, levelBounds, levelTitle, computeStreak,
   instancesOn, upcomingReminders, reminderText, headerContrast, cardContrast,
-  THEMES, contrastRatio, onAccent, POINTS, defaultSettings,
+  THEMES, ACCENTS, TEXT_COLOURS, BG_COLOURS, contrastRatio, onAccent, POINTS, defaultSettings,
+  paintColors, fixTextColor, migrateSettings, hexToRgb, relativeLuminance,
 } from '../js/model.js';
 
 test('planner date rolls at 4:00', () => {
@@ -157,8 +158,128 @@ test('scrim keeps header and card text at 4.5:1 on white and black photos', () =
 });
 
 test('accent swatches have a readable on-accent colour', () => {
-  for (const hex of ['#4F46E5', '#0F766E', '#C2410C', '#1D63B8', '#BE185D', '#8B8CF6', '#7C3AED', '#0E7490']) {
+  for (const hex of ACCENTS) {
     const ink = onAccent(hex);
     assert.ok(contrastRatio(hex, ink) >= 4.5, hex);
+  }
+});
+
+function saturation(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  return max === 0 ? 0 : (max - min) / max;
+}
+
+test('themes stay named and are more vivid, with night still dark', () => {
+  assert.deepEqual(Object.keys(THEMES), ['calm', 'mint', 'sunset', 'ocean', 'blossom', 'night']);
+  for (const [id, theme] of Object.entries(THEMES)) {
+    assert.ok(contrastRatio(theme.text, theme.bg) >= 4.5, `${id} text`);
+    assert.ok(contrastRatio(theme.muted, theme.surface) >= 4.5, `${id} muted`);
+    assert.ok(contrastRatio(theme.accent, theme.onAccent) >= 4.5, `${id} accent`);
+    const painted = paintColors({ theme: id });
+    assert.equal(painted.ok, true, `${id} paint ${painted.ratio}`);
+    if (id === 'night') {
+      assert.ok(relativeLuminance(theme.bg) < 0.05, 'night stays dark');
+      assert.ok(relativeLuminance(theme.accent) > relativeLuminance('#8B8CF6'), 'night accent is brighter');
+    } else {
+      assert.ok(saturation(theme.bg) >= 0.12, `${id} background is vivid`);
+      assert.ok(saturation(theme.accent) >= 0.65, `${id} accent is saturated`);
+    }
+  }
+});
+
+test('text and background palettes are compact bright sets', () => {
+  assert.ok(TEXT_COLOURS.length >= 16 && TEXT_COLOURS.length <= 24);
+  assert.ok(BG_COLOURS.length >= 16 && BG_COLOURS.length <= 24);
+  assert.equal(new Set(TEXT_COLOURS).size, TEXT_COLOURS.length);
+  assert.equal(new Set(BG_COLOURS).size, BG_COLOURS.length);
+});
+
+test('low contrast text is reported and fixed to a readable shade', () => {
+  const settings = { theme: 'calm', bgColor: '#FFF6D8', textColor: '#FFF3B0' };
+  const before = paintColors(settings);
+  assert.equal(before.ok, false);
+  assert.ok(before.ratio < 4.5);
+  const fixed = fixTextColor(settings);
+  const after = paintColors({ ...settings, textColor: fixed });
+  assert.equal(after.bg, '#FFF6D8');
+  assert.equal(after.ok, true, `fixed ${fixed} ratio ${after.ratio}`);
+  const { r, g, b } = hexToRgb(fixed);
+  assert.ok(r > b && g > b, `shade stays warm ${fixed}`);
+  const already = paintColors({ theme: 'blossom' });
+  assert.equal(fixTextColor({ theme: 'blossom', textColor: already.text }), already.text);
+});
+
+test('a v1 save keeps its theme, accent, and categories', () => {
+  const v1 = {
+    id: 'main',
+    title: "Sam's Day",
+    theme: 'ocean',
+    accent: '#1D63B8',
+    font: 'lexend',
+    format: 'timeline',
+    celebrations: 'full',
+    sound: false,
+    dayStart: '04:00',
+    weekStart: 'mon',
+    clock24: false,
+    streakMode: 'everyday',
+    dailyGoal: { mode: 'points', n: 30 },
+    defaultLead: 15,
+    showNames: false,
+    morningCheckin: { on: true, time: '07:30' },
+    setupComplete: true,
+    setupStep: 3,
+    photoScrim: 'dark',
+    photoBlur: 4,
+    schemaVersion: 1,
+    categories: [
+      { id: 'class', name: 'Lecture', emoji: '📚', color: '#1D63B8' },
+    ],
+  };
+  const next = migrateSettings(v1);
+  assert.equal(next.schemaVersion, 2);
+  assert.equal(next.textColor, null);
+  assert.equal(next.bgColor, null);
+  assert.equal(next.theme, 'ocean');
+  assert.equal(next.accent, '#1D63B8');
+  assert.equal(next.title, "Sam's Day");
+  assert.equal(next.font, 'lexend');
+  assert.equal(next.format, 'timeline');
+  assert.equal(next.showNames, false);
+  assert.equal(next.dailyGoal.n, 30);
+  assert.equal(next.morningCheckin.time, '07:30');
+  assert.equal(next.photoScrim, 'dark');
+  assert.equal(next.photoBlur, 4);
+  assert.equal(next.categories[0].name, 'Lecture');
+  assert.equal(next.categories[0].color, '#1D63B8');
+  assert.equal(next.setupComplete, true);
+  const painted = paintColors(next);
+  assert.equal(painted.bg, THEMES.ocean.bg);
+  assert.equal(painted.text, THEMES.ocean.text);
+  assert.equal(painted.accent, '#1D63B8');
+  assert.equal(painted.ok, true);
+
+  const custom = migrateSettings({ ...v1, schemaVersion: 2, textColor: '#6a1040', bgColor: '#ffd4e8' });
+  assert.equal(custom.textColor, '#6A1040');
+  assert.equal(custom.bgColor, '#FFD4E8');
+  assert.equal(custom.title, "Sam's Day");
+});
+
+test('photo dimming still counts toward text contrast', () => {
+  const settings = { theme: 'calm', textColor: '#FFFFFF', bgColor: '#FFFFFF' };
+  const onWhite = paintColors(settings, { on: true, luminance: 1, scrim: 'light' });
+  assert.equal(onWhite.ok, false);
+  const fixed = fixTextColor(settings, { on: true, luminance: 1, scrim: 'light' });
+  const after = paintColors({ ...settings, textColor: fixed }, { on: true, luminance: 1, scrim: 'light' });
+  assert.equal(after.ok, true, `${fixed} ${after.ratio}`);
+  for (const theme of Object.keys(THEMES)) {
+    for (const luminance of [0, 1]) {
+      for (const scrim of ['dark', 'light']) {
+        const painted = paintColors({ theme }, { on: true, luminance, scrim });
+        assert.equal(painted.ok, true, `${theme} ${scrim} lum ${luminance} ${painted.ratio}`);
+      }
+    }
   }
 });

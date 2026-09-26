@@ -1,9 +1,9 @@
 :root {
-  --bg: #F6F6FB;
+  --bg: #E4DEFF;
   --surface: #FFFFFF;
-  --text: #1E2030;
-  --muted: #565B6E;
-  --accent: #4F46E5;
+  --text: #2A1860;
+  --muted: #533C86;
+  --accent: #6D4AFF;
   --on-accent: #FFFFFF;
   --success: #15803D;
   --font: "Nunito", "Segoe UI", sans-serif;
@@ -13,15 +13,18 @@
   color-scheme: light;
 }
 
-html[data-theme="calm"] { --bg: #F6F6FB; --surface: #FFFFFF; --text: #1E2030; --muted: #565B6E; --success: #15803D; color-scheme: light; }
-html[data-theme="mint"] { --bg: #EFF8F4; --surface: #FFFFFF; --text: #14302A; --muted: #44605A; --success: #15803D; color-scheme: light; }
-html[data-theme="sunset"] { --bg: #FFF4EC; --surface: #FFFFFF; --text: #3A1F14; --muted: #6B4A3D; --success: #15803D; color-scheme: light; }
-html[data-theme="ocean"] { --bg: #EEF5FB; --surface: #FFFFFF; --text: #0F2438; --muted: #48607A; --success: #15803D; color-scheme: light; }
-html[data-theme="blossom"] { --bg: #FCF1F5; --surface: #FFFFFF; --text: #3B1427; --muted: #6E4A5B; --success: #15803D; color-scheme: light; }
+html[data-theme="calm"] { --bg: #E4DEFF; --surface: #FFFFFF; --text: #2A1860; --muted: #533C86; --success: #15803D; color-scheme: light; }
+html[data-theme="mint"] { --bg: #C8FFE6; --surface: #FFFFFF; --text: #064536; --muted: #1B6B56; --success: #15803D; color-scheme: light; }
+html[data-theme="sunset"] { --bg: #FFE0C2; --surface: #FFFFFF; --text: #5C2208; --muted: #8A4030; --success: #15803D; color-scheme: light; }
+html[data-theme="ocean"] { --bg: #D2EFFF; --surface: #FFFFFF; --text: #062E52; --muted: #1E5680; --success: #15803D; color-scheme: light; }
+html[data-theme="blossom"] { --bg: #FFD4E8; --surface: #FFFFFF; --text: #6A1040; --muted: #8E3A62; --success: #15803D; color-scheme: light; }
 html[data-theme="night"] {
-  --bg: #12131A; --surface: #1D1F2A; --text: #F2F3F8; --muted: #A9ADBF; --success: #4ADE80;
+  --bg: #16142B; --surface: #2A2744; --text: #F6F4FF; --muted: #C8C2EE; --success: #5DFFB0;
   --shadow: none; color-scheme: dark;
 }
+html[data-tone="light"] { color-scheme: light; --shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
+html[data-tone="dark"] { color-scheme: dark; }
+html[data-tone="light"][data-theme="night"] .card { box-shadow: var(--shadow); }
 
 html[data-font="nunito"] { --font: "Nunito", "Segoe UI", sans-serif; --title-font: "Nunito", "Segoe UI", sans-serif; }
 html[data-font="inter"] { --font: "Inter", "Segoe UI", sans-serif; --title-font: "Inter", "Segoe UI", sans-serif; }
@@ -69,15 +72,15 @@ img { max-width: 100%; }
 .backdrop-photo { background-position: center; background-size: cover; }
 html[data-photo="on"][data-scrim="dark"] .backdrop-scrim { background: rgba(0, 0, 0, 0.6); }
 html[data-photo="on"][data-scrim="light"] .backdrop-scrim { background: rgba(255, 255, 255, 0.7); }
-html[data-photo="on"][data-scrim="dark"] .top-title,
-html[data-photo="on"][data-scrim="dark"] .date-btn,
-html[data-photo="on"][data-scrim="dark"] .icon-btn,
-html[data-photo="on"][data-scrim="dark"] .wordmark,
-html[data-photo="on"][data-scrim="dark"] .setup-title,
-html[data-photo="on"][data-scrim="dark"] .lede { color: #fff; }
-html[data-photo="on"][data-scrim="light"] .top-title,
-html[data-photo="on"][data-scrim="light"] .date-btn,
-html[data-photo="on"][data-scrim="light"] .setup-title { color: #1E2030; }
+html[data-photo="on"][data-scrim="dark"]:not([data-text="custom"]) .top-title,
+html[data-photo="on"][data-scrim="dark"]:not([data-text="custom"]) .date-btn,
+html[data-photo="on"][data-scrim="dark"]:not([data-text="custom"]) .icon-btn,
+html[data-photo="on"][data-scrim="dark"]:not([data-text="custom"]) .wordmark,
+html[data-photo="on"][data-scrim="dark"]:not([data-text="custom"]) .setup-title,
+html[data-photo="on"][data-scrim="dark"]:not([data-text="custom"]) .lede { color: #fff; }
+html[data-photo="on"][data-scrim="light"]:not([data-text="custom"]) .top-title,
+html[data-photo="on"][data-scrim="light"]:not([data-text="custom"]) .date-btn,
+html[data-photo="on"][data-scrim="light"]:not([data-text="custom"]) .setup-title { color: #1E2030; }
 
 #app, #overlay, #celebrate { position: relative; z-index: 1; }
 #celebrate { position: fixed; inset: 0; z-index: 70; pointer-events: none; }
@@ -357,6 +360,15 @@ body.sheet-open .fab { visibility: hidden; }
   padding: 8px 12px;
 }
 .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.swatch-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 8px;
+  max-width: 100%;
+}
+.swatch-row .swatch { flex: 0 0 auto; }
 .swatch {
   width: 64px;
   min-height: 44px;
@@ -370,8 +382,55 @@ body.sheet-open .fab { visibility: hidden; }
   padding: 6px;
 }
 .swatch.accent { width: 44px; height: 44px; border-radius: 999px; padding: 0; }
+.swatch.dot {
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  border-radius: 999px;
+  padding: 0;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16);
+}
 .swatch.is-selected { border-color: currentColor; }
-.swatch.accent.is-selected { border-color: var(--text); }
+.swatch.accent.is-selected,
+.swatch.dot.is-selected { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg); }
+.color-chip {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 3px;
+  display: grid;
+  place-items: center;
+  background: conic-gradient(#ff4d6d, #ffd60a, #7dffb3, #4cc9f0, #6d4aff, #ff2d87, #ff4d6d);
+}
+.color-chip.is-selected { outline: 2px solid var(--text); outline-offset: 2px; }
+.color-chip input[type="color"] {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+}
+.color-chip input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.color-chip input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 999px; }
+.color-chip input[type="color"]::-moz-color-swatch { border: 0; border-radius: 999px; }
+.contrast-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 0 4px 0 12px;
+  min-height: 44px;
+  border-radius: 12px;
+  background: #FFF7ED;
+  color: #5C2208;
+  font-size: 15px;
+  line-height: 20px;
+}
+.contrast-note .text-btn { min-height: 44px; color: #9A3412; }
 .swatch-dot { width: 16px; height: 16px; border-radius: 999px; display: block; }
 .swatch-name { font-size: 14px; line-height: 16px; color: inherit; }
 .swatches.tiny .swatch.accent { width: 32px; height: 32px; min-height: 32px; }

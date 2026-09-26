@@ -9,11 +9,12 @@ import * as push from './push.js';
 
 const {
   POINTS, DAY_COMPLETE_BONUS, THEMES, ACCENTS, FONTS, WEEKDAY_LABELS,
-  defaultSettings, defaultDifficulty, addDays, plannerDate, formatDayLabel,
+  TEXT_COLOURS, BG_COLOURS, defaultSettings, defaultDifficulty, addDays, plannerDate, formatDayLabel,
   formatTime, dayOfWeek, instancesOn, computeStreak, sumPoints, pointsOnDate,
   isDayComplete, levelForPoints, levelProgress, levelTitle, displayLevel,
   upcomingReminders, reminderText, onAccent, autoScrim, burstCount, clone,
-  zonedDateTime, weekStartOf, parseHM,
+  zonedDateTime, weekStartOf, parseHM, migrateSettings, paintColors, fixTextColor,
+  normalizeHex, relativeLuminance,
 } = model;
 
 const S = {
@@ -146,18 +147,12 @@ function isDone(inst) {
 }
 
 function mergeSettings(saved) {
-  const base = defaultSettings();
-  if (!saved) return base;
-  return {
-    ...base,
-    ...saved,
-    dailyGoal: { ...base.dailyGoal, ...(saved.dailyGoal || {}) },
-    morningCheckin: { ...base.morningCheckin, ...(saved.morningCheckin || {}) },
-    dayCompleteShown: { ...(saved.dayCompleteShown || {}) },
-    dayCompleteAwarded: { ...(saved.dayCompleteAwarded || {}) },
-    categories: Array.isArray(saved.categories) && saved.categories.length ? saved.categories : base.categories,
-    id: 'main',
-  };
+  return migrateSettings(saved);
+}
+
+function photoArg() {
+  if (!photoUrl) return null;
+  return { on: true, luminance: S.background?.brightness, scrim: resolvedScrim() };
 }
 
 function noteHighWater() {
@@ -181,13 +176,19 @@ function resolvedScrim() {
 
 function applyChrome() {
   const settings = S.settings;
-  const theme = THEMES[settings.theme] || THEMES.calm;
+  const painted = paintColors(settings, photoArg());
   const root = document.documentElement;
   root.dataset.theme = settings.theme;
   root.dataset.font = settings.font;
-  const accent = settings.accent || theme.accent;
-  root.style.setProperty('--accent', accent);
-  root.style.setProperty('--on-accent', onAccent(accent));
+  root.dataset.text = painted.customText ? 'custom' : 'theme';
+  root.dataset.tone = relativeLuminance(painted.bg) > 0.45 ? 'light' : 'dark';
+  root.style.setProperty('--bg', painted.bg);
+  root.style.setProperty('--surface', painted.surface);
+  root.style.setProperty('--text', painted.text);
+  root.style.setProperty('--muted', painted.muted);
+  root.style.setProperty('--accent', painted.accent);
+  root.style.setProperty('--on-accent', onAccent(painted.accent));
+  root.style.setProperty('--success', painted.success);
   root.dataset.photo = photoUrl ? 'on' : 'off';
   root.dataset.scrim = photoUrl ? resolvedScrim() : 'none';
   const photo = document.getElementById('backdrop-photo');
@@ -198,7 +199,7 @@ function applyChrome() {
     photo.style.transform = blur ? 'scale(1.08)' : 'none';
   }
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = theme.bg;
+  if (meta) meta.content = painted.bg;
   document.title = PRODUCT_NAME;
   const apple = document.querySelector('meta[name="apple-mobile-web-app-title"]');
   if (apple) apple.setAttribute('content', PRODUCT_NAME);
@@ -408,7 +409,7 @@ function spawnBurst(inst) {
     const dist = inst.difficulty === 'hard' ? 40 + (i % 5) * 28 : 30 + (i % 4) * 18;
     p.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
     p.style.setProperty('--dy', `${Math.sin(angle) * dist - (inst.difficulty === 'hard' ? 20 : 0)}px`);
-    p.style.background = ['#4F46E5', '#F59E0B', '#0F766E', '#BE185D', '#1D63B8'][i % 5];
+    p.style.background = ['#6D4AFF', '#FFD60A', '#00C2A8', '#FF2D87', '#1A8CFF'][i % 5];
     layer.append(p);
     setTimeout(() => p.remove(), 1300);
   }
@@ -422,7 +423,7 @@ function spawnConfetti() {
     p.style.left = `${(i * 37) % 100}%`;
     p.style.top = '-8px';
     p.style.animationDelay = `${(i % 8) * 0.05}s`;
-    p.style.background = ['#4F46E5', '#F59E0B', '#0F766E', '#BE185D', '#1D63B8'][i % 5];
+    p.style.background = ['#6D4AFF', '#FFD60A', '#00C2A8', '#FF2D87', '#1A8CFF'][i % 5];
     layer.append(p);
     setTimeout(() => p.remove(), 1600);
   }
@@ -926,6 +927,8 @@ function renderSetup1() {
       btn.addEventListener('click', async () => {
         S.settings.theme = id;
         S.settings.accent = theme.accent;
+        S.settings.textColor = null;
+        S.settings.bgColor = null;
         await persistAll();
         render();
       });
@@ -1246,7 +1249,7 @@ function renderCard(inst) {
   const card = h('article', {
     class: `card${earlier ? ' is-earlier' : ''}`,
     dataset: { instance: inst.instanceId },
-  }, check, h('span', { class: 'dot', style: `background:${cat?.color || '#4F46E5'}` }), main, tag, move, actions);
+  }, check, h('span', { class: 'dot', style: `background:${cat?.color || '#6D4AFF'}` }), main, tag, move, actions);
   attachCardGestures(card);
   return card;
 }
@@ -1284,7 +1287,7 @@ function renderDone(done) {
       const cat = categoryById(inst.categoryId);
       return h('article', { class: 'card is-done', dataset: { instance: inst.instanceId } },
         h('span', { class: 'check is-checked', 'aria-hidden': 'true' }, icon(I.check)),
-        h('span', { class: 'dot', style: `background:${cat?.color || '#4F46E5'}` }),
+        h('span', { class: 'dot', style: `background:${cat?.color || '#6D4AFF'}` }),
         h('div', { class: 'card-main static' },
           h('span', { class: 'card-title', text: inst.title }),
           h('span', { class: 'card-meta', text: inst.time ? formatTime(inst.time, S.settings.clock24) : 'Anytime' })),
@@ -1690,6 +1693,74 @@ function closeSheet() {
   document.body.classList.remove('sheet-open');
 }
 
+function colourRow(kind) {
+  const s = S.settings;
+  const theme = THEMES[s.theme] || THEMES.calm;
+  const colours = kind === 'text' ? TEXT_COLOURS : BG_COLOURS;
+  const current = normalizeHex(kind === 'text' ? s.textColor : s.bgColor);
+  const themeHex = normalizeHex(kind === 'text' ? theme.text : theme.bg);
+  const label = kind === 'text' ? 'Text' : 'Background';
+  const row = h('div', { class: 'swatch-row' });
+  row.append(h('button', {
+    type: 'button',
+    class: `swatch dot${current ? '' : ' is-selected'}`,
+    'aria-label': `${label} colour from theme`,
+    style: `background:${themeHex}`,
+    onclick: async () => {
+      if (kind === 'text') s.textColor = null;
+      else s.bgColor = null;
+      await persistAll();
+      render();
+    },
+  }));
+  for (const hex of colours) {
+    row.append(h('button', {
+      type: 'button',
+      class: `swatch dot${current === hex ? ' is-selected' : ''}`,
+      'aria-label': `${label} ${hex}`,
+      style: `background:${hex}`,
+      onclick: async () => {
+        if (kind === 'text') s.textColor = hex;
+        else s.bgColor = hex;
+        await persistAll();
+        render();
+      },
+    }));
+  }
+  const picker = h('input', {
+    type: 'color',
+    'aria-label': `Custom ${label.toLowerCase()} colour`,
+    value: (current || themeHex).toLowerCase(),
+  });
+  picker.addEventListener('change', async () => {
+    const hex = normalizeHex(picker.value);
+    if (!hex) return;
+    if (kind === 'text') s.textColor = hex;
+    else s.bgColor = hex;
+    await persistAll();
+    render();
+  });
+  const customSelected = Boolean(current && !colours.includes(current));
+  row.append(h('label', { class: `color-chip${customSelected ? ' is-selected' : ''}` }, picker));
+  return row;
+}
+
+function contrastNote() {
+  const painted = paintColors(S.settings, photoArg());
+  if (painted.ok) return null;
+  return h('div', { class: 'contrast-note', id: 'contrast-note', 'aria-live': 'polite' },
+    h('span', { text: 'These colours are hard to read.' }),
+    h('button', {
+      type: 'button',
+      class: 'text-btn',
+      onclick: async () => {
+        S.settings.textColor = fixTextColor(S.settings, photoArg());
+        await persistAll();
+        render();
+      },
+    }, 'Fix it'));
+}
+
 function renderCustomize() {
   const s = S.settings;
   const page = h('main', { class: 'shell settings' });
@@ -1705,15 +1776,27 @@ function renderCustomize() {
     h('label', { class: 'field-label', text: 'Title' }),
     title,
     h('p', { class: 'field-label', text: 'Theme' }),
-    h('div', { class: 'swatches' }, Object.entries(THEMES).map(([id, theme]) => h('button', {
+    h('div', { class: 'swatch-row' }, Object.entries(THEMES).map(([id, theme]) => h('button', {
       type: 'button',
       class: `swatch${s.theme === id ? ' is-selected' : ''}`,
       'aria-label': `${id} theme`,
       style: `background:${theme.bg}; color:${theme.text}`,
-      onclick: async () => { s.theme = id; s.accent = theme.accent; await persistAll(); render(); },
+      onclick: async () => {
+        s.theme = id;
+        s.accent = theme.accent;
+        s.textColor = null;
+        s.bgColor = null;
+        await persistAll();
+        render();
+      },
     }, h('span', { class: 'swatch-dot', style: `background:${theme.accent}` })))),
+    h('p', { class: 'field-label', text: 'Text colour' }),
+    colourRow('text'),
+    h('p', { class: 'field-label', text: 'Background colour' }),
+    colourRow('bg'),
+    contrastNote(),
     h('p', { class: 'field-label', text: 'Accent colour' }),
-    h('div', { class: 'swatches' }, ACCENTS.map((hex) => h('button', {
+    h('div', { class: 'swatch-row' }, ACCENTS.map((hex) => h('button', {
       type: 'button',
       class: `swatch accent${s.accent.toLowerCase() === hex.toLowerCase() ? ' is-selected' : ''}`,
       'aria-label': `Accent ${hex}`,
@@ -1757,7 +1840,11 @@ function renderCustomize() {
     if ((s.photoScrim || 'auto') === val) opt.selected = true;
     scrim.append(opt);
   }
-  scrim.addEventListener('change', () => { s.photoScrim = scrim.value; persistAll(); applyChrome(); });
+  scrim.addEventListener('change', async () => {
+    s.photoScrim = scrim.value;
+    await persistAll();
+    render();
+  });
   const blur = h('input', { type: 'range', id: 'photo-blur', min: '0', max: '12', step: '1', 'aria-label': 'Background blur', value: String(s.photoBlur || 0) });
   const blurVal = h('span', { class: 'num', text: String(s.photoBlur || 0) });
   blur.addEventListener('input', () => {
