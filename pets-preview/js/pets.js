@@ -1047,10 +1047,10 @@ const gridGroup = new Group();
 scene.add(gridGroup);
 
 const FACE_SPOTS = [
-  [-0.7, 0.62],
-  [0.7, 0.62],
-  [-0.7, -0.48],
-  [0.7, -0.48],
+  [-0.35, 0.15],
+  [0.78, 0.15],
+  [-0.35, -0.95],
+  [0.78, -0.95],
 ];
 
 async function showFaceGrid(names) {
@@ -1062,12 +1062,12 @@ async function showFaceGrid(names) {
     if (pet.root.parent) pet.root.parent.remove(pet.root);
     const spot = FACE_SPOTS[index] || [0, 0];
     pet.root.position.set(spot[0], spot[1], 0);
-    pet.root.rotation.set(0, -0.5, 0);
+    pet.root.rotation.set(0, -0.35, 0);
     pet.root.scale.set(1, 1, 1);
     resetCartoonEyes(pet);
     showCartoonEyes(pet, 'open');
     if (pet.nodes.cheeks) pet.nodes.cheeks.visible = true;
-    if (pet.nodes.mouth) pet.nodes.mouth.visible = true;
+    if (pet.nodes.mouth) pet.nodes.mouth.visible = false;
     if (pet.nodes.mouth_open) pet.nodes.mouth_open.visible = false;
     if (pet.nodes.eyes_open) pet.nodes.eyes_open.visible = false;
     if (pet.nodes.eyes_happy) pet.nodes.eyes_happy.visible = false;
@@ -1076,9 +1076,9 @@ async function showFaceGrid(names) {
   });
   grid = {
     pets,
-    fov: 38,
-    cam: new Vector3(0, 1.55, 2.15),
-    look: new Vector3(0, 1.42, 0),
+    fov: 42,
+    cam: new Vector3(0, 1.35, 3.25),
+    look: new Vector3(0, 1.15, 0),
   };
   applyPose();
   renderer.render(scene, camera);
@@ -1089,6 +1089,7 @@ function clearFaceGrid() {
   for (const pet of grid.pets) {
     pet.root.position.set(0, 0, 0);
     pet.root.rotation.set(0, 0, 0);
+    pet.root.scale.set(1, 1, 1);
     if (pet.root.parent === gridGroup) gridGroup.remove(pet.root);
   }
   grid = null;
