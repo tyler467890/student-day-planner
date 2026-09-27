@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import fs from 'node:fs';
 
 const ANIMALS = [
   ['dog', 'Dog'],
@@ -149,7 +150,7 @@ test('pet preview on a phone', async ({ page }) => {
   await page.mouse.wheel(0, 280);
   const zoom1 = await page.evaluate(() => window.__PETS.zoom);
   expect(zoom1).toBeGreaterThan(zoom0);
-  expect(zoom1).toBeLessThanOrEqual(7.2);
+  expect(zoom1).toBeLessThanOrEqual(8.4);
   expect(zoom1).toBeGreaterThanOrEqual(2.8);
 
   await page.evaluate(async () => {
@@ -160,10 +161,10 @@ test('pet preview on a phone', async ({ page }) => {
     window.__PETS.setEyes('round');
     window.__PETS.setCheeks(true);
     window.__PETS.setHat(false);
-    window.__PETS.yaw = -0.62;
-    window.__PETS.zoom = 2.88;
-    window.__PETS.lookY = 1.4;
-    window.__PETS.camY = 1.62;
+    window.__PETS.yaw = -0.42;
+    window.__PETS.zoom = 6.85;
+    window.__PETS.lookY = 1.45;
+    window.__PETS.camY = 1.5;
     window.__PETS.play('wave');
     window.__PETS.pause(0.2);
   });
@@ -176,10 +177,10 @@ test('pet preview on a phone', async ({ page }) => {
     window.__PETS.setHat(true);
     window.__PETS.setEyes('round');
     window.__PETS.setCheeks(true);
-    window.__PETS.yaw = -0.5;
-    window.__PETS.zoom = 2.88;
-    window.__PETS.lookY = 1.42;
-    window.__PETS.camY = 1.64;
+    window.__PETS.yaw = -0.4;
+    window.__PETS.zoom = 6.85;
+    window.__PETS.lookY = 1.45;
+    window.__PETS.camY = 1.5;
     window.__PETS.play('idle');
     window.__PETS.pause(0.2);
   });
@@ -187,12 +188,13 @@ test('pet preview on a phone', async ({ page }) => {
   expect(await page.evaluate(() => window.__PETS.color.toLowerCase())).toBe('#7c3aed');
   await page.screenshot({ path: '/opt/cursor/artifacts/pets-custom-hat.png' });
 
-  await page.evaluate(async () => {
+  const faceSheet = await page.evaluate(async () => {
     window.__PETS.setHat(false);
     window.__PETS.setNatural();
-    await window.__PETS.showFaceGrid(['cat', 'dog', 'penguin', 'bunny']);
+    return window.__PETS.captureFaceSheet(['cat', 'dog', 'penguin', 'bunny']);
   });
-  await page.screenshot({ path: '/opt/cursor/artifacts/pets-faces.png' });
+  fs.mkdirSync('/opt/cursor/artifacts', { recursive: true });
+  fs.writeFileSync('/opt/cursor/artifacts/pets-faces.png', Buffer.from(faceSheet.split(',')[1], 'base64'));
   await page.evaluate(() => window.__PETS.clearFaceGrid());
 
   await page.evaluate(() => window.__PETS.resume());
