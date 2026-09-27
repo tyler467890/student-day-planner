@@ -165,6 +165,7 @@ test('notification permission is requested only from Turn on reminders', async (
 });
 
 test('enter saves a title with defaults; class defaults are medium, 50 min, 10 min remind', async ({ page }) => {
+  await useClock(page, '2026-09-25T15:00:00-04:00');
   await skipToToday(page);
   await page.getByRole('button', { name: 'Add a class or task' }).click();
   await page.getByLabel('What?').fill('Finish essay intro');

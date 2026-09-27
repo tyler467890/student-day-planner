@@ -19,7 +19,7 @@ const ZOOM_MAX = 7.2;
 const canvas = document.querySelector('#stage');
 const scene = new Scene();
 const camera = new PerspectiveCamera(32, 1, 0.1, 40);
-let camZ = 4.2;
+let camZ = 3.55;
 camera.position.set(0, 1.02, camZ);
 
 const renderer = new WebGLRenderer({
@@ -253,19 +253,19 @@ function buildPenguin() {
   addEyes(a, 0.14, 0.06, 0.34, 1.05);
   addCheeks(a, 0.2, -0.08, 0.36);
 
-  const flipGeo = new CapsuleGeometry(0.075, 0.3, 3, 6);
-  a.hand.position.set(0.4, 0.72, 0);
-  a.hand.rotation.z = 0.28;
+  const flipGeo = new CapsuleGeometry(0.1, 0.5, 3, 6);
+  a.hand.position.set(0.46, 0.92, 0.06);
+  a.hand.rotation.z = 0.22;
   const flip = mesh(flipGeo, navy);
-  flip.position.y = -0.22;
+  flip.position.y = -0.3;
   a.hand.add(flip);
   a.body.add(a.hand);
 
   const other = new Group();
-  other.position.set(-0.4, 0.72, 0);
-  other.rotation.z = -0.28;
+  other.position.set(-0.46, 0.92, 0.06);
+  other.rotation.z = -0.22;
   const flipL = mesh(flipGeo, navy);
-  flipL.position.y = -0.22;
+  flipL.position.y = -0.3;
   other.add(flipL);
   a.body.add(other);
 
@@ -278,7 +278,7 @@ function buildPenguin() {
     a.feet.push(foot);
   }
 
-  a.hatMount.position.set(0, 0.36, 0.02);
+  a.hatMount.position.set(0, 0.4, 0.08);
   remember(a, a.body);
   remember(a, a.head);
   remember(a, a.hand);
@@ -339,10 +339,10 @@ function buildCat() {
     a.feet.push(leg);
   }
 
-  a.hand.position.set(0.32, 0.52, 0.16);
+  a.hand.position.set(0.34, 0.62, 0.2);
   a.hand.rotation.z = 0.35;
-  const paw = mesh(new CapsuleGeometry(0.055, 0.16, 3, 6), fur);
-  paw.position.y = -0.14;
+  const paw = mesh(new CapsuleGeometry(0.06, 0.28, 3, 6), fur);
+  paw.position.y = -0.2;
   a.hand.add(paw);
   a.body.add(a.hand);
 
@@ -356,7 +356,7 @@ function buildCat() {
   a.body.add(tail);
   a.tail = tail;
 
-  a.hatMount.position.set(0, 0.34, 0);
+  a.hatMount.position.set(0, 0.38, 0.1);
   remember(a, a.body);
   remember(a, a.head);
   remember(a, a.hand);
@@ -389,12 +389,12 @@ function buildBunny() {
 
   const ears = new Group();
   for (const side of [-1, 1]) {
-    const ear = mesh(new CapsuleGeometry(0.07, 0.42, 3, 6), fur);
-    ear.position.set(side * 0.14, 0.52, 0);
-    ear.rotation.z = side * -0.08;
-    const inner = mesh(new CapsuleGeometry(0.035, 0.28, 2, 6), pink);
-    inner.position.set(side * 0.14, 0.5, 0.04);
-    inner.rotation.z = side * -0.08;
+    const ear = mesh(new CapsuleGeometry(0.065, 0.4, 3, 6), fur);
+    ear.position.set(side * 0.2, 0.5, -0.02);
+    ear.rotation.z = side * -0.18;
+    const inner = mesh(new CapsuleGeometry(0.032, 0.26, 2, 6), pink);
+    inner.position.set(side * 0.2, 0.48, 0.03);
+    inner.rotation.z = side * -0.18;
     ears.add(ear, inner);
   }
   a.head.add(ears);
@@ -421,15 +421,14 @@ function buildBunny() {
     a.feet.push(foot);
   }
 
-  a.hand.position.set(0.3, 0.5, 0.18);
+  a.hand.position.set(0.32, 0.58, 0.22);
   a.hand.rotation.z = 0.3;
-  const paw = mesh(new SphereGeometry(0.08, 10, 8), fur);
-  paw.scale.set(0.9, 1.15, 0.8);
-  paw.position.y = -0.12;
+  const paw = mesh(new CapsuleGeometry(0.06, 0.26, 3, 6), fur);
+  paw.position.y = -0.18;
   a.hand.add(paw);
   a.body.add(a.hand);
 
-  a.hatMount.position.set(0, 0.32, 0.02);
+  a.hatMount.position.set(0, 0.4, 0.16);
   remember(a, a.body);
   remember(a, a.head);
   remember(a, a.hand);
@@ -440,13 +439,16 @@ function buildBunny() {
 }
 
 const hat = new Group();
-const hatCone = mesh(new ConeGeometry(0.16, 0.32, 12), toon(0xff4d8d));
-hatCone.position.y = 0.18;
-const hatBrim = mesh(new CylinderGeometry(0.18, 0.2, 0.045, 12), toon(0xffd23f));
-hatBrim.position.y = 0.02;
-const pom = mesh(new SphereGeometry(0.055, 10, 8), toon(0xfff3a0));
-pom.position.y = 0.36;
-hat.add(hatCone, hatBrim, pom);
+const hatCone = mesh(new ConeGeometry(0.17, 0.5, 12), toon(0xff3d8a));
+hatCone.position.y = 0.27;
+const hatBrim = mesh(new CylinderGeometry(0.2, 0.22, 0.05, 12), toon(0xffd23f));
+hatBrim.position.y = 0.03;
+const stripe = mesh(new CylinderGeometry(0.11, 0.13, 0.07, 12), toon(0xffffff));
+stripe.position.y = 0.22;
+const pom = mesh(new SphereGeometry(0.07, 10, 8), toon(0xfff3a0));
+pom.position.y = 0.56;
+hat.rotation.z = -0.18;
+hat.add(hatCone, hatBrim, stripe, pom);
 hat.visible = false;
 
 const zzzCanvas = document.createElement('canvas');
@@ -550,9 +552,14 @@ function applyPose() {
   }
 
   if (mode === 'wave') {
-    const up = smooth(t / 0.16);
-    animal.hand.rotation.z += 1.9 * up;
-    animal.hand.rotation.x += Math.sin(t * 14) * 0.55 * up;
+    const up = smooth(t / 0.15);
+    const restZ = animal.hand.rotation.z;
+    const sign = restZ >= 0 ? 1 : -1;
+    // Up and outward so the paw clears the head instead of hiding behind it.
+    const target = sign * (2.25 + (Math.sin(t * 8) * 0.5 + 0.5) * 0.55);
+    animal.hand.rotation.z = restZ + (target - restZ) * up;
+    animal.hand.rotation.x = 0;
+    animal.hand.position.z += 0.1 * up;
   }
 
   let lift = 0;

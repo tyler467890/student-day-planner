@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+import { test, expect } from '@playwright/test';
 
 function watchPage(page) {
   const errors = [];
@@ -99,7 +99,7 @@ test('pet preview on a phone', async ({ page }) => {
   expect(zoom1).toBeGreaterThanOrEqual(2.8);
 
   await page.evaluate(() => {
-    window.__PETS.yaw = 0.15;
+    window.__PETS.yaw = -0.2;
     window.__PETS.setAnimal('penguin');
     window.__PETS.setHeight(1);
     window.__PETS.setBody(1);
@@ -108,7 +108,7 @@ test('pet preview on a phone', async ({ page }) => {
     window.__PETS.setCheeks(true);
     window.__PETS.setHat(false);
     window.__PETS.play('wave');
-    window.__PETS.pause(0.35);
+    window.__PETS.pause(0.2);
   });
   await page.screenshot({ path: '/opt/cursor/artifacts/pets-penguin.png' });
 
