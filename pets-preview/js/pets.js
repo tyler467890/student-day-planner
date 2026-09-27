@@ -167,78 +167,113 @@ const zzz = new Sprite(new SpriteMaterial({ map: zzzTex, transparent: true, dept
 zzz.scale.set(0.42, 0.21, 1);
 zzz.visible = false;
 
-const BROWN_EYES = new Set(['bunny', 'dog', 'horse', 'pig', 'penguin', 'shark']);
 const EYE_LAYOUT = {
-  dog: { spread: 0.31, drop: 0.055, s: 1.02 },
-  cat: { spread: 0.3, drop: 0.05, s: 1.08 },
-  bunny: { spread: 0.29, drop: 0.05, s: 1.08 },
-  penguin: { spread: 0.25, drop: 0.04, s: 0.96 },
-  horse: { spread: 0.34, drop: 0.04, s: 1 },
-  monkey: { spread: 0.26, drop: 0.04, s: 0.96 },
-  tiger: { spread: 0.31, drop: 0.05, s: 1.04 },
-  shark: { spread: 0.31, drop: 0.03, s: 1 },
-  pig: { spread: 0.3, drop: 0.02, s: 1 },
-  axolotl: { spread: 0.35, drop: 0.04, s: 0.9 },
-  capybara: { spread: 0.33, drop: 0.015, s: 0.8 },
-  dragon: { spread: 0.3, drop: 0.05, s: 1.06 },
+  dog: { spread: 0.22, drop: 0.07, s: 1.05, iris: 0x8d5a32, brow: true },
+  cat: { spread: 0.2, drop: 0.07, s: 1.08, iris: 0x3f9a62, brow: true },
+  bunny: { spread: 0.19, drop: 0.07, s: 1.08, iris: 0x6eafdf, brow: true },
+  penguin: { spread: 0.17, drop: 0.05, s: 0.96, iris: 0x4e86c4, brow: false },
+  horse: { spread: 0.24, drop: 0.06, s: 1, iris: 0x7a4a2a, brow: true },
+  monkey: { spread: 0.18, drop: 0.06, s: 0.98, iris: 0x6b4630, brow: true },
+  tiger: { spread: 0.21, drop: 0.07, s: 1.04, iris: 0xc4a24a, brow: true },
+  shark: { spread: 0.21, drop: 0.05, s: 1, iris: 0x3d86c8, brow: false },
+  pig: { spread: 0.2, drop: 0.04, s: 1, iris: 0x6aa0d4, brow: false },
+  axolotl: { spread: 0.23, drop: 0.06, s: 0.92, iris: 0xc47a4a, brow: false },
+  capybara: { spread: 0.22, drop: 0.03, s: 0.84, iris: 0x7a5434, brow: true },
+  dragon: { spread: 0.2, drop: 0.07, s: 1.05, iris: 0x3c9a6a, brow: true },
 };
-const eyeGeo = new SphereGeometry(1, 22, 16);
-const eyeMatDark = new MeshBasicMaterial({ color: 0x1a1424 });
-const eyeMatBrown = new MeshBasicMaterial({ color: 0x3a2418 });
-const eyeMatWhite = new MeshBasicMaterial({ color: 0xffffff });
-const smileMat = new MeshBasicMaterial({ color: 0x3a2418 });
+const eyeGeo = new SphereGeometry(1, 18, 14);
+const scleraMat = new MeshBasicMaterial({ color: 0xefe4d4 });
+const pupilMat = new MeshBasicMaterial({ color: 0x2a211c });
+const catchMat = new MeshBasicMaterial({ color: 0xf6f0e6 });
+const lineMat = new MeshBasicMaterial({ color: 0x3a2c28 });
+const tongueMat = new MeshBasicMaterial({ color: 0xf4a3b8 });
+const mouthMat = new MeshBasicMaterial({ color: 0xd46a7c });
+const padMat = new MeshBasicMaterial({ color: 0xf3a8bb });
+const irisMats = new Map();
+
+function irisMaterial(color) {
+  let mat = irisMats.get(color);
+  if (!mat) {
+    mat = new MeshBasicMaterial({ color });
+    irisMats.set(color, mat);
+  }
+  return mat;
+}
+
+function flatMesh(geo, mat, scale, position, order) {
+  const mesh = new Mesh(geo, mat);
+  mesh.scale.set(scale[0], scale[1], scale[2]);
+  mesh.position.set(position[0], position[1], position[2]);
+  mesh.castShadow = false;
+  mesh.renderOrder = order;
+  return mesh;
+}
 
 function buildCartoonEyes(animal, anchor) {
-  const layout = EYE_LAYOUT[animal] || { spread: 0.3, drop: 0.05, s: 1 };
-  const mat = BROWN_EYES.has(animal) ? eyeMatBrown : eyeMatDark;
+  const layout = EYE_LAYOUT[animal] || { spread: 0.2, drop: 0.06, s: 1, iris: 0x8d5a32, brow: true };
   const y = (anchor ? anchor.position.y : 0.5) - layout.drop;
-  const z = (anchor ? anchor.position.z : 0.56) + 0.045;
-  const w = 0.156 * layout.s;
-  const h = 0.172 * layout.s;
-  const d = 0.08 * layout.s;
+  const z = (anchor ? anchor.position.z : 0.56) + 0.05;
+  const s = layout.s;
+  const w = 0.132 * s;
+  const h = 0.15 * s;
+  const d = 0.07 * s;
+  const iris = irisMaterial(layout.iris);
   const rig = new Group();
   rig.name = 'cartoon_eyes';
   const sockets = [];
-  const arc = Math.PI * 0.8;
-  const sleepArc = Math.PI * 0.58;
+  const arc = Math.PI * 0.85;
+  const sleepArc = Math.PI * 0.62;
   for (const side of [-1, 1]) {
     const socket = new Group();
     socket.position.set(side * layout.spread, y, z);
-    socket.rotation.y = -side * 0.1;
+    socket.rotation.y = -side * 0.04;
     const open = new Group();
-    const eye = new Mesh(eyeGeo, mat);
-    eye.scale.set(w, h, d);
-    eye.castShadow = false;
-    eye.renderOrder = 2;
-    const big = new Mesh(eyeGeo, eyeMatWhite);
-    big.scale.set(0.03 * layout.s, 0.036 * layout.s, 0.018 * layout.s);
-    big.position.set(side * w * 0.34, h * 0.38, d * 0.95);
-    big.castShadow = false;
-    big.renderOrder = 3;
-    const small = new Mesh(eyeGeo, eyeMatWhite);
-    small.scale.set(0.016 * layout.s, 0.018 * layout.s, 0.012 * layout.s);
-    small.position.set(side * w * 0.02, h * 0.02, d * 1.15);
-    small.castShadow = false;
-    small.renderOrder = 3;
-    open.add(eye, big, small);
-    const happy = new Mesh(new TorusGeometry(w * 1.02, h * 0.2, 8, 18, arc), mat);
+    const sclera = flatMesh(eyeGeo, scleraMat, [w, h, d], [0, 0, 0], 2);
+    const ring = new Mesh(new TorusGeometry(Math.max(w, h) * 0.92, 0.01 * s, 6, 18), lineMat);
+    ring.position.z = d * 0.35;
+    ring.castShadow = false;
+    ring.renderOrder = 3;
+    const irisMesh = flatMesh(eyeGeo, iris, [w * 0.74, h * 0.72, d * 0.55], [0, -h * 0.04, d * 0.62], 4);
+    const pupil = flatMesh(eyeGeo, pupilMat, [w * 0.34, h * 0.36, d * 0.4], [0, -h * 0.05, d * 0.95], 5);
+    const big = flatMesh(
+      eyeGeo,
+      catchMat,
+      [0.02 * s, 0.024 * s, 0.012 * s],
+      [side * w * 0.28, h * 0.22, d * 1.15],
+      6,
+    );
+    const small = flatMesh(
+      eyeGeo,
+      catchMat,
+      [0.011 * s, 0.012 * s, 0.008 * s],
+      [-side * w * 0.12, -h * 0.02, d * 1.22],
+      6,
+    );
+    const lid = flatMesh(eyeGeo, lineMat, [w * 1.02, h * 0.11, d * 0.5], [0, h * 0.9, d * 0.55], 7);
+    open.add(sclera, ring, irisMesh, pupil, big, small, lid);
+    if (layout.brow) {
+      const brow = flatMesh(eyeGeo, lineMat, [w * 0.62, h * 0.08, d * 0.3], [side * w * 0.12, h * 1.42, d * 0.15], 3);
+      brow.rotation.z = -side * 0.28;
+      socket.add(brow);
+    }
+    const happy = new Mesh(new TorusGeometry(w * 1.05, h * 0.16, 8, 16, arc), lineMat);
     happy.rotation.z = Math.PI / 2 - arc / 2;
-    happy.position.z = 0.02;
+    happy.position.z = d * 0.4;
     happy.castShadow = false;
     happy.visible = false;
-    happy.renderOrder = 2;
-    const sleepy = new Mesh(new TorusGeometry(w * 0.92, h * 0.15, 8, 14, sleepArc), mat);
+    happy.renderOrder = 4;
+    const sleepy = new Mesh(new TorusGeometry(w * 0.95, h * 0.13, 8, 14, sleepArc), lineMat);
     sleepy.rotation.z = -Math.PI / 2 - sleepArc / 2;
-    sleepy.scale.y = 0.72;
-    sleepy.position.z = 0.02;
+    sleepy.scale.y = 0.65;
+    sleepy.position.set(0, -h * 0.05, d * 0.4);
     sleepy.castShadow = false;
     sleepy.visible = false;
-    sleepy.renderOrder = 2;
+    sleepy.renderOrder = 4;
     socket.add(open, happy, sleepy);
     rig.add(socket);
     sockets.push({ open, happy, sleepy });
   }
-  return { rig, sockets };
+  return { rig, sockets, layout };
 }
 
 function addWhiskers(head, anchor, color) {
@@ -297,46 +332,126 @@ function addTailTip(animal, tail, baseMat) {
   tail.add(puff);
 }
 
-function addAnimalFeatures(animal, head, anchor) {
+const FACE = {
+  dog: { nose: [0, 0.36, 0.74, 0.1, 0.07, 0.055, 0x5a3a2a], muzzle: [0xfff1dc, 0, -0.06, 0.14, 0.22, 0.14, 0.14], mouth: [-0.14, 0.16, 1] },
+  cat: { nose: [0, -0.16, 0.05, 0.07, 0.05, 0.045, 0xff8fb0], muzzle: [0xfff4f8, 0, -0.12, 0.04, 0.16, 0.1, 0.08], mouth: [-0.2, 0.04, 0.85], whisker: 0x6a5088 },
+  bunny: { nose: [0, -0.14, 0.04, 0.06, 0.045, 0.04, 0xff7fa3], muzzle: [0xfff7fb, 0, -0.1, 0.035, 0.14, 0.09, 0.07], mouth: [-0.18, 0.04, 0.8] },
+  penguin: { mouth: [-0.32, 0.02, 0.65] },
+  horse: { nose: [0.1, 0.34, 0.86, 0.045, 0.035, 0.03, 0x8a5a4a], nose2: [-0.1, 0.34, 0.86, 0.045, 0.035, 0.03, 0x8a5a4a], mouth: [-0.12, 0.22, 0.95] },
+  monkey: { muzzle: [0xffe0c2, 0, -0.14, 0.08, 0.18, 0.12, 0.1], mouth: [-0.22, 0.08, 1.05], nose: [0, -0.08, 0.12, 0.05, 0.04, 0.035, 0xc4896a] },
+  tiger: { nose: [0, 0.38, 0.7, 0.09, 0.06, 0.05, 0xff7a9a], mouth: [-0.14, 0.14, 1], whisker: 0x3a2a38 },
+  shark: { mouth: [-0.16, 0.05, 1] },
+  pig: { nose: [0.07, 0.42, 0.78, 0.04, 0.05, 0.028, 0xc85a78], nose2: [-0.07, 0.42, 0.78, 0.04, 0.05, 0.028, 0xc85a78], mouth: [-0.22, 0.12, 0.72] },
+  axolotl: { muzzle: [0xffe4f0, 0, -0.08, 0.04, 0.16, 0.1, 0.08], mouth: [-0.16, 0.04, 0.88], nose: [0, -0.06, 0.08, 0.04, 0.03, 0.03, 0xff8fb8] },
+  capybara: { nose: [0, 0.5, 0.8, 0.14, 0.06, 0.045, 0x6a4632], mouth: [-0.16, 0.16, 0.9] },
+  dragon: { muzzle: [0xe9ffe8, 0, -0.1, 0.04, 0.15, 0.1, 0.08], mouth: [-0.2, 0.04, 0.85], nose: [0, -0.08, 0.08, 0.045, 0.035, 0.03, 0x2e8b64] },
+};
+
+function addClipartMouth(head, anchor, spec) {
   const eyeY = anchor ? anchor.position.y : 0.5;
   const eyeZ = anchor ? anchor.position.z : 0.56;
-  if (animal === 'cat') {
-    addWhiskers(head, anchor, 0x6a5088);
-    addBead(head, new Vector3(0, eyeY - 0.16, eyeZ + 0.04), [0.075, 0.055, 0.05], 0xff8fb0);
-  } else if (animal === 'tiger') {
-    addWhiskers(head, anchor, 0x3a2a38);
-    addBead(head, new Vector3(0, 0.4, 0.68), [0.09, 0.065, 0.055], 0xff7a9a);
+  const [dy, dz, scale] = spec;
+  const mouth = new Group();
+  mouth.name = 'clipart_mouth';
+  const cavity = flatMesh(eyeGeo, mouthMat, [0.085, 0.05, 0.04], [0, 0, 0], 3);
+  const tongue = flatMesh(eyeGeo, tongueMat, [0.05, 0.038, 0.032], [0, -0.02, 0.028], 4);
+  mouth.add(cavity, tongue);
+  mouth.position.set(0, eyeY + dy, eyeZ + dz);
+  mouth.scale.setScalar(scale);
+  mouth.userData.base = scale;
+  head.add(mouth);
+  return mouth;
+}
+
+function addPawPads(foot) {
+  if (!foot) return;
+  const spots = [
+    [0, -0.02, 0.11, 0.048],
+    [-0.038, 0.02, 0.12, 0.024],
+    [0.038, 0.02, 0.12, 0.024],
+    [0, 0.045, 0.11, 0.02],
+  ];
+  for (const [x, y, z, s] of spots) {
+    foot.add(flatMesh(eyeGeo, padMat, [s, s * 0.55, s * 0.75], [x, y, z], 2));
+  }
+}
+
+function addInnerEars(animal, nodes, head) {
+  const pink = new MeshBasicMaterial({ color: 0xffb7cb });
+  const ears = nodes.ears;
+  if (ears) {
+    for (const side of [-1, 1]) {
+      ears.add(flatMesh(eyeGeo, pink, [0.07, 0.09, 0.03], [side * 0.12, 0.06, 0.1], 2));
+    }
+    return;
+  }
+  if (!head) return;
+  if (animal === 'bunny') {
+    for (const side of [-1, 1]) {
+      head.add(flatMesh(eyeGeo, pink, [0.055, 0.16, 0.03], [side * 0.22, 0.78, 0.12], 2));
+    }
   } else if (animal === 'dog') {
-    addBead(head, new Vector3(0, 0.4, 0.72), [0.105, 0.075, 0.06], 0x2a211c);
-  } else if (animal === 'bunny') {
-    addBead(head, new Vector3(0, eyeY - 0.15, eyeZ + 0.035), [0.062, 0.048, 0.04], 0xff7fa3);
-  } else if (animal === 'horse') {
-    addBead(head, new Vector3(0.1, 0.34, 0.84), [0.05, 0.04, 0.035], 0x8a5a4a);
-    addBead(head, new Vector3(-0.1, 0.34, 0.84), [0.05, 0.04, 0.035], 0x8a5a4a);
-  } else if (animal === 'pig') {
-    addBead(head, new Vector3(0.07, 0.42, 0.76), [0.045, 0.055, 0.03], 0xc85a78);
-    addBead(head, new Vector3(-0.07, 0.42, 0.76), [0.045, 0.055, 0.03], 0xc85a78);
-  } else if (animal === 'capybara') {
-    addBead(head, new Vector3(0, 0.5, 0.78), [0.16, 0.07, 0.05], 0x6a4632);
-  } else if (animal === 'penguin') {
+    for (const side of [-1, 1]) {
+      head.add(flatMesh(eyeGeo, pink, [0.07, 0.12, 0.03], [side * 0.4, 0.18, 0.08], 2));
+    }
+  }
+}
+
+function addFluff(animal, body) {
+  if (!body) return;
+  const colors = { bunny: 0xfff4f8, dog: 0xfff1dc, cat: 0xf7f0ff, tiger: 0xfff6ea };
+  if (!colors[animal]) return;
+  const mat = vinyl(colors[animal], 0.55);
+  const tuft = new Mesh(new SphereGeometry(1, 12, 10), mat);
+  tuft.scale.set(0.16, 0.12, 0.1);
+  tuft.position.set(0, 0.42, 0.28);
+  tuft.castShadow = true;
+  body.add(tuft);
+}
+
+function addAnimalFeatures(animal, head, anchor) {
+  const spec = FACE[animal];
+  let mouth = null;
+  if (!spec || !head) return mouth;
+  if (spec.whisker) addWhiskers(head, anchor, spec.whisker);
+  if (spec.nose) {
+    const n = spec.nose;
+    const eyeY = anchor ? anchor.position.y : 0.5;
+    const eyeZ = anchor ? anchor.position.z : 0.56;
+    const pos = n[1] > 0 && n[2] > 0.4 ? new Vector3(n[0], n[1], n[2]) : new Vector3(n[0], eyeY + n[1], eyeZ + n[2]);
+    addBead(head, pos, [n[3], n[4], n[5]], n[6]);
+  }
+  if (spec.nose2) {
+    const n = spec.nose2;
+    addBead(head, new Vector3(n[0], n[1], n[2]), [n[3], n[4], n[5]], n[6]);
+  }
+  if (spec.muzzle) {
+    const m = spec.muzzle;
+    const eyeY = anchor ? anchor.position.y : 0.5;
+    const eyeZ = anchor ? anchor.position.z : 0.56;
+    const mesh = new Mesh(new SphereGeometry(1, 16, 12), vinyl(m[0], 0.4));
+    mesh.scale.set(m[4], m[5], m[6]);
+    mesh.position.set(m[1], eyeY + m[2], eyeZ + m[3]);
+    mesh.castShadow = true;
+    head.add(mesh);
+  }
+  if (spec.mouth) mouth = addClipartMouth(head, anchor, spec.mouth);
+  if (animal === 'penguin') {
+    const eyeY = anchor ? anchor.position.y : 0.5;
+    const eyeZ = anchor ? anchor.position.z : 0.56;
     const beak = new Mesh(new SphereGeometry(1, 16, 12), vinyl(0xffa23a, 0.35));
-    beak.scale.set(0.2, 0.12, 0.16);
-    beak.position.set(0, eyeY - 0.2, eyeZ + 0.05);
+    beak.scale.set(0.2, 0.11, 0.15);
+    beak.position.set(0, eyeY - 0.18, eyeZ + 0.06);
     beak.castShadow = true;
     head.add(beak);
-    const arc = Math.PI * 0.72;
-    const smile = new Mesh(new TorusGeometry(0.09, 0.018, 8, 16, arc), smileMat);
-    smile.rotation.z = -Math.PI / 2 - arc / 2;
-    smile.position.set(0, beak.position.y - 0.11, eyeZ + 0.02);
-    smile.castShadow = false;
-    smile.renderOrder = 2;
-    head.add(smile);
   }
+  return mouth;
 }
 
 function resetCartoonEyes(pet) {
   if (!pet.face) return;
   for (const socket of pet.face.sockets) socket.open.scale.set(1, 1, 1);
+  if (pet.face.mouth) pet.face.mouth.scale.setScalar(pet.face.mouth.userData.base || 1);
 }
 
 function showCartoonEyes(pet, which) {
@@ -437,7 +552,7 @@ function prepare(gltf) {
       }
     }
   });
-  for (const name of ['eyes_open', 'eyes_happy', 'eyes_sleepy', 'mouth_open']) {
+  for (const name of ['eyes_open', 'eyes_happy', 'eyes_sleepy', 'mouth', 'mouth_open']) {
     if (nodes[name]) nodes[name].visible = false;
   }
   const bases = {};
@@ -448,8 +563,12 @@ function prepare(gltf) {
   const face = nodes.head ? buildCartoonEyes(animal, nodes.eyes_open) : null;
   if (face && nodes.head) {
     nodes.head.add(face.rig);
-    addAnimalFeatures(animal, nodes.head, nodes.eyes_open);
+    face.mouth = addAnimalFeatures(animal, nodes.head, nodes.eyes_open);
   }
+  addInnerEars(animal, nodes, nodes.head);
+  addPawPads(nodes.foot_L);
+  addPawPads(nodes.foot_R);
+  addFluff(animal, nodes.body);
   addTailTip(animal, nodes.tail, [...baseMats][0]);
   return {
     root,
@@ -485,8 +604,8 @@ function applyColors() {
   const baseHex = natural ? current.baseColor : state.swatch;
   const base = new Color(baseHex);
   const belly = natural
-    ? new Color(current.bellyColor)
-    : base.clone().lerp(new Color(0xffffff), 0.7);
+    ? new Color(current.bellyColor).lerp(new Color(0xfff7f2), 0.25)
+    : base.clone().lerp(new Color(0xffffff), 0.78);
   for (const mat of current.baseMats) mat.color.copy(base);
   for (const mat of current.bellyMats) mat.color.copy(belly);
 }
@@ -500,8 +619,10 @@ function showEyes(which) {
 
 function showMouth(open) {
   const nodes = current.nodes;
-  if (nodes.mouth) nodes.mouth.visible = !open;
-  if (nodes.mouth_open) nodes.mouth_open.visible = open && !!nodes.mouth_open;
+  if (nodes.mouth) nodes.mouth.visible = false;
+  if (nodes.mouth_open) nodes.mouth_open.visible = false;
+  const mouth = current.face && current.face.mouth;
+  if (mouth) mouth.scale.setScalar((mouth.userData.base || 1) * (open ? 1.18 : 1));
 }
 
 function smooth(t) {
@@ -540,6 +661,20 @@ function applyPose() {
   if (pet.bases.foot_R) {
     pet.bases.foot_R.obj.position.x = pet.bases.foot_R.p.x * bodySize;
     pet.bases.foot_R.obj.position.z = pet.bases.foot_R.p.z * bodySize;
+  }
+  if (head) {
+    head.obj.scale.set(head.s.x * 1.16, head.s.y * 1.18, head.s.z * 1.12);
+    head.obj.position.y += 0.06;
+  }
+  if (body) {
+    body.obj.scale.x *= 1.06;
+    body.obj.scale.z *= 1.1;
+    body.obj.scale.y *= 0.84;
+  }
+  for (const name of ['arm_L', 'arm_R', 'foot_L', 'foot_R']) {
+    const limb = pet.bases[name];
+    if (!limb) continue;
+    limb.obj.scale.set(limb.s.x * 0.78, limb.s.y * 0.74, limb.s.z * 0.78);
   }
 
   const mode = state.mode;
