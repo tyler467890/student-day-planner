@@ -797,7 +797,7 @@ test('screenshots', async ({ browser }) => {
   await page.screenshot({ path: `${ART}/add-edit-sheet.png` });
   await page.locator('.sheet').getByRole('button', { name: 'Cancel', exact: true }).click();
 
-  await page.getByRole('button', { name: 'Customize your pet' }).click();
+  await page.getByRole('button', { name: 'Your pet' }).click();
   await expect(page.getByRole('heading', { name: 'Your pet' })).toBeVisible();
   await page.getByRole('button', { name: 'Hat', exact: true }).click();
   await page.getByRole('button', { name: 'Pet colour Sunny yellow' }).click();

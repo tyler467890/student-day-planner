@@ -618,9 +618,9 @@ body.sheet-open .fab { visibility: hidden; }
 
 .pet-hero {
   position: relative;
-  width: min(100%, 22rem);
-  height: min(38vh, 340px);
-  min-height: 240px;
+  width: min(100%, 20rem);
+  height: min(32vh, 280px);
+  min-height: 210px;
   margin: 4px auto 0;
 }
 .pet-canvas {
@@ -711,9 +711,9 @@ body.sheet-open .fab { visibility: hidden; }
 
 @media (min-width: 900px) {
   .pet-hero {
-    width: min(100%, 28rem);
-    height: min(46vh, 420px);
-    min-height: 300px;
+    width: min(100%, 26rem);
+    height: min(40vh, 380px);
+    min-height: 280px;
   }
   .pet-setup .pet-hero,
   .pet-screen .pet-hero {

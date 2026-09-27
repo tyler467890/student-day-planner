@@ -935,8 +935,7 @@ function paintPetFallback() {
   if (name) name.textContent = petLabel(S.settings.pet?.animal);
   const btn = petHolder?.querySelector('.pet-open');
   if (!btn) return;
-  const canEdit = S.settings.setupComplete && S.screen !== 'pet';
-  btn.setAttribute('aria-label', canEdit ? 'Customize your pet' : 'Your pet');
+  btn.setAttribute('aria-label', 'Your pet');
 }
 
 function ensurePetHolder() {
