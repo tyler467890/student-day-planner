@@ -37,7 +37,8 @@ async function skipToToday(page) {
   await expect(skip.or(notNow)).toBeVisible();
   if (await skip.isVisible()) await skip.click();
   await notNow.click();
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await page.getByRole('button', { name: 'This is my pet' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'My Day' })).toBeVisible();
 }
 
 async function addItem(page, { title, category, difficulty, time, days, remind, save = 'click' }) {
@@ -67,7 +68,7 @@ async function openCard(page, title) {
   await page.locator('.card-main', { hasText: title }).first().click();
 }
 
-test('first launch shows 3 steps and step 1 cannot be skipped', async ({ page }) => {
+test('first launch shows 4 steps and step 1 cannot be skipped', async ({ page }) => {
   await useClock(page, '2026-09-25T15:00:00-04:00');
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Make it yours' })).toBeVisible();
@@ -78,8 +79,13 @@ test('first launch shows 3 steps and step 1 cannot be skipped', async ({ page })
   await page.getByRole('button', { name: 'Skip for now' }).click();
   await expect(page.getByRole('heading', { name: 'Want a nudge before classes and tasks?' })).toBeVisible();
   await page.getByRole('button', { name: 'Not now' }).click();
+  await expect(page.getByRole('heading', { name: 'Pick your pet' })).toBeVisible();
+  await page.getByRole('button', { name: 'Cat', exact: true }).click();
+  await page.getByRole('button', { name: 'This is my pet' }).click();
   await expect(page.getByText('Nothing planned yet. Add your first class or task.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Add', exact: true })).toBeVisible();
+  const pet = await page.evaluate(() => window.__dayli.getState().settings.pet);
+  expect(pet.animal).toBe('cat');
 });
 
 test('iPhone shows install steps; standalone skips step 2 and enables reminders', async ({ browser }) => {
@@ -587,6 +593,7 @@ test('themes and fonts apply and persist', async ({ page }) => {
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Skip for now' }).click();
   await page.getByRole('button', { name: 'Not now' }).click();
+  await page.getByRole('button', { name: 'This is my pet' }).click();
   await expect(page.getByRole('button', { name: 'Customize' })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'mint');
   await page.reload();
@@ -662,6 +669,7 @@ test('backup, restore, erase, persist, reload and offline', async ({ page, conte
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Skip for now' }).click();
   await page.getByRole('button', { name: 'Not now' }).click();
+  await page.getByRole('button', { name: 'This is my pet' }).click();
   await page.getByRole('button', { name: 'Customize' }).click();
 
   await page.locator('#restore-file').setInputFiles(file);
@@ -753,13 +761,30 @@ test('screenshots', async ({ browser }) => {
   await expect(page.getByRole('button', { name: 'Turn on reminders' })).toBeDisabled();
   await page.screenshot({ path: `${ART}/first-run-3.png` });
   await page.getByRole('button', { name: 'Not now' }).click();
+  await expect(page.getByRole('heading', { name: 'Pick your pet' })).toBeVisible();
+  await page.screenshot({ path: `${ART}/pet-picker.png` });
+  await page.getByRole('button', { name: 'Cat', exact: true }).click();
+  await page.getByRole('button', { name: 'This is my pet' }).click();
 
   await addItem(page, { title: 'Biology 101', category: 'Class', time: '09:00', days: ['Monday', 'Wednesday', 'Friday'] });
   await addItem(page, { title: 'Chemistry lab', category: 'Class', time: '11:00', difficulty: 'Medium' });
   await addItem(page, { title: 'Finish essay intro', difficulty: 'Hard' });
   await addItem(page, { title: 'Gym', time: '17:00', category: 'Personal' });
   await expect(page.getByRole('heading', { name: "Tyler's Day" })).toBeVisible();
+  await page.waitForFunction(() => {
+    const el = document.querySelector('#pet-hero');
+    return el && (el.dataset.state === 'ready' || el.dataset.state === 'fallback');
+  });
+  await page.waitForTimeout(400);
   await page.screenshot({ path: `${ART}/today-list.png` });
+  await page.screenshot({ path: `${ART}/today-pet-phone.png` });
+
+  await page.getByRole('button', { name: /Mark Finish essay intro done, hard, 20 points/ }).click();
+  await expect(page.locator('.points-float, .particle').first()).toBeVisible();
+  await page.waitForFunction(() => ['wave', 'jump', 'celebrate'].includes(window.__dayli.petMode()));
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: `${ART}/pet-reaction.png` });
+  await page.screenshot({ path: `${ART}/completion-moment.png` });
 
   await page.getByRole('button', { name: 'Customize' }).click();
   await page.getByRole('button', { name: 'Timeline', exact: true }).click();
@@ -772,6 +797,14 @@ test('screenshots', async ({ browser }) => {
   await page.screenshot({ path: `${ART}/add-edit-sheet.png` });
   await page.locator('.sheet').getByRole('button', { name: 'Cancel', exact: true }).click();
 
+  await page.getByRole('button', { name: 'Customize your pet' }).click();
+  await expect(page.getByRole('heading', { name: 'Your pet' })).toBeVisible();
+  await page.getByRole('button', { name: 'Hat', exact: true }).click();
+  await page.getByRole('button', { name: 'Pet colour Sunny yellow' }).click();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: `${ART}/pet-customizer.png` });
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+
   await page.getByRole('button', { name: 'Customize' }).click();
   await page.locator('#bg-file').setInputFiles('tests/fixtures/photo.jpg');
   await page.getByRole('button', { name: 'Save photo' }).click();
@@ -779,10 +812,6 @@ test('screenshots', async ({ browser }) => {
   await page.screenshot({ path: `${ART}/customize-photo.png` });
   await page.getByRole('button', { name: 'List', exact: true }).click();
   await page.getByRole('button', { name: 'Back', exact: true }).click();
-
-  await page.getByRole('button', { name: /Mark Finish essay intro done, hard, 20 points/ }).click();
-  await expect(page.locator('.points-float, .particle').first()).toBeVisible();
-  await page.screenshot({ path: `${ART}/completion-moment.png` });
 
   await page.getByRole('button', { name: /Mark Biology 101 done, medium, 10 points/ }).click();
   await page.getByRole('button', { name: 'Nice' }).click({ timeout: 1500 }).catch(() => {});
@@ -807,7 +836,13 @@ test('screenshots', async ({ browser }) => {
   await addItem(wide, { title: 'Chemistry lab', category: 'Class', time: '11:00' });
   await addItem(wide, { title: 'Finish essay intro', difficulty: 'Hard' });
   await addItem(wide, { title: 'Gym', time: '17:00' });
+  await wide.waitForFunction(() => {
+    const el = document.querySelector('#pet-hero');
+    return el && (el.dataset.state === 'ready' || el.dataset.state === 'fallback');
+  });
+  await wide.waitForTimeout(400);
   await wide.screenshot({ path: `${ART}/today-desktop.png` });
+  await wide.screenshot({ path: `${ART}/today-pet-desktop.png` });
   await desktop.close();
 });
 

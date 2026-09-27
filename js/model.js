@@ -71,6 +71,62 @@ export function defaultCategories() {
   ];
 }
 
+export const PET_ANIMALS = [
+  ['dog', 'Dog'],
+  ['cat', 'Cat'],
+  ['bunny', 'Bunny'],
+  ['penguin', 'Penguin'],
+  ['horse', 'Horse'],
+  ['monkey', 'Monkey'],
+  ['tiger', 'Tiger'],
+  ['shark', 'Shark'],
+  ['pig', 'Pig'],
+  ['axolotl', 'Axolotl'],
+  ['capybara', 'Capybara'],
+  ['dragon', 'Dragon'],
+];
+
+export const PET_COLOURS = [
+  { name: 'Natural', hex: null },
+  { name: 'Sunny yellow', hex: '#FFD23F' },
+  { name: 'Peach', hex: '#FFB086' },
+  { name: 'Coral pink', hex: '#FF8AD4' },
+  { name: 'Lavender', hex: '#C4B5FD' },
+  { name: 'Sky blue', hex: '#7EC8FF' },
+  { name: 'Mint', hex: '#7DDFC3' },
+  { name: 'Cocoa', hex: '#A8704A' },
+];
+
+export function defaultPet() {
+  return {
+    animal: 'penguin',
+    color: null,
+    eyes: 'round',
+    cheeks: true,
+    hat: false,
+    height: 1,
+    body: 1,
+  };
+}
+
+export function normalizePet(saved) {
+  const base = defaultPet();
+  if (!saved || typeof saved !== 'object') return base;
+  const animal = PET_ANIMALS.some(([id]) => id === saved.animal) ? saved.animal : base.animal;
+  const eyes = saved.eyes === 'happy' || saved.eyes === 'sparkly' ? saved.eyes : 'round';
+  const height = Number(saved.height);
+  const body = Number(saved.body);
+  return {
+    animal,
+    color: normalizeHex(saved.color),
+    eyes,
+    cheeks: saved.cheeks !== false,
+    hat: Boolean(saved.hat),
+    height: Number.isFinite(height) ? Math.min(1.4, Math.max(0.75, height)) : 1,
+    body: Number.isFinite(body) ? Math.min(1.3, Math.max(0.8, body)) : 1,
+  };
+}
+
 export function defaultSettings() {
   return {
     id: 'main',
@@ -106,6 +162,7 @@ export function defaultSettings() {
     photoScrim: 'auto',
     photoBlur: 0,
     categories: defaultCategories(),
+    pet: defaultPet(),
     schemaVersion: 2,
   };
 }
@@ -719,6 +776,7 @@ export function migrateSettings(saved) {
     dayCompleteShown: { ...(saved.dayCompleteShown || {}) },
     dayCompleteAwarded: { ...(saved.dayCompleteAwarded || {}) },
     categories: Array.isArray(saved.categories) && saved.categories.length ? saved.categories : base.categories,
+    pet: normalizePet(saved.pet),
     id: 'main',
   };
   if (version < 2) merged.schemaVersion = 2;

@@ -1,6 +1,6 @@
 /* Dayli service worker: offline shell, push, and notification actions. */
 
-const CACHE = 'dayli-v2';
+const CACHE = 'dayli-v3';
 
 const ASSETS = [
   './',
@@ -12,6 +12,23 @@ const ASSETS = [
   './js/db.js',
   './js/push.js',
   './js/app.js',
+  './js/pet-stage.js',
+  './vendor/three.module.js',
+  './vendor/examples/jsm/loaders/GLTFLoader.js',
+  './vendor/examples/jsm/utils/BufferGeometryUtils.js',
+  './vendor/examples/jsm/libs/meshopt_decoder.module.js',
+  './models/dog.glb',
+  './models/cat.glb',
+  './models/bunny.glb',
+  './models/penguin.glb',
+  './models/horse.glb',
+  './models/monkey.glb',
+  './models/tiger.glb',
+  './models/shark.glb',
+  './models/pig.glb',
+  './models/axolotl.glb',
+  './models/capybara.glb',
+  './models/dragon.glb',
   './fonts/fonts.css',
   './fonts/OFL.txt',
   './fonts/nunito-400.woff2',

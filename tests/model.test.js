@@ -255,6 +255,22 @@ test('a v1 save keeps its theme, accent, and categories', () => {
   assert.equal(next.categories[0].name, 'Lecture');
   assert.equal(next.categories[0].color, '#1D63B8');
   assert.equal(next.setupComplete, true);
+  assert.equal(next.pet.animal, 'penguin');
+  assert.equal(next.pet.color, null);
+  assert.equal(next.pet.hat, false);
+  const kept = migrateSettings({
+    ...v1,
+    schemaVersion: 2,
+    pet: { animal: 'tiger', color: '#ffd23f', eyes: 'sparkly', cheeks: false, hat: true, height: 1.2, body: 0.9 },
+  });
+  assert.equal(kept.schemaVersion, 2);
+  assert.equal(kept.pet.animal, 'tiger');
+  assert.equal(kept.pet.color, '#FFD23F');
+  assert.equal(kept.pet.eyes, 'sparkly');
+  assert.equal(kept.pet.cheeks, false);
+  assert.equal(kept.pet.hat, true);
+  assert.equal(kept.pet.height, 1.2);
+  assert.equal(kept.title, "Sam's Day");
   const painted = paintColors(next);
   assert.equal(painted.bg, THEMES.ocean.bg);
   assert.equal(painted.text, THEMES.ocean.text);

@@ -14,7 +14,7 @@ const {
   isDayComplete, levelForPoints, levelProgress, levelTitle, displayLevel,
   upcomingReminders, reminderText, onAccent, autoScrim, burstCount, clone,
   zonedDateTime, weekStartOf, parseHM, migrateSettings, paintColors, fixTextColor,
-  normalizeHex, relativeLuminance,
+  normalizeHex, relativeLuminance, PET_ANIMALS, PET_COLOURS,
 } = model;
 
 const S = {
@@ -39,6 +39,12 @@ let levelPop = null;
 let sheetOpen = false;
 let sessionStarted = currentMs();
 let doneExpanded = false;
+let petHolder = null;
+let petStage = null;
+let petBoot = null;
+let petKey = '';
+let petPending = null;
+let petReturn = 'today';
 const highWater = { level: 1, celebrated: 1, shown: {} };
 
 const appEl = () => document.getElementById('app');
@@ -350,11 +356,15 @@ async function completeInstance(inst, { fromUndo = false } = {}) {
   await persistAll();
   render();
   if (!fromUndo) {
-    playComplete(inst, points, { ...day, ...level, streak: streak.streak, showDay });
+    const moment = { ...day, ...level, streak: streak.streak, showDay };
+    playComplete(inst, points, moment);
+    reactPet(petReactionKind(inst, moment));
     showUndo(`Done! +${points}`, async () => {
       restore(snap);
+      petPending = null;
       await persistAll();
       render();
+      petStage?.calm();
       syncPush();
     });
   }
@@ -881,22 +891,271 @@ function reminderStatus() {
   return { code: 'on', text: 'On. Reminders usually arrive on time.' };
 }
 
+function petLabel(id) {
+  return PET_ANIMALS.find(([key]) => key === id)?.[1] || 'Penguin';
+}
+
+function petOnScreen() {
+  if (!S.settings.setupComplete) return (S.settings.setupStep || 1) >= 4;
+  return !S.screen || S.screen === 'today' || S.screen === 'pet';
+}
+
+function isLateNight() {
+  const now = currentDate();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const start = parseHM(S.settings.dayStart || '04:00');
+  return mins >= 21 * 60 || mins < start.h * 60 + start.m;
+}
+
+function petReactionKind(inst, result) {
+  const mode = celebrationMode();
+  if (mode === 'off') return null;
+  if (mode !== 'full') return 'wave';
+  if (result.leveled || result.showDay || inst.difficulty === 'hard') return 'celebrate';
+  if (inst.difficulty === 'medium') return 'jump';
+  return 'wave';
+}
+
+function reactPet(kind) {
+  if (!kind) return;
+  if (!petStage || petHolder?.dataset.state !== 'ready') {
+    petPending = kind;
+    return;
+  }
+  petStage.react(kind);
+}
+
+function syncPetAmbient() {
+  if (!petStage) return;
+  petStage.setAmbient(isLateNight() ? 'sleepy' : 'idle');
+}
+
+function paintPetFallback() {
+  const name = petHolder?.querySelector('.pet-fallback-name');
+  if (name) name.textContent = petLabel(S.settings.pet?.animal);
+  const btn = petHolder?.querySelector('.pet-open');
+  if (!btn) return;
+  const canEdit = S.settings.setupComplete && S.screen !== 'pet';
+  btn.setAttribute('aria-label', canEdit ? 'Customize your pet' : 'Your pet');
+}
+
+function ensurePetHolder() {
+  if (petHolder) return petHolder;
+  petHolder = h('div', { id: 'pet-hero', class: 'pet-hero', dataset: { state: 'loading' } });
+  const canvas = h('canvas', { class: 'pet-canvas' });
+  const fallback = h('div', { class: 'pet-fallback', 'aria-hidden': 'true' },
+    h('span', { class: 'pet-fallback-face' }),
+    h('span', { class: 'pet-fallback-name', text: 'Pet' }));
+  const btn = h('button', {
+    type: 'button',
+    class: 'pet-open',
+    'aria-label': 'Your pet',
+    onclick: () => {
+      petStage?.poke();
+      if (!S.settings.setupComplete || S.screen === 'pet') return;
+      openPetScreen('today');
+    },
+  });
+  petHolder.append(canvas, fallback, btn);
+  return petHolder;
+}
+
+let petApply = Promise.resolve();
+
+function applyPetConfig() {
+  if (!petStage) return petApply;
+  petApply = petApply.then(() => {
+    const pet = S.settings.pet || model.defaultPet();
+    const key = JSON.stringify(pet);
+    return petStage.setPet(pet).then(() => {
+      petKey = key;
+      if (petHolder && petHolder.dataset.state !== 'fallback') petHolder.dataset.state = 'ready';
+    });
+  }).catch((err) => {
+    console.error(err);
+    if (petHolder) {
+      petHolder.dataset.state = 'fallback';
+      paintPetFallback();
+    }
+  });
+  return petApply;
+}
+
+function bootPet() {
+  if (petBoot) return petBoot;
+  petBoot = (async () => {
+    const mod = await import('./pet-stage.js');
+    if (!petHolder) return;
+    if (!mod.webglAvailable()) {
+      petHolder.dataset.state = 'fallback';
+      paintPetFallback();
+      return;
+    }
+    petStage = mod.createPetStage(petHolder.querySelector('canvas'));
+    await applyPetConfig();
+    if (!petHolder || petHolder.dataset.state === 'fallback') return;
+    petHolder.dataset.state = 'ready';
+    syncPetAmbient();
+    petStage.setActive(petOnScreen());
+    petStage.resize();
+    if (petPending) {
+      const kind = petPending;
+      petPending = null;
+      petStage.react(kind);
+    }
+  })().catch((err) => {
+    console.error(err);
+    if (petHolder) {
+      petHolder.dataset.state = 'fallback';
+      paintPetFallback();
+    }
+  });
+  return petBoot;
+}
+
+function mountPet(parent) {
+  const holder = ensurePetHolder();
+  paintPetFallback();
+  parent.append(holder);
+  bootPet().then(() => {
+    if (!petStage || !petHolder || petHolder.dataset.state === 'fallback') return;
+    if (JSON.stringify(S.settings.pet) !== petKey) applyPetConfig();
+    petStage.setActive(petOnScreen());
+    syncPetAmbient();
+    requestAnimationFrame(() => petStage?.resize());
+  });
+  return holder;
+}
+
+function openPetScreen(from) {
+  petReturn = from || 'today';
+  S.screen = 'pet';
+  render();
+}
+
+function updatePet(patch, { redraw = true } = {}) {
+  S.settings.pet = { ...(S.settings.pet || model.defaultPet()), ...patch };
+  persistAll();
+  if (redraw) render();
+  else applyPetConfig();
+}
+
+function renderAnimalGrid() {
+  const current = S.settings.pet?.animal || 'penguin';
+  return h('div', { class: 'pet-animals', role: 'group', 'aria-label': 'Animal' },
+    PET_ANIMALS.map(([id, label]) => h('button', {
+      type: 'button',
+      'aria-pressed': current === id ? 'true' : 'false',
+      onclick: () => updatePet({ animal: id }),
+    }, label)));
+}
+
+function renderPetControls() {
+  const pet = S.settings.pet || model.defaultPet();
+  const wrap = h('div', { class: 'pet-controls' });
+  wrap.append(h('p', { class: 'field-label', text: 'Animal' }), renderAnimalGrid());
+  wrap.append(h('p', { class: 'field-label', text: 'Colour' }));
+  const colours = h('div', { class: 'pet-colours', role: 'group', 'aria-label': 'Pet colour' });
+  for (const swatch of PET_COLOURS) {
+    const selected = swatch.hex ? pet.color === swatch.hex : !pet.color;
+    colours.append(h('button', {
+      type: 'button',
+      'aria-label': swatch.hex ? `Pet colour ${swatch.name}` : 'Natural pet colour',
+      'aria-pressed': selected ? 'true' : 'false',
+      style: swatch.hex ? `background:${swatch.hex}` : 'background:linear-gradient(135deg,#fff,#d9d3ea)',
+      onclick: () => updatePet({ color: swatch.hex }),
+    }));
+  }
+  const picker = h('input', {
+    type: 'color',
+    'aria-label': 'Custom pet colour',
+    value: (pet.color || '#7EC8FF').toLowerCase(),
+  });
+  picker.addEventListener('change', () => {
+    const hex = normalizeHex(picker.value);
+    if (hex) updatePet({ color: hex });
+  });
+  const customOn = Boolean(pet.color && !PET_COLOURS.some((swatch) => swatch.hex === pet.color));
+  colours.append(h('label', { class: `color-chip${customOn ? ' is-selected' : ''}` }, picker));
+  wrap.append(colours);
+  wrap.append(h('p', { class: 'field-label', text: 'Face' }));
+  wrap.append(h('div', { class: 'chips' },
+    ['round', 'happy', 'sparkly'].map((eyes) => h('button', {
+      type: 'button',
+      class: `chip${pet.eyes === eyes ? ' is-selected' : ''}`,
+      onclick: () => updatePet({ eyes }),
+    }, eyes === 'round' ? 'Round eyes' : eyes === 'happy' ? 'Happy eyes' : 'Sparkly eyes')),
+    h('button', {
+      type: 'button',
+      class: `chip${pet.cheeks ? ' is-selected' : ''}`,
+      'aria-pressed': pet.cheeks ? 'true' : 'false',
+      onclick: () => updatePet({ cheeks: !pet.cheeks }),
+    }, 'Cheeks'),
+    h('button', {
+      type: 'button',
+      class: `chip${pet.hat ? ' is-selected' : ''}`,
+      'aria-pressed': pet.hat ? 'true' : 'false',
+      onclick: () => updatePet({ hat: !pet.hat }),
+    }, 'Hat')));
+  const height = h('input', {
+    type: 'range', min: '0.75', max: '1.4', step: '0.01', value: String(pet.height || 1), 'aria-label': 'Height',
+  });
+  const body = h('input', {
+    type: 'range', min: '0.8', max: '1.3', step: '0.01', value: String(pet.body || 1), 'aria-label': 'Body size',
+  });
+  const live = (key, input) => {
+    input.addEventListener('input', () => updatePet({ [key]: Number(input.value) }, { redraw: false }));
+  };
+  live('height', height);
+  live('body', body);
+  wrap.append(h('div', { class: 'pet-sliders' },
+    h('label', {}, 'Height', height),
+    h('label', {}, 'Body size', body)));
+  return wrap;
+}
+
+function renderPet() {
+  const page = h('main', { class: 'shell settings pet-screen' });
+  page.append(h('header', { class: 'top-row' },
+    h('button', {
+      type: 'button',
+      class: 'icon-btn',
+      'aria-label': 'Back',
+      onclick: () => { S.screen = petReturn || 'today'; render(); },
+    }, icon(I.left)),
+    h('h1', { class: 'setup-title', text: 'Your pet' })));
+  const stage = h('div', { class: 'pet-setup-stage' });
+  mountPet(stage);
+  page.append(stage, renderPetControls());
+  return page;
+}
+
 function render() {
   applyChrome();
   const root = appEl();
+  if (petHolder) petHolder.remove();
   root.replaceChildren();
   if (!S.settings.setupComplete) root.append(renderSetup());
   else if (S.screen === 'customize') root.append(renderCustomize());
   else if (S.screen === 'help') root.append(renderHelp());
+  else if (S.screen === 'pet') root.append(renderPet());
   else root.append(renderToday());
   renderOverlayBits();
+  if (petStage) {
+    petStage.setActive(petOnScreen());
+    if (petOnScreen()) {
+      syncPetAmbient();
+      petStage.resize();
+    }
+  }
 }
 
 function renderSetup() {
   const step = S.settings.setupStep || 1;
   if (step === 1) return renderSetup1();
   if (step === 2) return renderSetup2();
-  return renderSetup3();
+  if (step === 3) return renderSetup3();
+  return renderSetup4();
 }
 
 function renderSetup1() {
@@ -1040,7 +1299,7 @@ function renderSetup3() {
     onclick: async () => {
       if (iosBlocked) return;
       await turnOnReminders();
-      S.settings.setupComplete = true;
+      S.settings.setupStep = 4;
       await persistAll();
       render();
     },
@@ -1057,12 +1316,36 @@ function renderSetup3() {
       type: 'button',
       class: 'btn ghost',
       onclick: async () => {
-        S.settings.setupComplete = true;
+        S.settings.setupStep = 4;
         await persistAll();
         render();
       },
     }, 'Not now'),
     h('label', { class: 'check-row' }, morning, h('span', { text: 'Morning check-in at 8:00' })));
+}
+
+function renderSetup4() {
+  const section = h('section', { class: 'setup pet-setup' });
+  const stage = h('div', { class: 'pet-setup-stage' });
+  mountPet(stage);
+  section.append(
+    h('p', { class: 'wordmark', text: PRODUCT_NAME }),
+    h('h1', { class: 'setup-title', text: 'Pick your pet' }),
+    h('p', { class: 'lede', text: 'It sits in the middle of your day. You can change it any time.' }),
+    stage,
+    renderAnimalGrid(),
+    h('button', {
+      type: 'button',
+      class: 'btn primary',
+      onclick: async () => {
+        S.settings.setupComplete = true;
+        S.screen = 'today';
+        await persistAll();
+        render();
+      },
+    }, 'This is my pet'),
+  );
+  return section;
 }
 
 function renderToday() {
@@ -1083,7 +1366,7 @@ function renderToday() {
   const goal = S.settings.dailyGoal;
   const compsToday = S.completions.filter((c) => c.date === viewed);
 
-  const shell = h('main', { class: 'shell' });
+  const shell = h('main', { class: 'shell today' });
   const header = h('header', { class: 'top' });
   header.append(
     h('div', { class: 'top-row' },
@@ -1118,6 +1401,9 @@ function renderToday() {
     h('p', { class: 'chip points-chip', 'aria-label': `Today's points ${dayPoints}` },
       h('span', { class: 'num', text: `+${dayPoints}` }))));
   shell.append(header);
+  const petSlot = h('div', { class: 'pet-slot' });
+  mountPet(petSlot);
+  shell.append(petSlot);
 
   if (goal && goal.mode !== 'off') {
     const n = Number(goal.n) || 0;
@@ -1767,6 +2053,13 @@ function renderCustomize() {
   page.append(h('header', { class: 'top-row' },
     h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Back', onclick: () => { S.screen = 'today'; render(); } }, icon(I.left)),
     h('h1', { class: 'setup-title', text: 'Customize' })));
+  page.append(h('section', {},
+    h('h2', { text: 'Your pet' }),
+    h('button', {
+      type: 'button',
+      class: 'btn secondary',
+      onclick: () => openPetScreen('customize'),
+    }, 'Change pet')));
 
   const title = h('input', { class: 'text-input', maxlength: '30', 'aria-label': 'Title', value: s.title || '' });
   title.addEventListener('input', () => { s.title = title.value.slice(0, 30); persistAll(); });
@@ -2491,6 +2784,7 @@ async function boot() {
     render();
   });
   setInterval(checkDue, 30_000);
+  document.addEventListener('pointerdown', () => petStage?.poke());
   window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault();
     deferredPrompt = event;
@@ -2522,6 +2816,7 @@ async function boot() {
       background: S.background ? { width: S.background.width, height: S.background.height, brightness: S.background.brightness } : null,
     }),
     checkReminders: () => { checkDue(); },
+    petMode: () => petStage?.mode || null,
     buildUpcoming: () => upcomingReminders({
       tasks: S.tasks,
       overrides: S.overrides,
