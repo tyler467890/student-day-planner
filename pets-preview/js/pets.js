@@ -1,7 +1,7 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, Group, Mesh,
-  SphereGeometry, ConeGeometry, CylinderGeometry, PlaneGeometry,
-  MeshPhysicalMaterial, ShadowMaterial, Sprite, SpriteMaterial, CanvasTexture,
+  SphereGeometry, ConeGeometry, CylinderGeometry, TorusGeometry, PlaneGeometry,
+  MeshPhysicalMaterial, MeshBasicMaterial, ShadowMaterial, Sprite, SpriteMaterial, CanvasTexture,
   HemisphereLight, DirectionalLight,
   SRGBColorSpace, NoToneMapping, PCFSoftShadowMap,
   Vector3, Color,
@@ -44,8 +44,11 @@ const canvas = document.querySelector('#stage');
 const statusEl = document.querySelector('#pet-status');
 const scene = new Scene();
 const camera = new PerspectiveCamera(30, 1, 0.1, 40);
-let camZ = 3.7;
-camera.position.set(0, 1.2, camZ);
+const BASE_FOV = 30;
+let camZ = 3.35;
+let camY = 1.7;
+let lookY = 1.22;
+camera.position.set(0, camY, camZ);
 
 const renderer = new WebGLRenderer({
   canvas,
@@ -114,7 +117,8 @@ const state = {
   paused: false,
 };
 
-let userYaw = 0;
+let userYaw = -0.48;
+let grid = null;
 let current = null;
 const cache = new Map();
 const inflight = new Map();
@@ -162,6 +166,187 @@ zzzTex.colorSpace = SRGBColorSpace;
 const zzz = new Sprite(new SpriteMaterial({ map: zzzTex, transparent: true, depthWrite: false }));
 zzz.scale.set(0.42, 0.21, 1);
 zzz.visible = false;
+
+const BROWN_EYES = new Set(['bunny', 'dog', 'horse', 'pig', 'penguin', 'shark']);
+const EYE_LAYOUT = {
+  dog: { spread: 0.31, drop: 0.055, s: 1.02 },
+  cat: { spread: 0.3, drop: 0.05, s: 1.08 },
+  bunny: { spread: 0.29, drop: 0.05, s: 1.08 },
+  penguin: { spread: 0.25, drop: 0.04, s: 0.96 },
+  horse: { spread: 0.34, drop: 0.04, s: 1 },
+  monkey: { spread: 0.26, drop: 0.04, s: 0.96 },
+  tiger: { spread: 0.31, drop: 0.05, s: 1.04 },
+  shark: { spread: 0.31, drop: 0.03, s: 1 },
+  pig: { spread: 0.3, drop: 0.02, s: 1 },
+  axolotl: { spread: 0.35, drop: 0.04, s: 0.9 },
+  capybara: { spread: 0.33, drop: 0.015, s: 0.8 },
+  dragon: { spread: 0.3, drop: 0.05, s: 1.06 },
+};
+const eyeGeo = new SphereGeometry(1, 22, 16);
+const eyeMatDark = new MeshBasicMaterial({ color: 0x1a1424 });
+const eyeMatBrown = new MeshBasicMaterial({ color: 0x3a2418 });
+const eyeMatWhite = new MeshBasicMaterial({ color: 0xffffff });
+const smileMat = new MeshBasicMaterial({ color: 0x3a2418 });
+
+function buildCartoonEyes(animal, anchor) {
+  const layout = EYE_LAYOUT[animal] || { spread: 0.3, drop: 0.05, s: 1 };
+  const mat = BROWN_EYES.has(animal) ? eyeMatBrown : eyeMatDark;
+  const y = (anchor ? anchor.position.y : 0.5) - layout.drop;
+  const z = (anchor ? anchor.position.z : 0.56) + 0.045;
+  const w = 0.156 * layout.s;
+  const h = 0.172 * layout.s;
+  const d = 0.08 * layout.s;
+  const rig = new Group();
+  rig.name = 'cartoon_eyes';
+  const sockets = [];
+  const arc = Math.PI * 0.8;
+  const sleepArc = Math.PI * 0.58;
+  for (const side of [-1, 1]) {
+    const socket = new Group();
+    socket.position.set(side * layout.spread, y, z);
+    socket.rotation.y = -side * 0.1;
+    const open = new Group();
+    const eye = new Mesh(eyeGeo, mat);
+    eye.scale.set(w, h, d);
+    eye.castShadow = false;
+    eye.renderOrder = 2;
+    const big = new Mesh(eyeGeo, eyeMatWhite);
+    big.scale.set(0.03 * layout.s, 0.036 * layout.s, 0.018 * layout.s);
+    big.position.set(side * w * 0.34, h * 0.38, d * 0.95);
+    big.castShadow = false;
+    big.renderOrder = 3;
+    const small = new Mesh(eyeGeo, eyeMatWhite);
+    small.scale.set(0.016 * layout.s, 0.018 * layout.s, 0.012 * layout.s);
+    small.position.set(side * w * 0.02, h * 0.02, d * 1.15);
+    small.castShadow = false;
+    small.renderOrder = 3;
+    open.add(eye, big, small);
+    const happy = new Mesh(new TorusGeometry(w * 1.02, h * 0.2, 8, 18, arc), mat);
+    happy.rotation.z = Math.PI / 2 - arc / 2;
+    happy.position.z = 0.02;
+    happy.castShadow = false;
+    happy.visible = false;
+    happy.renderOrder = 2;
+    const sleepy = new Mesh(new TorusGeometry(w * 0.92, h * 0.15, 8, 14, sleepArc), mat);
+    sleepy.rotation.z = -Math.PI / 2 - sleepArc / 2;
+    sleepy.scale.y = 0.72;
+    sleepy.position.z = 0.02;
+    sleepy.castShadow = false;
+    sleepy.visible = false;
+    sleepy.renderOrder = 2;
+    socket.add(open, happy, sleepy);
+    rig.add(socket);
+    sockets.push({ open, happy, sleepy });
+  }
+  return { rig, sockets };
+}
+
+function addWhiskers(head, anchor, color) {
+  const mat = new MeshBasicMaterial({ color });
+  const geo = new CylinderGeometry(0.02, 0.008, 1, 6);
+  const y = (anchor ? anchor.position.y : 0.5) - 0.16;
+  const z = (anchor ? anchor.position.z : 0.56) + 0.02;
+  const rows = [
+    { dy: 0.055, pitch: 0.22 },
+    { dy: 0, pitch: 0.02 },
+    { dy: -0.05, pitch: -0.2 },
+  ];
+  for (const side of [-1, 1]) {
+    for (const row of rows) {
+      const len = 0.4;
+      const whisker = new Mesh(geo, mat);
+      whisker.scale.y = len;
+      whisker.rotation.z = side * Math.PI / 2;
+      whisker.rotation.x = row.pitch;
+      whisker.position.set(side * 0.4, y + row.dy, z);
+      whisker.castShadow = false;
+      head.add(whisker);
+    }
+  }
+}
+
+function addBead(head, position, scale, color) {
+  const bead = new Mesh(eyeGeo, new MeshBasicMaterial({ color }));
+  bead.scale.set(scale[0], scale[1], scale[2]);
+  bead.position.copy(position);
+  bead.castShadow = false;
+  bead.renderOrder = 2;
+  head.add(bead);
+  return bead;
+}
+
+function addTailTip(animal, tail, baseMat) {
+  if (!tail) return;
+  const specs = {
+    dog: { pos: [0.48, 0.22, -0.08], s: 0.16 },
+    cat: { pos: [0.5, 0.28, -0.02], s: 0.15 },
+    tiger: { pos: [0.5, 0.2, -0.08], s: 0.16 },
+    horse: { color: 0x9b7bea, pos: [0.46, 0.12, -0.12], s: 0.17 },
+    pig: { pos: [0.42, 0.18, -0.06], s: 0.12 },
+    monkey: { pos: [0.52, 0.24, 0.0], s: 0.12 },
+    bunny: { color: 0xfff7fb, pos: [0.42, 0.1, 0.02], s: 0.17 },
+  };
+  const spec = specs[animal];
+  if (!spec) return;
+  const mat = spec.color == null ? baseMat : vinyl(spec.color, 0.42);
+  if (!mat) return;
+  const puff = new Mesh(new SphereGeometry(1, 14, 10), mat);
+  puff.scale.set(spec.s, spec.s * 0.82, spec.s);
+  puff.position.set(spec.pos[0], spec.pos[1], spec.pos[2]);
+  puff.castShadow = true;
+  tail.add(puff);
+}
+
+function addAnimalFeatures(animal, head, anchor) {
+  const eyeY = anchor ? anchor.position.y : 0.5;
+  const eyeZ = anchor ? anchor.position.z : 0.56;
+  if (animal === 'cat') {
+    addWhiskers(head, anchor, 0x6a5088);
+    addBead(head, new Vector3(0, eyeY - 0.16, eyeZ + 0.04), [0.075, 0.055, 0.05], 0xff8fb0);
+  } else if (animal === 'tiger') {
+    addWhiskers(head, anchor, 0x3a2a38);
+    addBead(head, new Vector3(0, 0.4, 0.68), [0.09, 0.065, 0.055], 0xff7a9a);
+  } else if (animal === 'dog') {
+    addBead(head, new Vector3(0, 0.4, 0.72), [0.105, 0.075, 0.06], 0x2a211c);
+  } else if (animal === 'bunny') {
+    addBead(head, new Vector3(0, eyeY - 0.15, eyeZ + 0.035), [0.062, 0.048, 0.04], 0xff7fa3);
+  } else if (animal === 'horse') {
+    addBead(head, new Vector3(0.1, 0.34, 0.84), [0.05, 0.04, 0.035], 0x8a5a4a);
+    addBead(head, new Vector3(-0.1, 0.34, 0.84), [0.05, 0.04, 0.035], 0x8a5a4a);
+  } else if (animal === 'pig') {
+    addBead(head, new Vector3(0.07, 0.42, 0.76), [0.045, 0.055, 0.03], 0xc85a78);
+    addBead(head, new Vector3(-0.07, 0.42, 0.76), [0.045, 0.055, 0.03], 0xc85a78);
+  } else if (animal === 'capybara') {
+    addBead(head, new Vector3(0, 0.5, 0.78), [0.16, 0.07, 0.05], 0x6a4632);
+  } else if (animal === 'penguin') {
+    const beak = new Mesh(new SphereGeometry(1, 16, 12), vinyl(0xffa23a, 0.35));
+    beak.scale.set(0.2, 0.12, 0.16);
+    beak.position.set(0, eyeY - 0.2, eyeZ + 0.05);
+    beak.castShadow = true;
+    head.add(beak);
+    const arc = Math.PI * 0.72;
+    const smile = new Mesh(new TorusGeometry(0.09, 0.018, 8, 16, arc), smileMat);
+    smile.rotation.z = -Math.PI / 2 - arc / 2;
+    smile.position.set(0, beak.position.y - 0.11, eyeZ + 0.02);
+    smile.castShadow = false;
+    smile.renderOrder = 2;
+    head.add(smile);
+  }
+}
+
+function resetCartoonEyes(pet) {
+  if (!pet.face) return;
+  for (const socket of pet.face.sockets) socket.open.scale.set(1, 1, 1);
+}
+
+function showCartoonEyes(pet, which) {
+  if (!pet.face) return;
+  for (const socket of pet.face.sockets) {
+    socket.open.visible = which === 'open';
+    socket.happy.visible = which === 'happy';
+    socket.sleepy.visible = which === 'sleepy';
+  }
+}
 
 function capture(obj) {
   return {
@@ -252,17 +437,25 @@ function prepare(gltf) {
       }
     }
   });
-  for (const name of ['eyes_happy', 'eyes_sleepy', 'mouth_open']) {
+  for (const name of ['eyes_open', 'eyes_happy', 'eyes_sleepy', 'mouth_open']) {
     if (nodes[name]) nodes[name].visible = false;
   }
   const bases = {};
   for (const name of PARTS) {
     if (nodes[name]) bases[name] = capture(nodes[name]);
   }
+  const animal = info.userData.animal;
+  const face = nodes.head ? buildCartoonEyes(animal, nodes.eyes_open) : null;
+  if (face && nodes.head) {
+    nodes.head.add(face.rig);
+    addAnimalFeatures(animal, nodes.head, nodes.eyes_open);
+  }
+  addTailTip(animal, nodes.tail, [...baseMats][0]);
   return {
     root,
     nodes,
     bases,
+    face,
     baseMats: [...baseMats],
     bellyMats: [...bellyMats],
     baseColor: info.userData.baseColor || '#888888',
@@ -299,10 +492,10 @@ function applyColors() {
 }
 
 function showEyes(which) {
-  const nodes = current.nodes;
-  if (nodes.eyes_open) nodes.eyes_open.visible = which === 'open';
-  if (nodes.eyes_happy) nodes.eyes_happy.visible = which === 'happy';
-  if (nodes.eyes_sleepy) nodes.eyes_sleepy.visible = which === 'sleepy';
+  if (current.nodes.eyes_open) current.nodes.eyes_open.visible = false;
+  if (current.nodes.eyes_happy) current.nodes.eyes_happy.visible = false;
+  if (current.nodes.eyes_sleepy) current.nodes.eyes_sleepy.visible = false;
+  showCartoonEyes(current, which);
 }
 
 function showMouth(open) {
@@ -353,6 +546,7 @@ function applyPose() {
   const t = state.modeT;
   const bob = Math.sin(state.time * 2.2);
   holder.position.set(0, 0, 0);
+  resetCartoonEyes(pet);
   if (pet.nodes.cheeks) pet.nodes.cheeks.visible = state.cheeks;
   hat.visible = state.hat;
   zzz.visible = false;
@@ -390,8 +584,9 @@ function applyPose() {
     const phase = state.time % 4.5;
     if (!state.paused && phase > 4.32) {
       const k = phase < 4.41 ? (phase - 4.32) / 0.09 : (4.5 - phase) / 0.09;
-      if (eye === 'open' && pet.bases.eyes_open) {
-        pet.bases.eyes_open.obj.scale.y = pet.bases.eyes_open.s.y * (1 - 0.9 * k);
+      if (eye === 'open' && pet.face) {
+        const squash = 1 - 0.92 * k;
+        for (const socket of pet.face.sockets) socket.open.scale.y = squash;
       } else if (eye === 'happy') {
         eye = k > 0.45 ? 'sleepy' : 'happy';
       }
@@ -419,11 +614,12 @@ function applyPose() {
     pet.bases.tail.obj.rotation.y += Math.sin(state.time * 2.4) * 0.18;
   }
 
-  if (eye === 'open' && state.eyes === 'sparkly' && pet.bases.eyes_open && mode !== 'sleepy') {
-    const eyes = pet.bases.eyes_open;
-    eyes.obj.scale.x = eyes.s.x * 1.28;
-    eyes.obj.scale.z = eyes.s.z * 1.28;
-    if (eyes.obj.scale.y === eyes.s.y) eyes.obj.scale.y = eyes.s.y * 1.28;
+  if (eye === 'open' && state.eyes === 'sparkly' && pet.face && mode !== 'sleepy') {
+    for (const socket of pet.face.sockets) {
+      socket.open.scale.x *= 1.22;
+      socket.open.scale.z *= 1.22;
+      socket.open.scale.y *= 1.22;
+    }
   }
 
   showEyes(eye);
@@ -436,8 +632,19 @@ function applyPose() {
     holder.position.y += Math.abs(Math.sin(t * 10)) * 0.04;
   }
   turntable.rotation.y = userYaw + spin;
-  camera.position.set(0, 1.2, camZ);
-  camera.lookAt(0, 0.95, 0);
+  if (grid) {
+    camera.fov = grid.fov;
+    camera.updateProjectionMatrix();
+    camera.position.copy(grid.cam);
+    camera.lookAt(grid.look);
+    return;
+  }
+  if (camera.fov !== BASE_FOV) {
+    camera.fov = BASE_FOV;
+    camera.updateProjectionMatrix();
+  }
+  camera.position.set(0, camY, camZ);
+  camera.lookAt(0, lookY, 0);
 }
 
 function present(pet) {
@@ -701,6 +908,65 @@ function hatFollow() {
   return { hatY: v3b.y, headY: v3a.y, gap: v3a.distanceTo(v3b) };
 }
 
+const gridGroup = new Group();
+scene.add(gridGroup);
+
+const FACE_SPOTS = [
+  [-0.7, 0.62],
+  [0.7, 0.62],
+  [-0.7, -0.48],
+  [0.7, -0.48],
+];
+
+async function showFaceGrid(names) {
+  const pets = [];
+  for (const name of names) pets.push(await ensure(name));
+  holder.visible = false;
+  while (gridGroup.children.length) gridGroup.remove(gridGroup.children[0]);
+  pets.forEach((pet, index) => {
+    if (pet.root.parent) pet.root.parent.remove(pet.root);
+    const spot = FACE_SPOTS[index] || [0, 0];
+    pet.root.position.set(spot[0], spot[1], 0);
+    pet.root.rotation.set(0, -0.5, 0);
+    pet.root.scale.set(1, 1, 1);
+    resetCartoonEyes(pet);
+    showCartoonEyes(pet, 'open');
+    if (pet.nodes.cheeks) pet.nodes.cheeks.visible = true;
+    if (pet.nodes.mouth) pet.nodes.mouth.visible = true;
+    if (pet.nodes.mouth_open) pet.nodes.mouth_open.visible = false;
+    if (pet.nodes.eyes_open) pet.nodes.eyes_open.visible = false;
+    if (pet.nodes.eyes_happy) pet.nodes.eyes_happy.visible = false;
+    if (pet.nodes.eyes_sleepy) pet.nodes.eyes_sleepy.visible = false;
+    gridGroup.add(pet.root);
+  });
+  grid = {
+    pets,
+    fov: 38,
+    cam: new Vector3(0, 1.55, 2.15),
+    look: new Vector3(0, 1.42, 0),
+  };
+  applyPose();
+  renderer.render(scene, camera);
+}
+
+function clearFaceGrid() {
+  if (!grid) return;
+  for (const pet of grid.pets) {
+    pet.root.position.set(0, 0, 0);
+    pet.root.rotation.set(0, 0, 0);
+    if (pet.root.parent === gridGroup) gridGroup.remove(pet.root);
+  }
+  grid = null;
+  holder.visible = true;
+  camera.fov = BASE_FOV;
+  camera.updateProjectionMatrix();
+  if (current) present(current);
+  else {
+    applyPose();
+    renderer.render(scene, camera);
+  }
+}
+
 function pixelScore() {
   applyPose();
   renderer.render(scene, camera);
@@ -743,6 +1009,8 @@ window.__PETS = {
   play,
   pause,
   resume,
+  showFaceGrid,
+  clearFaceGrid,
   fps,
   pixelScore,
   hatOffset,
@@ -764,6 +1032,15 @@ window.__PETS = {
     renderer.render(scene, camera);
   },
   get zoom() { return camZ; },
+  set zoom(value) {
+    camZ = clamp(Number(value), ZOOM_MIN, ZOOM_MAX);
+    applyPose();
+    renderer.render(scene, camera);
+  },
+  get lookY() { return lookY; },
+  set lookY(value) { lookY = Number(value); },
+  get camY() { return camY; },
+  set camY(value) { camY = Number(value); },
   get timeScale() { return state.timeScale; },
   set timeScale(value) { state.timeScale = Number(value); },
   anchors() {

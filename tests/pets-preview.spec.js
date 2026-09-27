@@ -160,7 +160,10 @@ test('pet preview on a phone', async ({ page }) => {
     window.__PETS.setEyes('round');
     window.__PETS.setCheeks(true);
     window.__PETS.setHat(false);
-    window.__PETS.yaw = -0.85;
+    window.__PETS.yaw = -0.62;
+    window.__PETS.zoom = 2.88;
+    window.__PETS.lookY = 1.4;
+    window.__PETS.camY = 1.62;
     window.__PETS.play('wave');
     window.__PETS.pause(0.2);
   });
@@ -173,13 +176,24 @@ test('pet preview on a phone', async ({ page }) => {
     window.__PETS.setHat(true);
     window.__PETS.setEyes('round');
     window.__PETS.setCheeks(true);
-    window.__PETS.yaw = -0.45;
+    window.__PETS.yaw = -0.5;
+    window.__PETS.zoom = 2.88;
+    window.__PETS.lookY = 1.42;
+    window.__PETS.camY = 1.64;
     window.__PETS.play('idle');
     window.__PETS.pause(0.2);
   });
   await shown(page, 'bunny');
   expect(await page.evaluate(() => window.__PETS.color.toLowerCase())).toBe('#7c3aed');
   await page.screenshot({ path: '/opt/cursor/artifacts/pets-custom-hat.png' });
+
+  await page.evaluate(async () => {
+    window.__PETS.setHat(false);
+    window.__PETS.setNatural();
+    await window.__PETS.showFaceGrid(['cat', 'dog', 'penguin', 'bunny']);
+  });
+  await page.screenshot({ path: '/opt/cursor/artifacts/pets-faces.png' });
+  await page.evaluate(() => window.__PETS.clearFaceGrid());
 
   await page.evaluate(() => window.__PETS.resume());
   await page.waitForTimeout(2200);
