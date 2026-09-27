@@ -1,26 +1,51 @@
 import {
   Scene, PerspectiveCamera, WebGLRenderer, Group, Mesh,
-  SphereGeometry, CapsuleGeometry, ConeGeometry, CylinderGeometry,
-  CircleGeometry, TorusGeometry, OctahedronGeometry,
-  MeshToonMaterial, MeshStandardMaterial, MeshBasicMaterial,
+  SphereGeometry, ConeGeometry, CylinderGeometry, PlaneGeometry,
+  MeshPhysicalMaterial, ShadowMaterial, Sprite, SpriteMaterial, CanvasTexture,
   HemisphereLight, DirectionalLight,
-  DataTexture, NearestFilter, ClampToEdgeWrapping, RGBAFormat, UnsignedByteType,
-  CanvasTexture, Sprite, SpriteMaterial,
-  SRGBColorSpace, NoColorSpace, NoToneMapping,
+  SRGBColorSpace, NoToneMapping, PCFSoftShadowMap,
   Vector3, Color,
 } from 'three';
+import { GLTFLoader } from '../vendor/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from '../vendor/examples/jsm/libs/meshopt_decoder.module.js';
 
-const SWATCHES = ['#3B5BDB', '#FF8A3D', '#FF8AD4', '#00C2A8', '#FF4D1A', '#7C3AED', '#FFD23F', '#FFFFFF'];
-const DEFAULTS = { penguin: '#3B5BDB', cat: '#FF8A3D', bunny: '#FF8AD4' };
-const DURATION = { wave: 1.55, jump: 1.18, spin: 1.35, sleepy: 2.8, walk: 2.6 };
+const ANIMALS = [
+  ['dog', 'Dog'],
+  ['cat', 'Cat'],
+  ['bunny', 'Bunny'],
+  ['penguin', 'Penguin'],
+  ['horse', 'Horse'],
+  ['monkey', 'Monkey'],
+  ['tiger', 'Tiger'],
+  ['shark', 'Shark'],
+  ['pig', 'Pig'],
+  ['axolotl', 'Axolotl'],
+  ['capybara', 'Capybara'],
+  ['dragon', 'Dragon'],
+];
+
+const SWATCHES = [
+  { name: 'Natural', hex: null },
+  { name: 'Sunny yellow', hex: '#FFD23F' },
+  { name: 'Peach', hex: '#FFB086' },
+  { name: 'Coral pink', hex: '#FF8AD4' },
+  { name: 'Lavender', hex: '#C4B5FD' },
+  { name: 'Sky blue', hex: '#7EC8FF' },
+  { name: 'Mint', hex: '#7DDFC3' },
+  { name: 'Cocoa', hex: '#A8704A' },
+];
+
+const DURATION = { wave: 1.55, jump: 1.2, spin: 1.35, sleepy: 2.8, walk: 2.6 };
 const ZOOM_MIN = 2.8;
 const ZOOM_MAX = 7.2;
+const PARTS = ['body', 'head', 'arm_L', 'arm_R', 'foot_L', 'foot_R', 'tail', 'eyes_open', 'eyes_happy', 'eyes_sleepy'];
 
 const canvas = document.querySelector('#stage');
+const statusEl = document.querySelector('#pet-status');
 const scene = new Scene();
-const camera = new PerspectiveCamera(32, 1, 0.1, 40);
-let camZ = 3.55;
-camera.position.set(0, 1.02, camZ);
+const camera = new PerspectiveCamera(30, 1, 0.1, 40);
+let camZ = 3.7;
+camera.position.set(0, 1.2, camZ);
 
 const renderer = new WebGLRenderer({
   canvas,
@@ -33,54 +58,50 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.outputColorSpace = SRGBColorSpace;
 renderer.toneMapping = NoToneMapping;
 renderer.setClearColor(0x000000, 0);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = PCFSoftShadowMap;
 
-scene.add(new HemisphereLight(0xfff8f2, 0xc9b6ff, 1.2));
-const sun = new DirectionalLight(0xffffff, 1.45);
-sun.position.set(2.4, 4.8, 3.2);
-scene.add(sun);
+scene.add(new HemisphereLight(0xfff9ff, 0xe6def4, 1.05));
 
-const gradient = new DataTexture(
-  new Uint8Array([
-    90, 90, 90, 255,
-    150, 150, 150, 255,
-    215, 215, 215, 255,
-    255, 255, 255, 255,
-  ]),
-  4,
-  1,
-  RGBAFormat,
-  UnsignedByteType,
+const key = new DirectionalLight(0xfff6ef, 2.35);
+key.position.set(-2.8, 5.4, 3.2);
+key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024);
+key.shadow.camera.near = 0.4;
+key.shadow.camera.far = 16;
+key.shadow.camera.left = -2.2;
+key.shadow.camera.right = 2.2;
+key.shadow.camera.top = 2.2;
+key.shadow.camera.bottom = -2.2;
+key.shadow.bias = -0.0006;
+key.shadow.normalBias = 0.025;
+scene.add(key);
+scene.add(key.target);
+key.target.position.set(0, 0.85, 0);
+
+const fill = new DirectionalLight(0xf4f1ff, 1.05);
+fill.position.set(3.4, 2.6, 2.4);
+scene.add(fill);
+
+const ground = new Mesh(
+  new PlaneGeometry(12, 12),
+  new ShadowMaterial({ opacity: 0.28 }),
 );
-gradient.magFilter = NearestFilter;
-gradient.minFilter = NearestFilter;
-gradient.wrapS = ClampToEdgeWrapping;
-gradient.wrapT = ClampToEdgeWrapping;
-gradient.colorSpace = NoColorSpace;
-gradient.generateMipmaps = false;
-gradient.needsUpdate = true;
-
-const floor = new Mesh(
-  new CircleGeometry(1.45, 28),
-  new MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.38, depthWrite: false }),
-);
-floor.rotation.x = -Math.PI / 2;
-floor.position.y = 0;
-scene.add(floor);
-
-const shadow = new Mesh(
-  new CircleGeometry(0.62, 24),
-  new MeshBasicMaterial({ color: 0x3a2468, transparent: true, opacity: 0.18, depthWrite: false }),
-);
-shadow.rotation.x = -Math.PI / 2;
-shadow.position.y = 0.015;
-scene.add(shadow);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = 0.001;
+ground.receiveShadow = true;
+scene.add(ground);
 
 const turntable = new Group();
 scene.add(turntable);
+const holder = new Group();
+turntable.add(holder);
 
 const state = {
   animal: 'penguin',
-  color: null,
+  shown: null,
+  loading: true,
+  swatch: null,
   height: 1,
   body: 1,
   eyes: 'round',
@@ -94,369 +115,44 @@ const state = {
 };
 
 let userYaw = 0;
-const animals = {};
 let current = null;
-
+const cache = new Map();
+const inflight = new Map();
 const v3a = new Vector3();
 const v3b = new Vector3();
 
-function toon(color) {
-  return new MeshToonMaterial({ color, gradientMap: gradient });
-}
-
-function shiny(color, roughness = 0.22) {
-  return new MeshStandardMaterial({ color, roughness, metalness: 0.05 });
-}
-
-function mesh(geo, mat) {
-  return new Mesh(geo, mat);
-}
-
-function scaffold(kind) {
-  const root = new Group();
-  const fit = new Group();
-  const body = new Group();
-  const head = new Group();
-  const hand = new Group();
-  const hatMount = new Group();
-  root.add(fit);
-  fit.add(body);
-  body.add(head);
-  head.add(hatMount);
-  return {
-    kind,
-    root,
-    fit,
-    body,
-    head,
-    hand,
-    hatMount,
-    anchors: { head: hatMount, hand },
-    colourMats: [],
-    bases: [],
-    feet: [],
-    eyes: null,
-    eyeSets: {},
-    cheeks: null,
-    tail: null,
-    ears: null,
-  };
-}
-
-function remember(animal, obj) {
-  animal.bases.push({
-    obj,
-    p: obj.position.clone(),
-    r: obj.rotation.clone(),
-    s: obj.scale.clone(),
+function vinyl(color, roughness = 0.4) {
+  return new MeshPhysicalMaterial({
+    color,
+    roughness,
+    metalness: 0,
+    clearcoat: 0.35,
+    clearcoatRoughness: 0.25,
   });
-}
-
-function restore(animal) {
-  for (const b of animal.bases) {
-    b.obj.position.copy(b.p);
-    b.obj.rotation.copy(b.r);
-    b.obj.scale.copy(b.s);
-  }
-}
-
-const eyeWhite = shiny(0xffffff, 0.16);
-const pupilMat = shiny(0x1c1233, 0.3);
-const glintMat = new MeshBasicMaterial({ color: 0xffffff });
-const sparkMat = shiny(0xfff4a8, 0.12);
-const cheekMat = toon(0xff8eb8);
-
-function addEyes(animal, spread, y, z, scale = 1) {
-  const root = new Group();
-  root.position.set(0, y, z);
-  root.scale.setScalar(scale);
-  animal.head.add(root);
-  animal.eyes = root;
-
-  function pair(build) {
-    const g = new Group();
-    for (const side of [-1, 1]) {
-      const pivot = new Group();
-      pivot.position.x = side * spread;
-      build(pivot, side);
-      g.add(pivot);
-    }
-    root.add(g);
-    return g;
-  }
-
-  animal.eyeSets.round = pair((pivot) => {
-    const white = mesh(new SphereGeometry(0.095, 12, 10), eyeWhite);
-    const pupil = mesh(new SphereGeometry(0.048, 10, 8), pupilMat);
-    pupil.position.z = 0.055;
-    const glint = mesh(new SphereGeometry(0.02, 8, 6), glintMat);
-    glint.position.set(0.025, 0.03, 0.085);
-    pivot.add(white, pupil, glint);
-  });
-
-  animal.eyeSets.happy = pair((pivot) => {
-    const arc = mesh(new TorusGeometry(0.075, 0.02, 6, 14, Math.PI), pupilMat);
-    arc.position.z = 0.04;
-    pivot.add(arc);
-  });
-
-  animal.eyeSets.sparkly = pair((pivot) => {
-    const star = mesh(new OctahedronGeometry(0.09, 0), sparkMat);
-    const glint = mesh(new SphereGeometry(0.028, 8, 6), glintMat);
-    glint.position.set(0.03, 0.035, 0.06);
-    pivot.add(star, glint);
-  });
-}
-
-function addCheeks(animal, spread, y, z) {
-  const g = new Group();
-  for (const side of [-1, 1]) {
-    const c = mesh(new SphereGeometry(0.055, 10, 8), cheekMat);
-    c.scale.z = 0.42;
-    c.position.set(side * spread, y, z);
-    g.add(c);
-  }
-  animal.head.add(g);
-  animal.cheeks = g;
-}
-
-function buildPenguin() {
-  const a = scaffold('penguin');
-  const navy = toon(0x3b5bdb);
-  const white = toon(0xfff7fb);
-  const orange = toon(0xff8a1e);
-  a.colourMats.push(navy);
-
-  const torso = mesh(new SphereGeometry(0.46, 14, 12), navy);
-  torso.scale.set(0.9, 1.08, 0.8);
-  torso.position.y = 0.58;
-  a.body.add(torso);
-
-  const belly = mesh(new SphereGeometry(0.3, 14, 10), white);
-  belly.scale.set(0.72, 1.05, 0.42);
-  belly.position.set(0, 0.52, 0.24);
-  a.body.add(belly);
-
-  a.head.position.set(0, 1.12, 0.02);
-  const skull = mesh(new SphereGeometry(0.4, 14, 12), navy);
-  a.head.add(skull);
-  const face = mesh(new SphereGeometry(0.26, 12, 10), white);
-  face.scale.set(0.95, 0.78, 0.48);
-  face.position.set(0, -0.02, 0.24);
-  a.head.add(face);
-
-  const beak = mesh(new ConeGeometry(0.085, 0.22, 10), orange);
-  beak.rotation.x = Math.PI / 2;
-  beak.position.set(0, -0.05, 0.42);
-  a.head.add(beak);
-
-  addEyes(a, 0.14, 0.06, 0.34, 1.05);
-  addCheeks(a, 0.2, -0.08, 0.36);
-
-  const flipGeo = new CapsuleGeometry(0.1, 0.5, 3, 6);
-  a.hand.position.set(0.46, 0.92, 0.06);
-  a.hand.rotation.z = 0.22;
-  const flip = mesh(flipGeo, navy);
-  flip.position.y = -0.3;
-  a.hand.add(flip);
-  a.body.add(a.hand);
-
-  const other = new Group();
-  other.position.set(-0.46, 0.92, 0.06);
-  other.rotation.z = -0.22;
-  const flipL = mesh(flipGeo, navy);
-  flipL.position.y = -0.3;
-  other.add(flipL);
-  a.body.add(other);
-
-  const footGeo = new SphereGeometry(0.11, 10, 8);
-  for (const side of [1, -1]) {
-    const foot = mesh(footGeo, orange);
-    foot.scale.set(1.55, 0.42, 1.85);
-    foot.position.set(side * 0.16, 0.05, 0.1);
-    a.body.add(foot);
-    a.feet.push(foot);
-  }
-
-  a.hatMount.position.set(0, 0.4, 0.08);
-  remember(a, a.body);
-  remember(a, a.head);
-  remember(a, a.hand);
-  remember(a, other);
-  remember(a, a.eyes);
-  for (const foot of a.feet) remember(a, foot);
-  return a;
-}
-
-function buildCat() {
-  const a = scaffold('cat');
-  const fur = toon(0xff8a3d);
-  const white = toon(0xfff7fb);
-  const pink = toon(0xff6b9a);
-  a.colourMats.push(fur);
-
-  const torso = mesh(new SphereGeometry(0.4, 14, 12), fur);
-  torso.scale.set(1.05, 0.9, 0.95);
-  torso.position.y = 0.48;
-  a.body.add(torso);
-  const chest = mesh(new SphereGeometry(0.18, 12, 8), white);
-  chest.position.set(0, 0.42, 0.24);
-  a.body.add(chest);
-
-  a.head.position.set(0, 1.02, 0.05);
-  const skull = mesh(new SphereGeometry(0.36, 14, 12), fur);
-  a.head.add(skull);
-
-  const ears = new Group();
-  for (const side of [-1, 1]) {
-    const ear = mesh(new ConeGeometry(0.12, 0.26, 8), fur);
-    ear.position.set(side * 0.2, 0.3, 0);
-    ear.rotation.z = side * -0.25;
-    const inner = mesh(new ConeGeometry(0.06, 0.14, 8), pink);
-    inner.position.set(side * 0.2, 0.28, 0.045);
-    inner.rotation.z = side * -0.25;
-    ears.add(ear, inner);
-  }
-  a.head.add(ears);
-  a.ears = ears;
-
-  const muzzle = mesh(new SphereGeometry(0.11, 10, 8), white);
-  muzzle.scale.set(1.35, 0.75, 0.65);
-  muzzle.position.set(0, -0.08, 0.28);
-  a.head.add(muzzle);
-  const nose = mesh(new SphereGeometry(0.04, 8, 6), pink);
-  nose.position.set(0, -0.02, 0.38);
-  a.head.add(nose);
-
-  addEyes(a, 0.13, 0.06, 0.32, 1);
-  addCheeks(a, 0.18, -0.08, 0.34);
-
-  const legGeo = new CapsuleGeometry(0.065, 0.14, 3, 6);
-  for (const [x, y, z] of [[0.15, 0.16, 0.12], [-0.15, 0.16, 0.12], [0.16, 0.18, -0.14], [-0.16, 0.18, -0.14]]) {
-    const leg = mesh(legGeo, fur);
-    leg.position.set(x, y, z);
-    a.body.add(leg);
-    a.feet.push(leg);
-  }
-
-  a.hand.position.set(0.34, 0.62, 0.2);
-  a.hand.rotation.z = 0.35;
-  const paw = mesh(new CapsuleGeometry(0.06, 0.28, 3, 6), fur);
-  paw.position.y = -0.2;
-  a.hand.add(paw);
-  a.body.add(a.hand);
-
-  const tail = new Group();
-  tail.position.set(0.02, 0.5, -0.32);
-  tail.rotation.x = 1.05;
-  tail.rotation.z = 0.55;
-  const tailMesh = mesh(new CapsuleGeometry(0.05, 0.38, 3, 6), fur);
-  tailMesh.position.y = 0.22;
-  tail.add(tailMesh);
-  a.body.add(tail);
-  a.tail = tail;
-
-  a.hatMount.position.set(0, 0.38, 0.1);
-  remember(a, a.body);
-  remember(a, a.head);
-  remember(a, a.hand);
-  remember(a, a.eyes);
-  remember(a, ears);
-  remember(a, tail);
-  for (const foot of a.feet) remember(a, foot);
-  return a;
-}
-
-function buildBunny() {
-  const a = scaffold('bunny');
-  const fur = toon(0xff8ad4);
-  const white = toon(0xfff7fb);
-  const pink = toon(0xff6b9a);
-  a.colourMats.push(fur);
-
-  const torso = mesh(new SphereGeometry(0.4, 14, 12), fur);
-  torso.scale.set(0.95, 0.92, 0.9);
-  torso.position.y = 0.5;
-  a.body.add(torso);
-
-  const tail = mesh(new SphereGeometry(0.1, 10, 8), white);
-  tail.position.set(0, 0.48, -0.34);
-  a.body.add(tail);
-
-  a.head.position.set(0, 1.02, 0.06);
-  const skull = mesh(new SphereGeometry(0.36, 14, 12), fur);
-  a.head.add(skull);
-
-  const ears = new Group();
-  for (const side of [-1, 1]) {
-    const ear = mesh(new CapsuleGeometry(0.065, 0.4, 3, 6), fur);
-    ear.position.set(side * 0.2, 0.5, -0.02);
-    ear.rotation.z = side * -0.18;
-    const inner = mesh(new CapsuleGeometry(0.032, 0.26, 2, 6), pink);
-    inner.position.set(side * 0.2, 0.48, 0.03);
-    inner.rotation.z = side * -0.18;
-    ears.add(ear, inner);
-  }
-  a.head.add(ears);
-  a.ears = ears;
-
-  const muzzle = mesh(new SphereGeometry(0.1, 10, 8), white);
-  muzzle.scale.set(1.2, 0.7, 0.6);
-  muzzle.position.set(0, -0.1, 0.28);
-  a.head.add(muzzle);
-  const nose = mesh(new SphereGeometry(0.035, 8, 6), pink);
-  nose.scale.set(1.2, 0.8, 0.8);
-  nose.position.set(0, -0.04, 0.36);
-  a.head.add(nose);
-
-  addEyes(a, 0.13, 0.04, 0.32, 1.05);
-  addCheeks(a, 0.18, -0.08, 0.34);
-
-  const footGeo = new SphereGeometry(0.1, 10, 8);
-  for (const side of [1, -1]) {
-    const foot = mesh(footGeo, fur);
-    foot.scale.set(1.15, 0.55, 1.7);
-    foot.position.set(side * 0.14, 0.07, 0.12);
-    a.body.add(foot);
-    a.feet.push(foot);
-  }
-
-  a.hand.position.set(0.32, 0.58, 0.22);
-  a.hand.rotation.z = 0.3;
-  const paw = mesh(new CapsuleGeometry(0.06, 0.26, 3, 6), fur);
-  paw.position.y = -0.18;
-  a.hand.add(paw);
-  a.body.add(a.hand);
-
-  a.hatMount.position.set(0, 0.4, 0.16);
-  remember(a, a.body);
-  remember(a, a.head);
-  remember(a, a.hand);
-  remember(a, a.eyes);
-  remember(a, ears);
-  for (const foot of a.feet) remember(a, foot);
-  return a;
 }
 
 const hat = new Group();
-const hatCone = mesh(new ConeGeometry(0.17, 0.5, 12), toon(0xff3d8a));
-hatCone.position.y = 0.27;
-const hatBrim = mesh(new CylinderGeometry(0.2, 0.22, 0.05, 12), toon(0xffd23f));
+const hatCone = new Mesh(new ConeGeometry(0.2, 0.5, 16), vinyl(0xff4d8d, 0.38));
+hatCone.position.y = 0.28;
+hatCone.castShadow = true;
+const hatBrim = new Mesh(new CylinderGeometry(0.24, 0.26, 0.06, 16), vinyl(0xffd23f, 0.4));
 hatBrim.position.y = 0.03;
-const stripe = mesh(new CylinderGeometry(0.11, 0.13, 0.07, 12), toon(0xffffff));
-stripe.position.y = 0.22;
-const pom = mesh(new SphereGeometry(0.07, 10, 8), toon(0xfff3a0));
+hatBrim.castShadow = true;
+const stripe = new Mesh(new CylinderGeometry(0.13, 0.15, 0.07, 16), vinyl(0xffffff, 0.35));
+stripe.position.y = 0.24;
+const pom = new Mesh(new SphereGeometry(0.075, 14, 10), vinyl(0xfff3a0, 0.35));
 pom.position.y = 0.56;
-hat.rotation.z = -0.18;
+pom.name = 'hat-pom';
 hat.add(hatCone, hatBrim, stripe, pom);
+hat.position.y = 0.12;
+hat.rotation.z = -0.18;
 hat.visible = false;
 
 const zzzCanvas = document.createElement('canvas');
 zzzCanvas.width = 128;
 zzzCanvas.height = 64;
 const zctx = zzzCanvas.getContext('2d');
-zctx.clearRect(0, 0, 128, 64);
-zctx.fillStyle = '#6D4AFF';
+zctx.fillStyle = '#6d4aff';
 zctx.font = '700 42px sans-serif';
 zctx.textAlign = 'center';
 zctx.textBaseline = 'middle';
@@ -464,36 +160,155 @@ zctx.fillText('Zzz', 64, 34);
 const zzzTex = new CanvasTexture(zzzCanvas);
 zzzTex.colorSpace = SRGBColorSpace;
 const zzz = new Sprite(new SpriteMaterial({ map: zzzTex, transparent: true, depthWrite: false }));
-zzz.scale.set(0.5, 0.25, 1);
+zzz.scale.set(0.42, 0.21, 1);
 zzz.visible = false;
 
-function activeColor() {
-  return state.color || DEFAULTS[state.animal];
+function capture(obj) {
+  return {
+    obj,
+    p: obj.position.clone(),
+    r: obj.rotation.clone(),
+    s: obj.scale.clone(),
+  };
 }
 
-function applyColour() {
-  const color = new Color(activeColor());
-  for (const mat of current.colourMats) mat.color.copy(color);
-}
-
-function applyFace() {
-  for (const [name, group] of Object.entries(current.eyeSets)) {
-    group.visible = name === state.eyes;
+function restore(pet) {
+  for (const base of Object.values(pet.bases)) {
+    base.obj.position.copy(base.p);
+    base.obj.rotation.copy(base.r);
+    base.obj.scale.copy(base.s);
   }
-  if (current.cheeks) current.cheeks.visible = state.cheeks;
-  hat.visible = state.hat;
 }
 
-function showAnimal(name) {
-  if (current) turntable.remove(current.root);
-  current = animals[name];
-  state.animal = name;
-  turntable.add(current.root);
-  current.hatMount.add(hat);
-  current.head.add(zzz);
-  applyColour();
-  applyFace();
-  syncControls();
+function hexToHsl(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h /= 6;
+  }
+  return { h, s, l };
+}
+
+function hslToHex(h, s, l) {
+  const hue = (p, q, t) => {
+    let x = t;
+    if (x < 0) x += 1;
+    if (x > 1) x -= 1;
+    if (x < 1 / 6) return p + (q - p) * 6 * x;
+    if (x < 1 / 2) return q;
+    if (x < 2 / 3) return p + (q - p) * (2 / 3 - x) * 6;
+    return p;
+  };
+  let r;
+  let g;
+  let b;
+  if (s === 0) r = g = b = l;
+  else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue(p, q, h + 1 / 3);
+    g = hue(p, q, h);
+    b = hue(p, q, h - 1 / 3);
+  }
+  const channel = (v) => Math.round(v * 255).toString(16).padStart(2, '0');
+  return `#${channel(r)}${channel(g)}${channel(b)}`;
+}
+
+function limitLightness(hex) {
+  const clean = `#${hex.replace('#', '').toLowerCase()}`;
+  const { h, s, l } = hexToHsl(clean);
+  if (l >= 0.34 && l <= 0.72) return clean;
+  return hslToHex(h, s, Math.min(0.72, Math.max(0.34, l)));
+}
+
+function prepare(gltf) {
+  const root = gltf.scene;
+  const nodes = {};
+  const baseMats = new Set();
+  const bellyMats = new Set();
+  let info = root;
+  root.traverse((obj) => {
+    if (obj.name) nodes[obj.name] = obj;
+    if (obj.userData && obj.userData.baseColor) info = obj;
+    if (obj.isMesh) {
+      obj.castShadow = true;
+      const list = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const mat of list) {
+        if (!mat) continue;
+        if (mat.name === 'base') baseMats.add(mat);
+        else if (mat.name === 'belly') bellyMats.add(mat);
+      }
+    }
+  });
+  for (const name of ['eyes_happy', 'eyes_sleepy', 'mouth_open']) {
+    if (nodes[name]) nodes[name].visible = false;
+  }
+  const bases = {};
+  for (const name of PARTS) {
+    if (nodes[name]) bases[name] = capture(nodes[name]);
+  }
+  return {
+    root,
+    nodes,
+    bases,
+    baseMats: [...baseMats],
+    bellyMats: [...bellyMats],
+    baseColor: info.userData.baseColor || '#888888',
+    bellyColor: info.userData.bellyColor || '#ffffff',
+  };
+}
+
+const loader = new GLTFLoader();
+loader.setMeshoptDecoder(MeshoptDecoder);
+
+function ensure(name) {
+  if (cache.has(name)) return Promise.resolve(cache.get(name));
+  if (inflight.has(name)) return inflight.get(name);
+  const task = loader.loadAsync(`models/${name}.glb`).then((gltf) => {
+    const pet = prepare(gltf);
+    cache.set(name, pet);
+    inflight.delete(name);
+    return pet;
+  });
+  inflight.set(name, task);
+  return task;
+}
+
+function applyColors() {
+  if (!current) return;
+  const natural = state.swatch == null;
+  const baseHex = natural ? current.baseColor : state.swatch;
+  const base = new Color(baseHex);
+  const belly = natural
+    ? new Color(current.bellyColor)
+    : base.clone().lerp(new Color(0xffffff), 0.7);
+  for (const mat of current.baseMats) mat.color.copy(base);
+  for (const mat of current.bellyMats) mat.color.copy(belly);
+}
+
+function showEyes(which) {
+  const nodes = current.nodes;
+  if (nodes.eyes_open) nodes.eyes_open.visible = which === 'open';
+  if (nodes.eyes_happy) nodes.eyes_happy.visible = which === 'happy';
+  if (nodes.eyes_sleepy) nodes.eyes_sleepy.visible = which === 'sleepy';
+}
+
+function showMouth(open) {
+  const nodes = current.nodes;
+  if (nodes.mouth) nodes.mouth.visible = !open;
+  if (nodes.mouth_open) nodes.mouth_open.visible = open && !!nodes.mouth_open;
 }
 
 function smooth(t) {
@@ -502,94 +317,230 @@ function smooth(t) {
 }
 
 function applyPose() {
-  const animal = current;
-  restore(animal);
-  animal.fit.scale.set(state.body, state.body * state.height, state.body);
-  animal.root.position.x = 0;
+  if (!current) return;
+  const pet = current;
+  restore(pet);
+  const body = pet.bases.body;
+  const head = pet.bases.head;
+  const height = state.height;
+  const bodySize = state.body;
+  if (body) {
+    body.obj.scale.set(body.s.x * bodySize, body.s.y * height, body.s.z * bodySize);
+  }
+  const span = head && body ? head.p.y - body.p.y : 0.9;
+  const extra = (height - 1) * span;
+  const liftPart = (name, outward) => {
+    const base = pet.bases[name];
+    if (!base) return;
+    base.obj.position.x = base.p.x * (outward ? bodySize : 1);
+    base.obj.position.y = base.p.y + extra;
+    base.obj.position.z = base.p.z * (outward ? bodySize : 1);
+  };
+  if (head) head.obj.position.y = head.p.y + extra;
+  liftPart('arm_L', true);
+  liftPart('arm_R', true);
+  liftPart('tail', false);
+  if (pet.bases.foot_L) {
+    pet.bases.foot_L.obj.position.x = pet.bases.foot_L.p.x * bodySize;
+    pet.bases.foot_L.obj.position.z = pet.bases.foot_L.p.z * bodySize;
+  }
+  if (pet.bases.foot_R) {
+    pet.bases.foot_R.obj.position.x = pet.bases.foot_R.p.x * bodySize;
+    pet.bases.foot_R.obj.position.z = pet.bases.foot_R.p.z * bodySize;
+  }
 
   const mode = state.mode;
   const t = state.modeT;
-  const bob = Math.sin(state.time * 2.3);
+  const bob = Math.sin(state.time * 2.2);
+  holder.position.set(0, 0, 0);
+  if (pet.nodes.cheeks) pet.nodes.cheeks.visible = state.cheeks;
+  hat.visible = state.hat;
+  zzz.visible = false;
+  showMouth(false);
 
+  let eye = state.eyes === 'happy' ? 'happy' : 'open';
   if (mode === 'sleepy') {
-    animal.eyes.scale.y *= 0.14;
-    animal.body.rotation.z += Math.sin(state.time * 1.15) * 0.08;
-    animal.body.position.y += Math.sin(state.time * 1.15) * 0.03;
-    zzz.visible = true;
-    zzz.position.set(0.28, 0.58 + Math.sin(state.time * 2.4) * 0.05, 0.15);
-  } else {
-    zzz.visible = false;
-    if (mode === 'idle' || mode === 'walk' || mode === 'wave' || mode === 'spin') {
-      animal.body.position.y += bob * 0.035;
-      const breathe = 1 + bob * 0.018;
-      animal.body.scale.y *= breathe;
-      animal.body.scale.x /= breathe;
+    eye = 'sleepy';
+    if (head) {
+      head.obj.rotation.x += 0.28;
+      head.obj.rotation.z += Math.sin(state.time * 1.05) * 0.06;
     }
-    const phase = state.time % 3.6;
-    if (!state.paused && phase > 3.42) {
-      const k = phase < 3.51 ? (phase - 3.42) / 0.09 : (3.6 - phase) / 0.09;
-      animal.eyes.scale.y *= 1 - 0.88 * k;
+    if (body) {
+      const breathe = 1 + Math.sin(state.time * 1.15) * 0.025;
+      body.obj.scale.y *= breathe;
+      body.obj.position.y += Math.sin(state.time * 1.15) * 0.02;
+    }
+    zzz.visible = true;
+    zzz.position.set(0.55, 0.85 + Math.sin(state.time * 1.6) * 0.04, 0.15);
+  } else if (mode === 'jump') {
+    eye = 'happy';
+    showMouth(true);
+    const p = Math.min(t / DURATION.jump, 1);
+    const lift = Math.sin(p * Math.PI);
+    holder.position.y = lift * 0.32;
+    if (pet.bases.arm_L) pet.bases.arm_L.obj.rotation.z = 1.9;
+    if (pet.bases.arm_R) pet.bases.arm_R.obj.rotation.z = -1.9;
+    if (body) body.obj.scale.y *= 1 + lift * 0.06;
+  } else {
+    holder.position.y = bob * 0.03;
+    if (body && (mode === 'idle' || mode === 'walk' || mode === 'wave' || mode === 'spin')) {
+      const breathe = 1 + bob * 0.015;
+      body.obj.scale.y *= breathe;
+    }
+    const phase = state.time % 4.5;
+    if (!state.paused && phase > 4.32) {
+      const k = phase < 4.41 ? (phase - 4.32) / 0.09 : (4.5 - phase) / 0.09;
+      if (eye === 'open' && pet.bases.eyes_open) {
+        pet.bases.eyes_open.obj.scale.y = pet.bases.eyes_open.s.y * (1 - 0.9 * k);
+      } else if (eye === 'happy') {
+        eye = k > 0.45 ? 'sleepy' : 'happy';
+      }
+    }
+  }
+
+  if (mode === 'wave') {
+    const up = smooth(t / 0.16);
+    const wiggle = Math.sin(t * 8) * 0.08;
+    if (pet.bases.arm_L) {
+      pet.bases.arm_L.obj.rotation.z = (1.92 + wiggle) * up;
+      pet.bases.arm_L.obj.rotation.x = -0.35 * up;
     }
   }
 
   if (mode === 'walk') {
-    const cycle = t * (animal.kind === 'penguin' ? 8 : 7);
-    animal.root.position.x = Math.sin(t * 1.35) * 0.6;
-    if (animal.kind === 'penguin') {
-      animal.body.rotation.z += Math.sin(cycle) * 0.16;
-      animal.body.position.y += Math.abs(Math.sin(cycle)) * 0.035;
-    } else {
-      const hop = Math.abs(Math.sin(cycle));
-      animal.body.position.y += hop * 0.16;
-      animal.body.rotation.x += (hop - 0.5) * -0.1;
-    }
-    animal.feet.forEach((foot, i) => {
-      foot.rotation.x += Math.sin(cycle + i * Math.PI) * 0.45;
-    });
-    if (animal.tail) animal.tail.rotation.z += Math.sin(cycle) * 0.35;
-  } else if (animal.tail && mode !== 'sleepy') {
-    animal.tail.rotation.z += Math.sin(state.time * 3) * 0.25;
+    const cycle = t * 7.5;
+    holder.position.x = Math.sin(t * 1.25) * 0.28;
+    if (body) body.obj.rotation.z += Math.sin(cycle) * 0.08;
+    if (body) body.obj.position.y += Math.abs(Math.sin(cycle)) * 0.035;
+    if (pet.bases.foot_L) pet.bases.foot_L.obj.rotation.x = Math.sin(cycle) * 0.45;
+    if (pet.bases.foot_R) pet.bases.foot_R.obj.rotation.x = Math.sin(cycle + Math.PI) * 0.45;
+    if (pet.bases.tail) pet.bases.tail.obj.rotation.y += Math.sin(cycle) * 0.35;
+  } else if (pet.bases.tail && mode !== 'sleepy') {
+    pet.bases.tail.obj.rotation.y += Math.sin(state.time * 2.4) * 0.18;
   }
 
-  if (mode === 'wave') {
-    const up = smooth(t / 0.15);
-    const restZ = animal.hand.rotation.z;
-    const sign = restZ >= 0 ? 1 : -1;
-    // Up and outward so the paw clears the head instead of hiding behind it.
-    const target = sign * (2.25 + (Math.sin(t * 8) * 0.5 + 0.5) * 0.55);
-    animal.hand.rotation.z = restZ + (target - restZ) * up;
-    animal.hand.rotation.x = 0;
-    animal.hand.position.z += 0.1 * up;
+  if (eye === 'open' && state.eyes === 'sparkly' && pet.bases.eyes_open && mode !== 'sleepy') {
+    const eyes = pet.bases.eyes_open;
+    eyes.obj.scale.x = eyes.s.x * 1.28;
+    eyes.obj.scale.z = eyes.s.z * 1.28;
+    if (eyes.obj.scale.y === eyes.s.y) eyes.obj.scale.y = eyes.s.y * 1.28;
   }
 
-  let lift = 0;
-  if (mode === 'jump') {
-    const p = Math.min(t / DURATION.jump, 1);
-    lift = Math.sin(p * Math.PI);
-    animal.body.position.y += lift * 0.55;
-    animal.body.scale.y *= 1 + lift * 0.08;
-    animal.body.scale.x *= 1 - lift * 0.05;
-    animal.head.rotation.z += Math.sin(p * Math.PI * 2) * 0.1;
-    if (animal.ears) animal.ears.rotation.x += lift * 0.35;
-  }
+  showEyes(eye);
 
   let spin = 0;
   if (mode === 'spin') {
     const p = Math.min(t / DURATION.spin, 1);
     const e = p < 0.5 ? 2 * p * p : 1 - ((-2 * p + 2) ** 2) / 2;
     spin = e * Math.PI * 2;
-    animal.body.position.y += Math.abs(Math.sin(t * 12)) * 0.05;
+    holder.position.y += Math.abs(Math.sin(t * 10)) * 0.04;
   }
-
   turntable.rotation.y = userYaw + spin;
-  camera.position.set(0, 1.02, camZ);
-  camera.lookAt(0, 0.84, 0);
+  camera.position.set(0, 1.2, camZ);
+  camera.lookAt(0, 0.95, 0);
+}
 
-  turntable.updateWorldMatrix(true, true);
-  animal.root.getWorldPosition(v3a);
-  shadow.position.x = v3a.x;
-  shadow.position.z = v3a.z;
-  shadow.scale.setScalar(Math.max(0.35, state.body * (1 - lift * 0.45)));
+function present(pet) {
+  if (current && current !== pet) holder.remove(current.root);
+  current = pet;
+  state.shown = state.animal;
+  if (!pet.root.parent) holder.add(pet.root);
+  if (pet.nodes.hat_anchor) pet.nodes.hat_anchor.add(hat);
+  if (pet.nodes.head) pet.nodes.head.add(zzz);
+  applyColors();
+  applyPose();
+  syncControls();
+}
+
+let requestSerial = 0;
+function setAnimal(name) {
+  if (!ANIMALS.some(([id]) => id === name)) return Promise.resolve();
+  state.animal = name;
+  const serial = ++requestSerial;
+  const ready = cache.has(name);
+  state.loading = !ready;
+  statusEl.hidden = ready;
+  syncControls();
+  return ensure(name).then((pet) => {
+    if (serial !== requestSerial) return pet;
+    state.loading = false;
+    statusEl.hidden = true;
+    present(pet);
+    return pet;
+  }).catch((error) => {
+    if (serial === requestSerial) {
+      state.loading = false;
+      statusEl.hidden = true;
+    }
+    console.error(error);
+    throw error;
+  });
+}
+
+function setSwatch(hex) {
+  state.swatch = hex.toLowerCase();
+  applyColors();
+  syncControls();
+}
+
+function setColor(hex) {
+  state.swatch = limitLightness(hex);
+  applyColors();
+  syncControls();
+}
+
+function setNatural() {
+  state.swatch = null;
+  applyColors();
+  syncControls();
+}
+
+function setHeight(n) {
+  state.height = Math.min(1.4, Math.max(0.75, Number(n)));
+  syncControls();
+}
+
+function setBody(n) {
+  state.body = Math.min(1.3, Math.max(0.8, Number(n)));
+  syncControls();
+}
+
+function setEyes(style) {
+  if (!['round', 'happy', 'sparkly'].includes(style)) return;
+  state.eyes = style;
+  syncControls();
+}
+
+function setCheeks(on) {
+  state.cheeks = Boolean(on);
+  syncControls();
+}
+
+function setHat(on) {
+  state.hat = Boolean(on);
+  syncControls();
+}
+
+function play(name) {
+  state.paused = false;
+  if (!DURATION[name]) {
+    state.mode = 'idle';
+    state.modeT = 0;
+    return;
+  }
+  state.mode = name;
+  state.modeT = 0;
+}
+
+function pause(atTime) {
+  state.paused = true;
+  state.modeT = atTime;
+  applyPose();
+  renderer.render(scene, camera);
+}
+
+function resume() {
+  state.paused = false;
 }
 
 function step(dt) {
@@ -607,7 +558,6 @@ function step(dt) {
 
 const frameTimes = [];
 let last = performance.now();
-
 function frame(now) {
   requestAnimationFrame(frame);
   frameTimes.push(now);
@@ -628,25 +578,21 @@ function resize() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(w, h, false);
 }
-
 window.addEventListener('resize', resize);
 
 const pointers = new Map();
 let lastPinch = null;
-
 canvas.addEventListener('pointerdown', (event) => {
   canvas.setPointerCapture(event.pointerId);
   pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
   if (pointers.size === 2) lastPinch = pinchSpan();
 });
-
 canvas.addEventListener('pointermove', (event) => {
   const prev = pointers.get(event.pointerId);
   if (!prev) return;
   pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-  if (pointers.size === 1) {
-    userYaw += (event.clientX - prev.x) * 0.012;
-  } else if (pointers.size >= 2 && lastPinch) {
+  if (pointers.size === 1) userYaw += (event.clientX - prev.x) * 0.012;
+  else if (pointers.size >= 2 && lastPinch) {
     const span = pinchSpan();
     if (span) {
       camZ = clamp(camZ * (lastPinch / span), ZOOM_MIN, ZOOM_MAX);
@@ -654,15 +600,12 @@ canvas.addEventListener('pointermove', (event) => {
     }
   }
 });
-
 function endPointer(event) {
   pointers.delete(event.pointerId);
   lastPinch = pointers.size >= 2 ? pinchSpan() : null;
 }
-
 canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
-
 canvas.addEventListener('wheel', (event) => {
   event.preventDefault();
   camZ = clamp(camZ + event.deltaY * 0.004, ZOOM_MIN, ZOOM_MAX);
@@ -673,9 +616,13 @@ function pinchSpan() {
   if (pts.length < 2) return null;
   return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
 }
-
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
+}
+
+function activeHex() {
+  if (!current) return state.swatch || '#3d5a9e';
+  return state.swatch || current.baseColor;
 }
 
 function syncControls() {
@@ -687,125 +634,43 @@ function syncControls() {
   });
   document.querySelector('#pet-cheeks').setAttribute('aria-pressed', state.cheeks ? 'true' : 'false');
   document.querySelector('#pet-hat').setAttribute('aria-pressed', state.hat ? 'true' : 'false');
-  const colour = activeColor();
+  const hex = activeHex();
   const picker = document.querySelector('#pet-colour');
-  picker.value = colour;
+  if (/^#[0-9a-fA-F]{6}$/.test(hex)) picker.value = hex;
   document.querySelectorAll('.swatch').forEach((button) => {
-    button.setAttribute('aria-pressed', button.dataset.colour.toLowerCase() === colour.toLowerCase() ? 'true' : 'false');
+    const selected = state.swatch == null
+      ? button.dataset.swatch === 'natural'
+      : button.dataset.swatch === state.swatch.toLowerCase();
+    button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    if (button.dataset.swatch === 'natural' && current) button.style.background = current.baseColor;
   });
   document.querySelector('#pet-height').value = String(state.height);
   document.querySelector('#pet-body').value = String(state.body);
 }
 
-function setAnimal(name) {
-  if (!animals[name]) return;
-  showAnimal(name);
-}
-
-function setColor(hex) {
-  state.color = hex;
-  applyColour();
-  syncControls();
-}
-
-function setHeight(n) {
-  state.height = clamp(Number(n), 0.75, 1.4);
-  syncControls();
-}
-
-function setBody(n) {
-  state.body = clamp(Number(n), 0.8, 1.3);
-  syncControls();
-}
-
-function setEyes(style) {
-  if (!current.eyeSets[style]) return;
-  state.eyes = style;
-  applyFace();
-  syncControls();
-}
-
-function setCheeks(on) {
-  state.cheeks = Boolean(on);
-  applyFace();
-  syncControls();
-}
-
-function setHat(on) {
-  state.hat = Boolean(on);
-  applyFace();
-  syncControls();
-}
-
-function play(name) {
-  state.paused = false;
-  if (name === 'idle' || !DURATION[name]) {
-    state.mode = 'idle';
-    state.modeT = 0;
-    return;
-  }
-  state.mode = name;
-  state.modeT = 0;
-}
-
-function pause(atTime) {
-  state.paused = true;
-  state.modeT = atTime;
-  applyPose();
-  renderer.render(scene, camera);
-}
-
-function resume() {
-  state.paused = false;
-}
-
-function hatOffset() {
-  applyPose();
-  pom.updateWorldMatrix(true, true);
-  current.hatMount.getWorldPosition(v3a);
-  pom.getWorldPosition(v3b);
-  return current.hatMount.worldToLocal(v3b).length();
-}
-
-function pixelScore() {
-  applyPose();
-  renderer.render(scene, camera);
-  const gl = renderer.getContext();
-  const w = gl.drawingBufferWidth;
-  const h = gl.drawingBufferHeight;
-  const buf = new Uint8Array(4);
-  let hits = 0;
-  for (let y = 0.25; y <= 0.8; y += 0.07) {
-    for (let x = 0.28; x <= 0.72; x += 0.07) {
-      gl.readPixels(Math.floor(x * (w - 1)), Math.floor(y * (h - 1)), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
-      if (buf[0] + buf[1] + buf[2] > 40) hits += 1;
-    }
-  }
-  return hits;
-}
-
-function fps() {
-  if (frameTimes.length < 2) return 0;
-  const seconds = (frameTimes[frameTimes.length - 1] - frameTimes[0]) / 1000;
-  if (seconds <= 0) return 0;
-  return (frameTimes.length - 1) / seconds;
+const animalBox = document.querySelector('#animals');
+for (const [id, label] of ANIMALS) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.dataset.animal = id;
+  button.textContent = label;
+  button.setAttribute('aria-pressed', id === 'penguin' ? 'true' : 'false');
+  button.addEventListener('click', () => setAnimal(id));
+  animalBox.append(button);
 }
 
 const swatchBox = document.querySelector('#swatches');
-for (const colour of SWATCHES) {
+for (const swatch of SWATCHES) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'swatch';
-  button.style.background = colour;
-  button.dataset.colour = colour;
-  button.setAttribute('aria-label', `Colour ${colour}`);
-  button.addEventListener('click', () => setColor(colour));
+  button.dataset.swatch = swatch.hex ? swatch.hex.toLowerCase() : 'natural';
+  button.style.background = swatch.hex || 'conic-gradient(#f2b66d, #b9a6ec, #5fa8e8, #6fd6a6, #f2b66d)';
+  button.setAttribute('aria-label', `Colour ${swatch.name}`);
+  button.addEventListener('click', () => (swatch.hex ? setSwatch(swatch.hex) : setNatural()));
   swatchBox.append(button);
 }
 
-document.querySelectorAll('[data-animal]').forEach((button) => {
-  button.addEventListener('click', () => setAnimal(button.dataset.animal));
-});
 document.querySelectorAll('[data-eyes]').forEach((button) => {
   button.addEventListener('click', () => setEyes(button.dataset.eyes));
 });
@@ -818,16 +683,58 @@ document.querySelector('#pet-height').addEventListener('input', (event) => setHe
 document.querySelector('#pet-body').addEventListener('input', (event) => setBody(event.target.value));
 document.querySelector('#pet-colour').addEventListener('input', (event) => setColor(event.target.value));
 
-animals.penguin = buildPenguin();
-animals.cat = buildCat();
-animals.bunny = buildBunny();
-showAnimal('penguin');
+function hatOffset() {
+  applyPose();
+  if (!current || !current.nodes.hat_anchor) return 0;
+  current.nodes.hat_anchor.updateWorldMatrix(true, true);
+  current.nodes.hat_anchor.getWorldPosition(v3a);
+  pom.getWorldPosition(v3b);
+  return v3a.distanceTo(v3b);
+}
+
+function hatFollow() {
+  applyPose();
+  if (!current || !current.nodes.hat_anchor) return { hatY: 0, headY: 0, gap: 0 };
+  current.nodes.hat_anchor.updateWorldMatrix(true, true);
+  current.nodes.hat_anchor.getWorldPosition(v3a);
+  pom.getWorldPosition(v3b);
+  return { hatY: v3b.y, headY: v3a.y, gap: v3a.distanceTo(v3b) };
+}
+
+function pixelScore() {
+  applyPose();
+  renderer.render(scene, camera);
+  const gl = renderer.getContext();
+  const w = gl.drawingBufferWidth;
+  const h = gl.drawingBufferHeight;
+  if (!w || !h) return 0;
+  const buf = new Uint8Array(4);
+  let hits = 0;
+  for (let y = 0.22; y <= 0.82; y += 0.06) {
+    for (let x = 0.22; x <= 0.78; x += 0.06) {
+      gl.readPixels(Math.floor(x * (w - 1)), Math.floor(y * (h - 1)), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+      if (buf[3] > 12 && buf[0] + buf[1] + buf[2] > 24) hits += 1;
+    }
+  }
+  return hits;
+}
+
+function fps() {
+  if (frameTimes.length < 2) return 0;
+  const seconds = (frameTimes[frameTimes.length - 1] - frameTimes[0]) / 1000;
+  if (seconds <= 0) return 0;
+  return (frameTimes.length - 1) / seconds;
+}
+
 resize();
 requestAnimationFrame(frame);
+setAnimal('penguin');
 
 window.__PETS = {
   setAnimal,
   setColor,
+  setSwatch,
+  setNatural,
   setHeight,
   setBody,
   setEyes,
@@ -839,14 +746,17 @@ window.__PETS = {
   fps,
   pixelScore,
   hatOffset,
+  hatFollow,
   get animal() { return state.animal; },
+  get shown() { return state.shown; },
+  get loading() { return state.loading; },
   get mode() { return state.mode; },
   get hatVisible() { return state.hat; },
   get cheeks() { return state.cheeks; },
   get eyes() { return state.eyes; },
   get height() { return state.height; },
   get body() { return state.body; },
-  get color() { return activeColor(); },
+  get color() { return activeHex(); },
   get yaw() { return userYaw; },
   set yaw(value) {
     userYaw = Number(value);
@@ -857,6 +767,6 @@ window.__PETS = {
   get timeScale() { return state.timeScale; },
   set timeScale(value) { state.timeScale = Number(value); },
   anchors() {
-    return { head: current.anchors.head, hand: current.anchors.hand };
+    return current ? { head: current.nodes.hat_anchor, hand: current.nodes.arm_L } : null;
   },
 };

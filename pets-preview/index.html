@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#E4DEFF">
+  <meta name="theme-color" content="#f6f2fc">
   <title>Dayli pet preview</title>
   <link rel="stylesheet" href="css/pets.css">
   <script type="importmap">
@@ -20,13 +20,12 @@
     <h1>Pet preview</h1>
     <p class="hint">Drag to turn · pinch or scroll to zoom</p>
   </header>
-  <canvas id="stage" aria-label="3D pet"></canvas>
+  <div class="stage-wrap">
+    <canvas id="stage" aria-label="3D pet"></canvas>
+    <p id="pet-status" class="status" role="status">Loading…</p>
+  </div>
   <section class="panel" aria-label="Pet controls">
-    <div class="row" role="group" aria-label="Animal">
-      <button type="button" data-animal="penguin" aria-pressed="true">Penguin</button>
-      <button type="button" data-animal="cat" aria-pressed="false">Cat</button>
-      <button type="button" data-animal="bunny" aria-pressed="false">Bunny</button>
-    </div>
+    <div class="animals" id="animals" role="group" aria-label="Animal"></div>
     <label class="slider">Height
       <input id="pet-height" type="range" min="0.75" max="1.4" step="0.01" value="1" aria-label="Height">
     </label>
@@ -37,10 +36,10 @@
       <div class="swatches" id="swatches"></div>
       <label class="picker">
         <span class="sr">Custom pet colour</span>
-        <input id="pet-colour" type="color" value="#3B5BDB" aria-label="Custom pet colour">
+        <input id="pet-colour" type="color" value="#3d5a9e" aria-label="Custom pet colour">
       </label>
     </div>
-    <div class="row" role="group" aria-label="Face">
+    <div class="row face" role="group" aria-label="Face">
       <button type="button" data-eyes="round" aria-pressed="true">Round eyes</button>
       <button type="button" data-eyes="happy" aria-pressed="false">Happy eyes</button>
       <button type="button" data-eyes="sparkly" aria-pressed="false">Sparkly eyes</button>

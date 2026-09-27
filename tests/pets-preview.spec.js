@@ -1,5 +1,20 @@
 import { test, expect } from '@playwright/test';
 
+const ANIMALS = [
+  ['dog', 'Dog'],
+  ['cat', 'Cat'],
+  ['bunny', 'Bunny'],
+  ['penguin', 'Penguin'],
+  ['horse', 'Horse'],
+  ['monkey', 'Monkey'],
+  ['tiger', 'Tiger'],
+  ['shark', 'Shark'],
+  ['pig', 'Pig'],
+  ['axolotl', 'Axolotl'],
+  ['capybara', 'Capybara'],
+  ['dragon', 'Dragon'],
+];
+
 function watchPage(page) {
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
@@ -18,7 +33,13 @@ async function openPets(page) {
   const watched = watchPage(page);
   await page.goto('/pets-preview/');
   await expect.poll(() => page.evaluate(() => window.__PETS && window.__PETS.pixelScore())).toBeGreaterThan(0);
+  await expect.poll(() => page.evaluate(() => window.__PETS.shown)).toBe('penguin');
   return watched;
+}
+
+async function shown(page, name) {
+  await expect.poll(() => page.evaluate(() => window.__PETS.shown)).toBe(name);
+  expect(await page.evaluate(() => window.__PETS.pixelScore())).toBeGreaterThan(0);
 }
 
 test('pet preview on a phone', async ({ page }) => {
@@ -26,23 +47,44 @@ test('pet preview on a phone', async ({ page }) => {
   expect(external, 'no third-party requests').toEqual([]);
   expect(errors, 'no console errors').toEqual([]);
 
-  await page.getByRole('button', { name: 'Cat', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.__PETS.animal)).toBe('cat');
-  await page.getByRole('button', { name: 'Bunny', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.__PETS.animal)).toBe('bunny');
-  await page.getByRole('button', { name: 'Penguin', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.__PETS.animal)).toBe('penguin');
-  expect(await page.evaluate(() => window.__PETS.pixelScore())).toBeGreaterThan(0);
+  for (const [id, label] of ANIMALS) {
+    await page.getByRole('button', { name: label, exact: true }).click();
+    await shown(page, id);
+  }
+
+  const clipped = await page.locator('button, input').evaluateAll((els) => els.map((el) => {
+    const box = el.getBoundingClientRect();
+    return {
+      name: (el.getAttribute('aria-label') || el.textContent || '').trim(),
+      left: box.left,
+      right: box.right,
+      width: box.width,
+      view: window.innerWidth,
+    };
+  }));
+  for (const box of clipped) {
+    expect(box.width, box.name).toBeGreaterThan(0);
+    expect(box.left, box.name).toBeGreaterThanOrEqual(-1);
+    expect(box.right, box.name).toBeLessThanOrEqual(box.view + 1);
+  }
 
   await page.locator('#pet-height').fill('1.35');
   await expect.poll(() => page.evaluate(() => window.__PETS.height)).toBeCloseTo(1.35, 2);
   await page.locator('#pet-body').fill('1.2');
   await expect.poll(() => page.evaluate(() => window.__PETS.body)).toBeCloseTo(1.2, 2);
 
-  await page.getByRole('button', { name: 'Colour #FF4D1A' }).click();
-  await expect.poll(() => page.evaluate(() => window.__PETS.color)).toBe('#FF4D1A');
+  await page.getByRole('button', { name: 'Colour Sunny yellow' }).click();
+  await expect.poll(() => page.evaluate(() => window.__PETS.color.toLowerCase())).toBe('#ffd23f');
+  await page.getByRole('button', { name: 'Colour Natural' }).click();
+  await expect.poll(() => page.evaluate(() => window.__PETS.color.toLowerCase())).toBe('#6fd6a6');
   await page.locator('#pet-colour').fill('#00c2a8');
   await expect.poll(() => page.evaluate(() => window.__PETS.color.toLowerCase())).toBe('#00c2a8');
+  await page.locator('#pet-colour').fill('#f4f4f4');
+  const clamped = await page.evaluate(() => window.__PETS.color);
+  const value = parseInt(clamped.slice(1), 16);
+  const luminance = (0.2126 * ((value >> 16) & 255) + 0.7152 * ((value >> 8) & 255) + 0.0722 * (value & 255)) / 255;
+  expect(luminance).toBeLessThan(0.78);
+  expect(luminance).toBeGreaterThan(0.25);
 
   await page.getByRole('button', { name: 'Happy eyes' }).click();
   await expect.poll(() => page.evaluate(() => window.__PETS.eyes)).toBe('happy');
@@ -58,20 +100,32 @@ test('pet preview on a phone', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Hat', exact: true }).click();
   await expect.poll(() => page.evaluate(() => window.__PETS.hatVisible)).toBe(true);
-  const attached = await page.evaluate(() => window.__PETS.hatOffset());
-  expect(attached).toBeGreaterThan(0.2);
+  const idle = await page.evaluate(() => {
+    window.__PETS.play('idle');
+    window.__PETS.pause(0);
+    return window.__PETS.hatFollow();
+  });
+  expect(idle.gap).toBeGreaterThan(0.2);
 
+  let jumpHead = idle;
   for (const emote of ['wave', 'jump', 'spin', 'sleepy', 'walk']) {
-    const distance = await page.evaluate((name) => {
+    const follow = await page.evaluate((name) => {
       window.__PETS.play(name);
-      window.__PETS.pause(0.4);
-      return window.__PETS.hatOffset();
+      window.__PETS.pause(0.45);
+      return window.__PETS.hatFollow();
     }, emote);
-    expect(Math.abs(distance - attached), `${emote} keeps the hat on the head`).toBeLessThan(0.02);
+    if (emote === 'jump') jumpHead = follow;
+    expect(Math.abs(follow.gap - idle.gap), `${emote} keeps the hat on the head`).toBeLessThan(0.02);
     expect(await page.evaluate(() => window.__PETS.mode)).toBe(emote);
   }
+  expect(jumpHead.headY - idle.headY).toBeGreaterThan(0.05);
+  expect(jumpHead.hatY - idle.hatY).toBeGreaterThan(0.05);
 
-  await page.evaluate(() => window.__PETS.resume());
+  await page.evaluate(() => {
+    window.__PETS.resume();
+    window.__PETS.setHeight(1);
+    window.__PETS.setBody(1);
+  });
   for (const [label, mode] of [['Wave', 'wave'], ['Jump', 'jump'], ['Spin', 'spin'], ['Sleepy', 'sleepy'], ['Walk', 'walk']]) {
     await page.evaluate(() => { window.__PETS.timeScale = 1; });
     await page.getByRole('button', { name: label, exact: true }).click();
@@ -98,33 +152,34 @@ test('pet preview on a phone', async ({ page }) => {
   expect(zoom1).toBeLessThanOrEqual(7.2);
   expect(zoom1).toBeGreaterThanOrEqual(2.8);
 
-  await page.evaluate(() => {
-    window.__PETS.yaw = -0.2;
-    window.__PETS.setAnimal('penguin');
+  await page.evaluate(async () => {
+    await window.__PETS.setAnimal('tiger');
+    window.__PETS.setNatural();
     window.__PETS.setHeight(1);
     window.__PETS.setBody(1);
-    window.__PETS.setColor('#3B5BDB');
     window.__PETS.setEyes('round');
     window.__PETS.setCheeks(true);
     window.__PETS.setHat(false);
+    window.__PETS.yaw = -0.85;
     window.__PETS.play('wave');
     window.__PETS.pause(0.2);
   });
-  await page.screenshot({ path: '/opt/cursor/artifacts/pets-penguin.png' });
+  await shown(page, 'tiger');
+  await page.screenshot({ path: '/opt/cursor/artifacts/pets-lineup-or-picker.png' });
 
-  await page.evaluate(() => {
-    window.__PETS.resume();
-    window.__PETS.setAnimal('bunny');
+  await page.evaluate(async () => {
+    await window.__PETS.setAnimal('bunny');
     window.__PETS.setColor('#7C3AED');
     window.__PETS.setHat(true);
     window.__PETS.setEyes('round');
     window.__PETS.setCheeks(true);
-    window.__PETS.yaw = -0.35;
+    window.__PETS.yaw = -0.45;
     window.__PETS.play('idle');
     window.__PETS.pause(0.2);
   });
-  await page.screenshot({ path: '/opt/cursor/artifacts/pets-bunny-hat.png' });
-  expect(await page.evaluate(() => window.__PETS.pixelScore())).toBeGreaterThan(0);
+  await shown(page, 'bunny');
+  expect(await page.evaluate(() => window.__PETS.color.toLowerCase())).toBe('#7c3aed');
+  await page.screenshot({ path: '/opt/cursor/artifacts/pets-custom-hat.png' });
 
   await page.evaluate(() => window.__PETS.resume());
   await page.waitForTimeout(2200);
