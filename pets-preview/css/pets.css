@@ -1,0 +1,153 @@
+:root {
+  color-scheme: light;
+  --ink: #2A1860;
+  --accent: #6D4AFF;
+  --panel: rgba(255, 255, 255, 0.9);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  color: var(--ink);
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: linear-gradient(165deg, #E4DEFF 0%, #FFE0C2 46%, #C8FFE6 100%);
+}
+
+.top {
+  padding: 10px 14px 0;
+  flex: 0 0 auto;
+}
+
+.kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6D4AFF;
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.2;
+}
+
+.hint {
+  margin: 2px 0 6px;
+  font-size: 0.75rem;
+  color: #5c4d88;
+}
+
+#stage {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 200px;
+  display: block;
+  touch-action: none;
+}
+
+.panel {
+  flex: 0 0 auto;
+  margin: 0 10px 10px;
+  padding: 8px 10px 10px;
+  max-height: 46vh;
+  overflow: auto;
+  background: var(--panel);
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(42, 24, 96, 0.12);
+}
+
+.row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.emotes, .colours {
+  overflow-x: auto;
+}
+
+button {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  background: #efeaff;
+  color: var(--ink);
+  font: 600 0.82rem/1 system-ui, sans-serif;
+  min-height: 36px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+button[aria-pressed="true"] {
+  background: var(--accent);
+  color: #fff;
+}
+
+.slider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.slider input {
+  flex: 1;
+  min-height: 36px;
+  accent-color: var(--accent);
+}
+
+.swatches {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+}
+
+.swatch {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(42, 24, 96, 0.2);
+}
+
+.swatch[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.picker input {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 50%;
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+@media (min-width: 800px) {
+  body { align-items: center; }
+  .top, #stage { width: min(960px, 100%); }
+  .panel { width: min(440px, calc(100% - 20px)); }
+}

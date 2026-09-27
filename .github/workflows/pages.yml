@@ -33,7 +33,7 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html manifest.webmanifest sw.js robots.txt _site/
-          cp -r css js fonts icons _site/
+          cp -r css js fonts icons pets-preview _site/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

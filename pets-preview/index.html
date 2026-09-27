@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#E4DEFF">
+  <title>Dayli pet preview</title>
+  <link rel="stylesheet" href="css/pets.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three.module.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="top">
+    <p class="kicker">Dayli</p>
+    <h1>Pet preview</h1>
+    <p class="hint">Drag to turn · pinch or scroll to zoom</p>
+  </header>
+  <canvas id="stage" aria-label="3D pet"></canvas>
+  <section class="panel" aria-label="Pet controls">
+    <div class="row" role="group" aria-label="Animal">
+      <button type="button" data-animal="penguin" aria-pressed="true">Penguin</button>
+      <button type="button" data-animal="cat" aria-pressed="false">Cat</button>
+      <button type="button" data-animal="bunny" aria-pressed="false">Bunny</button>
+    </div>
+    <label class="slider">Height
+      <input id="pet-height" type="range" min="0.75" max="1.4" step="0.01" value="1" aria-label="Height">
+    </label>
+    <label class="slider">Body size
+      <input id="pet-body" type="range" min="0.8" max="1.3" step="0.01" value="1" aria-label="Body size">
+    </label>
+    <div class="row colours">
+      <div class="swatches" id="swatches"></div>
+      <label class="picker">
+        <span class="sr">Custom pet colour</span>
+        <input id="pet-colour" type="color" value="#3B5BDB" aria-label="Custom pet colour">
+      </label>
+    </div>
+    <div class="row" role="group" aria-label="Face">
+      <button type="button" data-eyes="round" aria-pressed="true">Round eyes</button>
+      <button type="button" data-eyes="happy" aria-pressed="false">Happy eyes</button>
+      <button type="button" data-eyes="sparkly" aria-pressed="false">Sparkly eyes</button>
+      <button type="button" id="pet-cheeks" aria-pressed="true">Cheeks</button>
+    </div>
+    <div class="row">
+      <button type="button" id="pet-hat" aria-pressed="false">Hat</button>
+    </div>
+    <div class="row emotes" role="group" aria-label="Emotes">
+      <button type="button" data-emote="wave">Wave</button>
+      <button type="button" data-emote="jump">Jump</button>
+      <button type="button" data-emote="spin">Spin</button>
+      <button type="button" data-emote="sleepy">Sleepy</button>
+      <button type="button" data-emote="walk">Walk</button>
+    </div>
+  </section>
+  <script type="module" src="js/pets.js"></script>
+</body>
+</html>

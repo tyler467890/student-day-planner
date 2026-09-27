@@ -48,6 +48,8 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  // Separate prototype: never intercept or cache /pets-preview/.
+  if (url.pathname.includes('/pets-preview')) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
     try {
