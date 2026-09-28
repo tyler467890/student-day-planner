@@ -336,7 +336,7 @@ const SNOUT = {
   horse: { mouth: 'smile' },
   monkey: { mouth: 'smile' },
   tiger: { mouth: 'w' },
-  shark: { mouth: 'closed' },
+  shark: { mouth: 'smile' },
   pig: { mouth: 'smile' },
   axolotl: { mouth: 'smile' },
   capybara: { mouth: 'smile' },

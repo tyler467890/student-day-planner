@@ -37,8 +37,16 @@ COLS = {
     'axolotl': ('#ffb0d4', '#ffe0ee'), 'capybara': ('#c88f5a', '#e2b183'), 'dragon': ('#6fd6a6', '#fff0a8'),
 }
 
-VOXEL = {'body': 0.046, 'head': 0.038, 'tail': 0.04, 'mane': 0.04, 'wing_L': 0.04, 'wing_R': 0.04}
-FACE_CAP = {'body': 4500, 'head': 7000, 'tail': 2500, 'mane': 2000, 'wing_L': 2000, 'wing_R': 2000}
+VOXEL = {
+    'body': 0.03, 'head': 0.026, 'tail': 0.032, 'mane': 0.032,
+    'wing_L': 0.032, 'wing_R': 0.032, 'muzzle': 0.024,
+    'arm_L': 0.026, 'arm_R': 0.026, 'foot_L': 0.026, 'foot_R': 0.026,
+}
+FACE_CAP = {
+    'body': 7000, 'head': 9000, 'tail': 2800, 'mane': 2200,
+    'wing_L': 2200, 'wing_R': 2200, 'muzzle': 2800,
+    'arm_L': 1800, 'arm_R': 1800, 'foot_L': 1800, 'foot_R': 1800,
+}
 BODY_PARTS = {'body', 'belly', 'wing_L', 'wing_R'}
 LIMB_PARTS = {'arm_L', 'arm_R', 'foot_L', 'foot_R', 'tail'}
 MESH_NAME = {
@@ -75,7 +83,7 @@ def attach(o, parent=None):
 pets.attach = attach
 
 _orig_M = pets.M
-def M(hexcol, rough=0.45, coat=0.25, emit=0.0):
+def M(hexcol, rough=0.34, coat=0.55, emit=0.0):
     m = _orig_M(hexcol, rough, coat, emit)
     m['key'] = repr((hexcol.lower(), float(rough), float(coat), float(emit)))
     return m
@@ -143,8 +151,8 @@ def remesh(o, voxel):
         bpy.data.objects.remove(dup, do_unlink=True)
         return o
     sm = dup.modifiers.new('smooth', 'SMOOTH')
-    sm.iterations = 1
-    sm.factor = 0.15
+    sm.iterations = 5
+    sm.factor = 0.4
     bpy.ops.object.modifier_apply(modifier=sm.name)
     shade(dup)
     dup['part'] = o.get('part', '')
@@ -224,7 +232,7 @@ def rename_materials(name):
         if 'key' not in m:
             continue
         hexcol, rough, coat, emit = eval(m['key'])
-        plain = abs(rough - 0.45) < 1e-6 and abs(coat - 0.25) < 1e-6 and not emit
+        plain = abs(rough - 0.34) < 1e-6 and abs(coat - 0.55) < 1e-6 and not emit
         if plain and hexcol == base:
             m.name = 'base'
         elif plain and hexcol == belly:
