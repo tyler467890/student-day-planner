@@ -211,11 +211,12 @@ function flatMesh(geo, mat, scale, position, order) {
   return mesh;
 }
 
-function buildCartoonEyes(animal, anchor) {
+function buildCartoonEyes(animal, anchor, tune = {}) {
   const layout = EYE_LAYOUT[animal] || { spread: 0.19, s: 1, iris: 0x8d5a32, brow: false };
   const y = anchor ? anchor.position.y : 0.5;
   const z = (anchor ? anchor.position.z : 0.56) + 0.06;
-  const s = layout.s;
+  const s = Number(tune.eyeScale) || layout.s;
+  const spread = Number(tune.eyeSpread) || layout.spread;
   const w = 0.112 * s;
   const h = 0.142 * s;
   const d = 0.108 * s;
@@ -227,7 +228,7 @@ function buildCartoonEyes(animal, anchor) {
   const sleepArc = Math.PI * 0.55;
   for (const side of [-1, 1]) {
     const socket = new Group();
-    socket.position.set(side * layout.spread, y, z);
+    socket.position.set(side * spread, y, z);
     const open = new Group();
     const sclera = flatMesh(eyeGeo, scleraMat, [w, h, d], [0, 0, 0], 2);
     const irisMesh = flatMesh(eyeGeo, iris, [w * 0.88, h * 0.84, d * 0.07], [0, 0, d * 0.98], 4);
@@ -328,18 +329,18 @@ function addTailTip(animal, tail, baseMat) {
 }
 
 const SNOUT = {
-  dog: { nose: 0x5c3a32, noseScale: [0.05, 0.036, 0.034], noseLift: 0.11 },
-  cat: { muzzle: 0xfff4f8, nose: 0xff8fb0, noseScale: [0.04, 0.03, 0.028], mouth: 'w', whisker: 0x8a74b0 },
-  bunny: { muzzle: 0xfff7fb, nose: 0xff7fa3, noseScale: [0.036, 0.026, 0.024], mouth: 'w' },
+  dog: { mouth: 'smile' },
+  cat: { mouth: 'w' },
+  bunny: { mouth: 'w' },
   penguin: { mouth: 'closed' },
-  horse: { nose: 0x8a5a4a, noseScale: [0.032, 0.024, 0.02], pair: 0.08, noseLift: 0.14 },
-  monkey: { nose: 0xc4896a, noseScale: [0.036, 0.028, 0.024], noseLift: 0.08 },
-  tiger: { nose: 0xff7a9a, noseScale: [0.048, 0.034, 0.032], noseLift: 0.12, whisker: 0x6a5870 },
+  horse: { mouth: 'smile' },
+  monkey: { mouth: 'smile' },
+  tiger: { mouth: 'w' },
   shark: { mouth: 'closed' },
-  pig: { nose: 0xc85a78, noseScale: [0.028, 0.024, 0.018], pair: 0.065, noseLift: 0.12 },
-  axolotl: { muzzle: 0xffeef5, nose: 0xff8fb8, noseScale: [0.028, 0.02, 0.018] },
-  capybara: { nose: 0x6a4632, noseScale: [0.07, 0.032, 0.028], noseLift: 0.1 },
-  dragon: { muzzle: 0xeefbf0, nose: 0x2e8b64, noseScale: [0.024, 0.018, 0.016], pair: 0.055 },
+  pig: { mouth: 'smile' },
+  axolotl: { mouth: 'smile' },
+  capybara: { mouth: 'smile' },
+  dragon: { mouth: 'smile' },
 };
 
 function smileArc(radius, tube, arc, color) {
@@ -425,7 +426,7 @@ function addBlush(head, anchor, spread) {
   group.name = 'blush';
   const y = (anchor ? anchor.position.y : 0.5) - 0.1;
   const z = (anchor ? anchor.position.z : 0.56) + 0.035;
-  const x = Math.min(spread || 0.19, 0.2);
+  const x = Math.min(spread || 0.19, 0.34);
   for (const side of [-1, 1]) {
     group.add(flatMesh(eyeGeo, blushMat, [0.052, 0.03, 0.016], [side * x, y, z], 3));
   }
@@ -433,7 +434,7 @@ function addBlush(head, anchor, spread) {
   return group;
 }
 
-function addAnimalFeatures(animal, head, anchor, mouthNode) {
+function addAnimalFeatures(animal, head, anchor, mouthNode, tune = {}) {
   const spec = SNOUT[animal];
   if (!spec || !head) return { mouth: null, blush: null };
   const eyeY = anchor ? anchor.position.y : 0.5;
@@ -458,7 +459,11 @@ function addAnimalFeatures(animal, head, anchor, mouthNode) {
   }
   if (spec.whisker) addWhiskers(head, origin, spec.whisker);
   const mouth = addClipartMouth(head, origin, spec.mouth || 'smile');
-  const blush = addBlush(head, anchor, EYE_LAYOUT[animal] && EYE_LAYOUT[animal].spread);
+  const blush = addBlush(
+    head,
+    anchor,
+    Number(tune.eyeSpread) || (EYE_LAYOUT[animal] && EYE_LAYOUT[animal].spread),
+  );
   return { mouth, blush };
 }
 
@@ -574,18 +579,17 @@ function prepare(gltf) {
     if (nodes[name]) bases[name] = capture(nodes[name]);
   }
   const animal = info.userData.animal;
-  const face = nodes.head ? buildCartoonEyes(animal, nodes.eyes_open) : null;
+  const tune = {
+    eyeSpread: Number(info.userData.eyeSpread) || 0,
+    eyeScale: Number(info.userData.eyeScale) || 0,
+  };
+  const face = nodes.head ? buildCartoonEyes(animal, nodes.eyes_open, tune) : null;
   if (face && nodes.head) {
     nodes.head.add(face.rig);
-    const features = addAnimalFeatures(animal, nodes.head, nodes.eyes_open, nodes.mouth || nodes.mouth_open);
+    const features = addAnimalFeatures(animal, nodes.head, nodes.eyes_open, nodes.mouth || nodes.mouth_open, tune);
     face.mouth = features.mouth;
     face.blush = features.blush;
   }
-  addInnerEars(animal, nodes, nodes.head);
-  addPawPads(nodes.foot_L);
-  addPawPads(nodes.foot_R);
-  addFluff(animal, nodes.body);
-  addTailTip(animal, nodes.tail, [...baseMats][0]);
   return {
     root,
     nodes,
