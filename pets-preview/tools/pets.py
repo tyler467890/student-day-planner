@@ -345,9 +345,9 @@ def tail_curve(pts, radius, col, fuse=False):
 def dog():
     if not begin('dog', neck=(0, 0.0, 1.08), hat=(0, -0.1, 1.98),
                  shoulder=(0.44, -0.04, 0.98), foot=(0.24, -0.12, 0.14), tail=(0, 0.34, 0.64),
-                 eye=(0, -0.34, 1.66), spread=0.2, eye_scale=1.04,
+                 eye=(0, -0.39, 1.645), spread=0.196, eye_scale=1.04,
                  mouth=(0, -0.68, 1.24), mouth_w=0.13, mouth_bow=0.045, mouth_kind='smile',
-                 cheeks=(0.34, -0.42, 1.46)):
+                 cheeks=(0.306, -0.45, 1.465)):
         return
     col, cream, ear = '#f2b66d', '#fff1dc', '#c4844a'
     torso(col, cream, (0, 0.02, 0.58), (0.5, 0.46, 0.44), (0.32, 0.16, 0.28))
@@ -367,9 +367,9 @@ def dog():
 def cat():
     if not begin('cat', neck=(0, 0, 1.1), hat=(0, -0.08, 1.9),
                  shoulder=(0.38, -0.02, 0.96), foot=(0.2, -0.1, 0.13), tail=(0.02, 0.3, 0.5),
-                 eye=(0, -0.36, 1.6), spread=0.175, eye_scale=1.08,
+                 eye=(0, -0.332, 1.595), spread=0.17, eye_scale=1.08,
                  mouth=(0, -0.52, 1.32), mouth_w=0.07, mouth_bow=0.03, mouth_kind='w',
-                 cheeks=(0.3, -0.44, 1.42)):
+                 cheeks=(0.28, -0.392, 1.415)):
         return
     col, cream = '#b9a6ec', '#fbf5ff'
     torso(col, cream, (0, 0.0, 0.56), (0.42, 0.38, 0.4), (0.26, 0.14, 0.24))
@@ -411,9 +411,9 @@ def bunny():
 def penguin():
     if not begin('penguin', neck=(0, 0, 1.12), hat=(0, -0.08, 1.78),
                  shoulder=(0.4, -0.02, 1.05), foot=(0.18, -0.2, 0.08), tail=(0, 0.32, 0.48),
-                 eye=(0, -0.34, 1.42), spread=0.15, eye_scale=0.98,
+                 eye=(0, -0.43, 1.459), spread=0.136, eye_scale=0.98,
                  mouth=(0, -0.5, 1.18), mouth_w=0.08, mouth_bow=0.02, mouth_kind='closed',
-                 cheeks=(0.26, -0.36, 1.28)):
+                 cheeks=(0.246, -0.49, 1.279)):
         return
     col, white, beak = '#3d5a9e', '#ffffff', '#ffa23a'
     use_part('body', True)
@@ -435,9 +435,9 @@ def penguin():
 def horse():
     if not begin('horse', neck=(0, 0.02, 1.16), hat=(0, -0.16, 1.92),
                  shoulder=(0.4, -0.02, 0.98), foot=(0.22, -0.1, 0.12), tail=(0, 0.4, 0.7),
-                 eye=(0, -0.28, 1.68), spread=0.16, eye_scale=0.96,
+                 eye=(0, -0.354, 1.644), spread=0.136, eye_scale=0.96,
                  mouth=(0, -0.78, 1.28), mouth_w=0.1, mouth_bow=0.035, mouth_kind='smile',
-                 cheeks=(0.28, -0.32, 1.52)):
+                 cheeks=(0.246, -0.414, 1.464)):
         return
     col, mane, muz = '#f7c9a0', '#9b7bea', '#fde7d3'
     torso(col, muz, (0, 0.02, 0.58), (0.44, 0.4, 0.46), (0.26, 0.14, 0.24), neck=False)
@@ -464,9 +464,9 @@ def horse():
 def monkey():
     if not begin('monkey', neck=(0, 0, 1.08), hat=(0, -0.08, 1.96),
                  shoulder=(0.44, -0.02, 0.98), foot=(0.22, -0.1, 0.13), tail=(0.05, 0.36, 0.58),
-                 eye=(0, -0.42, 1.6), spread=0.16, eye_scale=1.0,
+                 eye=(0, -0.469, 1.606), spread=0.17, eye_scale=1.0,
                  mouth=(0, -0.62, 1.32), mouth_w=0.12, mouth_bow=0.05, mouth_kind='smile',
-                 cheeks=(0.3, -0.48, 1.42)):
+                 cheeks=(0.28, -0.529, 1.426)):
         return
     col, face = '#a8704a', '#ffd9b0'
     torso(col, face, (0, 0.0, 0.58), (0.46, 0.42, 0.44), (0.28, 0.16, 0.26))
@@ -493,9 +493,9 @@ def monkey():
 def tiger():
     if not begin('tiger', neck=(0, 0, 1.08), hat=(0, -0.08, 1.98),
                  shoulder=(0.46, -0.02, 1.0), foot=(0.24, -0.1, 0.14), tail=(0, 0.36, 0.62),
-                 eye=(0, -0.34, 1.66), spread=0.19, eye_scale=1.02,
+                 eye=(0, -0.375, 1.645), spread=0.19, eye_scale=1.02,
                  mouth=(0, -0.64, 1.28), mouth_w=0.12, mouth_bow=0.04, mouth_kind='w',
-                 cheeks=(0.34, -0.42, 1.46)):
+                 cheeks=(0.3, -0.435, 1.465)):
         return
     col, white, stripe = '#ff9a3c', '#fff6ea', '#3b2a3f'
     torso(col, white, (0, 0.0, 0.6), (0.5, 0.46, 0.46), (0.32, 0.16, 0.3))
@@ -529,9 +529,9 @@ def tiger():
 def shark():
     if not begin('shark', neck=(0, -0.02, 1.05), hat=(0, -0.18, 1.7),
                  shoulder=(0.4, 0.0, 0.95), foot=(0.2, -0.06, 0.12), tail=(0, 0.4, 0.62),
-                 eye=(0, -0.62, 1.46), spread=0.17, eye_scale=1.08,
+                 eye=(0, -0.462, 1.368), spread=0.173, eye_scale=1.02,
                  mouth=(0, -0.7, 1.16), mouth_w=0.13, mouth_bow=0.04, mouth_kind='smile',
-                 cheeks=(0.28, -0.48, 1.28)):
+                 cheeks=(0.283, -0.522, 1.188)):
         return
     col, white = '#5fa8e8', '#f4fbff'
     use_part('body', True)
@@ -560,9 +560,9 @@ def shark():
 def pig():
     if not begin('pig', neck=(0, 0, 1.06), hat=(0, -0.1, 1.98),
                  shoulder=(0.46, -0.02, 0.98), foot=(0.24, -0.1, 0.13), tail=(0, 0.4, 0.58),
-                 eye=(0, -0.32, 1.64), spread=0.2, eye_scale=1.0,
+                 eye=(0, -0.376, 1.625), spread=0.184, eye_scale=1.0,
                  mouth=(0, -0.62, 1.16), mouth_w=0.1, mouth_bow=0.03, mouth_kind='smile',
-                 cheeks=(0.34, -0.4, 1.42)):
+                 cheeks=(0.294, -0.436, 1.445)):
         return
     col, snout = '#ffb3c6', '#ff94b0'
     torso(col, '#ffd1dd', (0, 0.0, 0.58), (0.52, 0.5, 0.5), (0.32, 0.16, 0.3))
@@ -616,9 +616,9 @@ def axolotl():
 def capybara():
     if not begin('capybara', neck=(0, 0, 1.02), hat=(0, -0.06, 1.78),
                  shoulder=(0.48, -0.02, 0.9), foot=(0.26, -0.08, 0.13), tail=None,
-                 eye=(0, -0.22, 1.55), spread=0.22, eye_scale=0.82,
+                 eye=(0, -0.41, 1.452), spread=0.209, eye_scale=0.86,
                  mouth=(0, -0.62, 1.16), mouth_w=0.14, mouth_bow=0.03, mouth_kind='smile',
-                 cheeks=(0.36, -0.28, 1.36)):
+                 cheeks=(0.319, -0.47, 1.272)):
         return
     col, belly, snout = '#c88f5a', '#e2b183', '#a87442'
     torso(col, belly, (0, 0.02, 0.55), (0.56, 0.48, 0.4), (0.36, 0.16, 0.24), neck=False)
@@ -643,9 +643,9 @@ def capybara():
 def dragon():
     if not begin('dragon', neck=(0, 0, 1.08), hat=(0, -0.14, 1.92),
                  shoulder=(0.42, -0.02, 0.98), foot=(0.22, -0.1, 0.13), tail=(0, 0.36, 0.58),
-                 eye=(0, -0.36, 1.6), spread=0.18, eye_scale=1.02,
+                 eye=(0, -0.358, 1.615), spread=0.17, eye_scale=1.02,
                  mouth=(0, -0.58, 1.28), mouth_w=0.08, mouth_bow=0.03, mouth_kind='smile',
-                 cheeks=(0.3, -0.42, 1.42)):
+                 cheeks=(0.28, -0.418, 1.435)):
         return
     col, belly, wing = '#6fd6a6', '#fff0a8', '#b18cff'
     torso(col, belly, (0, 0.0, 0.58), (0.48, 0.44, 0.46), (0.3, 0.16, 0.3))
