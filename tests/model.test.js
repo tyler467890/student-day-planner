@@ -4,7 +4,7 @@ import {
   addDays, plannerDate, levelForPoints, levelBounds, levelTitle, computeStreak,
   instancesOn, upcomingReminders, reminderText, headerContrast, cardContrast,
   THEMES, ACCENTS, TEXT_COLOURS, BG_COLOURS, contrastRatio, onAccent, POINTS, defaultSettings,
-  paintColors, fixTextColor, migrateSettings, hexToRgb, relativeLuminance,
+  paintColors, fixTextColor,   migrateSettings, hexToRgb, relativeLuminance, normalizePet,
 } from '../js/model.js';
 
 test('planner date rolls at 4:00', () => {
@@ -281,6 +281,19 @@ test('a v1 save keeps its theme, accent, and categories', () => {
   assert.equal(custom.textColor, '#6A1040');
   assert.equal(custom.bgColor, '#FFD4E8');
   assert.equal(custom.title, "Sam's Day");
+});
+
+test('retired pets migrate onto the cube lineup', () => {
+  assert.equal(normalizePet({ animal: 'horse', hat: true, eyes: 'sparkly' }).animal, 'fox');
+  assert.equal(normalizePet({ animal: 'horse', hat: true }).hat, true);
+  assert.equal(normalizePet({ animal: 'shark', color: '#ffd23f' }).animal, 'penguin');
+  assert.equal(normalizePet({ animal: 'shark', color: '#ffd23f' }).color, '#FFD23F');
+  assert.equal(normalizePet({ animal: 'axolotl' }).animal, 'bunny');
+  assert.equal(normalizePet({ animal: 'capybara' }).animal, 'koala');
+  assert.equal(normalizePet({ animal: 'dragon' }).animal, 'lion');
+  assert.equal(normalizePet({ animal: 'tiger' }).animal, 'tiger');
+  assert.equal(normalizePet({ animal: 'chick' }).animal, 'chick');
+  assert.equal(normalizePet({ animal: 'nope' }).animal, 'penguin');
 });
 
 test('photo dimming still counts toward text contrast', () => {

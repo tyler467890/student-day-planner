@@ -76,15 +76,24 @@ export const PET_ANIMALS = [
   ['cat', 'Cat'],
   ['bunny', 'Bunny'],
   ['penguin', 'Penguin'],
-  ['horse', 'Horse'],
   ['monkey', 'Monkey'],
   ['tiger', 'Tiger'],
-  ['shark', 'Shark'],
   ['pig', 'Pig'],
-  ['axolotl', 'Axolotl'],
-  ['capybara', 'Capybara'],
-  ['dragon', 'Dragon'],
+  ['lion', 'Lion'],
+  ['panda', 'Panda'],
+  ['fox', 'Fox'],
+  ['koala', 'Koala'],
+  ['chick', 'Chick'],
 ];
+
+/** Saves from the retired procedural lineup land on a cube pet. */
+const PET_MIGRATION = {
+  horse: 'fox',
+  shark: 'penguin',
+  axolotl: 'bunny',
+  capybara: 'koala',
+  dragon: 'lion',
+};
 
 export const PET_COLOURS = [
   { name: 'Natural', hex: null },
@@ -112,7 +121,8 @@ export function defaultPet() {
 export function normalizePet(saved) {
   const base = defaultPet();
   if (!saved || typeof saved !== 'object') return base;
-  const animal = PET_ANIMALS.some(([id]) => id === saved.animal) ? saved.animal : base.animal;
+  const migrated = PET_MIGRATION[saved.animal] || saved.animal;
+  const animal = PET_ANIMALS.some(([id]) => id === migrated) ? migrated : base.animal;
   const eyes = saved.eyes === 'happy' || saved.eyes === 'sparkly' ? saved.eyes : 'round';
   const height = Number(saved.height);
   const body = Number(saved.body);

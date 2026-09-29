@@ -6,14 +6,14 @@ const ANIMALS = [
   ['cat', 'Cat'],
   ['bunny', 'Bunny'],
   ['penguin', 'Penguin'],
-  ['horse', 'Horse'],
   ['monkey', 'Monkey'],
   ['tiger', 'Tiger'],
-  ['shark', 'Shark'],
   ['pig', 'Pig'],
-  ['axolotl', 'Axolotl'],
-  ['capybara', 'Capybara'],
-  ['dragon', 'Dragon'],
+  ['lion', 'Lion'],
+  ['panda', 'Panda'],
+  ['fox', 'Fox'],
+  ['koala', 'Koala'],
+  ['chick', 'Chick'],
 ];
 
 function watchPage(page) {
@@ -77,7 +77,7 @@ test('pet preview on a phone', async ({ page }) => {
   await page.getByRole('button', { name: 'Colour Sunny yellow' }).click();
   await expect.poll(() => page.evaluate(() => window.__PETS.color.toLowerCase())).toBe('#ffd23f');
   await page.getByRole('button', { name: 'Colour Natural' }).click();
-  await expect.poll(() => page.evaluate(() => window.__PETS.color.toLowerCase())).toBe('#6fd6a6');
+  await expect.poll(() => page.evaluate(() => window.__PETS.color.toLowerCase())).toBe('#ffffff');
   await page.locator('#pet-colour').fill('#00c2a8');
   await expect.poll(() => page.evaluate(() => window.__PETS.color.toLowerCase())).toBe('#00c2a8');
   await page.locator('#pet-colour').fill('#f4f4f4');
