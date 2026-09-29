@@ -37,9 +37,11 @@ function vinyl(color, roughness = 0.4) {
 export function createPetStage(canvas) {
   const scene = new Scene();
   const camera = new PerspectiveCamera(32, 1, 0.1, 40);
-  const lookX = 0.12;
-  const lookY = 1.15;
-  camera.position.set(lookX, 1.35, 5.6);
+  const lookX = 0.08;
+  const lookY = 0.86;
+  const camY = 1.08;
+  const camZ = 4.7;
+  camera.position.set(lookX, camY, camZ);
   const renderer = new WebGLRenderer({
     canvas,
     alpha: true,
@@ -189,7 +191,7 @@ export function createPetStage(canvas) {
       spin = e * Math.PI * 2;
     }
     turntable.rotation.y = -0.38 + spin;
-    camera.position.set(lookX, 1.35, 5.6);
+    camera.position.set(lookX, camY, camZ);
     camera.lookAt(lookX, lookY, 0);
   }
 
