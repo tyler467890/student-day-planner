@@ -1,18 +1,31 @@
-"""Procedural 3D 'vinyl toy' pet concepts for Dayli. Run with the bpy venv.
-Usage: python pets.py <name|all|emotes|lineup> [samples]
+"""Procedural 3D vinyl-toy pets for Dayli. Run with Blender (bpy).
+
+Each animal is a bipedal toy with its own body proportions and the features
+that make the silhouette readable at phone size. Objects are tagged with a
+`part` custom property so export_glb.py can join them onto the animation rig:
+
+  body, belly, wing_L, wing_R  -> body
+  arm_L/R, foot_L/R, tail      -> those pivots
+  head and everything else     -> head
+
+`fuse` True marks same-material pieces that should be voxel-remeshed into one
+smooth volume (head + ears, body + fins). Curls, whiskers, stripes and other
+thin details stay fuse False so they keep their shape.
+
+Usage: blender --background --python pets.py -- <name|all|emotes|lineup> [samples]
 """
-import bpy, math, sys, os
-from mathutils import Vector, Quaternion, Matrix
+import bpy, math, sys
+from mathutils import Vector
 
 OUT = "/workspace/pet-avatars"
-BG = (246, 242, 252)  # plain light lavender-white background
+BG = (246, 242, 252)
 
 def hexlin(h):
     h = h.lstrip('#'); c = [int(h[i:i+2], 16)/255 for i in (0, 2, 4)]
     return tuple((x/12.92) if x <= 0.04045 else ((x+0.055)/1.055)**2.4 for x in c)
 
 _mats = {}
-def M(hexcol, rough=0.45, coat=0.25, emit=0.0):
+def M(hexcol, rough=0.34, coat=0.55, emit=0.0):
     key = (hexcol, rough, coat, emit)
     if key in _mats: return _mats[key]
     m = bpy.data.materials.new(hexcol); m.use_nodes = True
@@ -29,7 +42,23 @@ def M(hexcol, rough=0.45, coat=0.25, emit=0.0):
     _mats[key] = m; return m
 
 PARENT = [None]
+PART = ['accent']
+FUSE = [True]
+ONLY = [None]
+STYLE = {'eye': 'open', 'mouth': None, 'arms': 'down'}
+RIG = {}
+
+def tag(o):
+    o['part'] = PART[0] or 'accent'
+    o['fuse'] = bool(FUSE[0])
+    return o
+
+def use_part(name, fuse=True):
+    PART[0] = name
+    FUSE[0] = fuse
+
 def attach(o, parent=None):
+    tag(o)
     p = parent or PARENT[0]
     if p is not None:
         bpy.context.view_layer.update()
@@ -40,9 +69,11 @@ def attach(o, parent=None):
 def finish(o, mat, subsurf=0, smooth=True):
     if smooth and o.type == 'MESH':
         for poly in o.data.polygons: poly.use_smooth = True
-    o.data.materials.append(mat)
+    if mat is not None and (not o.data.materials or o.data.materials[-1] != mat):
+        o.data.materials.append(mat)
     if subsurf:
         s = o.modifiers.new("s", 'SUBSURF'); s.levels = subsurf; s.render_levels = subsurf
+    tag(o)
     return attach(o)
 
 def quat_to(d, axis='Z', up='Y'):
@@ -68,14 +99,18 @@ def cyl(loc, r, depth, mat, rot=None, verts=48, scale=(1, 1, 1)):
     return finish(o, mat)
 
 def curve(points, bevel, mat, taper_end=None):
+    return tube(points, bevel, mat, 'AUTO')
+
+def tube(points, bevel, mat, handles='AUTO'):
     cu = bpy.data.curves.new("c", 'CURVE'); cu.dimensions = '3D'
-    cu.bevel_depth = bevel; cu.bevel_resolution = 6; cu.use_fill_caps = True
+    cu.bevel_depth = bevel; cu.bevel_resolution = 4; cu.use_fill_caps = True
+    cu.resolution_u = 8
     sp = cu.splines.new('BEZIER'); sp.bezier_points.add(len(points)-1)
     for bp, p in zip(sp.bezier_points, points):
-        bp.co = p; bp.handle_left_type = bp.handle_right_type = 'AUTO'
-        if taper_end is not None: pass
+        bp.co = Vector(p); bp.handle_left_type = bp.handle_right_type = handles
     o = bpy.data.objects.new("curve", cu); bpy.context.collection.objects.link(o)
     cu.materials.append(mat)
+    tag(o)
     return attach(o)
 
 def text(s, loc, size, mat, rot=(math.radians(90), 0, 0)):
@@ -86,11 +121,10 @@ def text(s, loc, size, mat, rot=(math.radians(90), 0, 0)):
     return attach(o)
 
 def star(loc, r, mat, depth=0.35):
-    import math as _m
     verts = [(0, -depth*r, 0), (0, depth*r, 0)]
     for i in range(10):
-        a = _m.pi/2 + i*_m.pi/5; rr = r if i % 2 == 0 else r*0.45
-        verts.append((rr*_m.cos(a), 0, rr*_m.sin(a)))
+        a = math.pi/2 + i*math.pi/5; rr = r if i % 2 == 0 else r*0.45
+        verts.append((rr*math.cos(a), 0, rr*math.sin(a)))
     faces = []
     for i in range(10):
         a, b = 2 + i, 2 + (i+1) % 10
@@ -104,294 +138,558 @@ def empty(loc=(0, 0, 0)):
     o = bpy.data.objects.new("root", None); bpy.context.collection.objects.link(o)
     o.location = loc; return o
 
-# ---------- body plan ----------
-HEAD = Vector((0, 0, 1.5)); HS = Vector((0.70, 0.62, 0.60))
-BODY = Vector((0, 0, 0.62)); BS = Vector((0.50, 0.44, 0.52))
+def torus(loc, major, minor, mat, rot=None):
+    bpy.ops.mesh.primitive_torus_add(
+        major_radius=major, minor_radius=minor, major_segments=28, minor_segments=12, location=loc)
+    o = bpy.context.active_object
+    if rot is not None:
+        o.rotation_mode = 'QUATERNION'; o.rotation_quaternion = rot
+    return finish(o, mat)
 
-def dirv(az, el):
-    return Vector((math.sin(az)*math.cos(el), -math.cos(az)*math.cos(el), math.sin(el)))
+def softbox(loc, size, mat, bevel=0.1):
+    bpy.ops.mesh.primitive_cube_add(size=1, location=loc)
+    o = bpy.context.active_object
+    o.scale = size
+    bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+    b = o.modifiers.new('b', 'BEVEL')
+    b.width = bevel
+    b.segments = 4
+    return finish(o, mat)
 
-def surf(C, S, az, el, k=1.0):
-    d = dirv(az, el); return C + Vector((d.x*S.x, d.y*S.y, d.z*S.z))*k
-
-def face_rot(az, el):
-    return quat_to(dirv(az, el), '-Y', 'Z')
+# Kept so older notes and the hat fallback still have a head size to read.
+HEAD = Vector((0, 0, 1.5)); HS = Vector((0.58, 0.52, 0.54))
+BODY = Vector((0, 0, 0.62)); BS = Vector((0.48, 0.44, 0.46))
 
 BLACK = lambda: M('#1d1a2b', rough=0.08, coat=1.0)
-WHITE_EMIT = lambda: M('#ffffff', rough=0.2, coat=0, emit=2.5)
+NOSE = lambda hexcol='#3a2a28': M(hexcol, rough=0.32, coat=0.45)
+PINK = lambda hexcol='#ffb7c8': M(hexcol, rough=0.5, coat=0.15)
 
-def eyes(style='open', az=0.34, el=0.02, size=1.0, C=None, S=None, lashes=False):
-    C = C or HEAD; S = S or HS
-    for sgn in (-1, 1):
-        a = az*sgn
-        if style == 'open':
-            p = surf(C, S, a, el, 0.965)
-            sphere(p, (0.115*size, 0.06, 0.14*size), BLACK(), face_rot(a, el))
-            sphere(surf(C, S, a-0.045, el+0.06, 1.0), (0.034*size,)*3, WHITE_EMIT())
-            sphere(surf(C, S, a+0.04, el-0.05, 1.0), (0.017*size,)*3, WHITE_EMIT())
-            if lashes:
-                for i, t in enumerate((-0.5, 0.0, 0.5)):
-                    base = surf(C, S, a + sgn*0.07 + t*0.02, el+0.13, 1.0)
-                    tip = base + Vector((sgn*0.05, -0.03, 0.05))
-                    curve([base, tip], 0.012, BLACK())
+def begin(animal, **kw):
+    """Store rig/face anchors. Return False when only a face alternate is needed."""
+    RIG.clear()
+    shoulder = kw.pop('shoulder')
+    foot = kw.pop('foot')
+    RIG['animal'] = animal
+    RIG['shoulder_L'] = shoulder
+    RIG['shoulder_R'] = (-shoulder[0], shoulder[1], shoulder[2])
+    RIG['foot_L'] = foot
+    RIG['foot_R'] = (-foot[0], foot[1], foot[2])
+    RIG.update(kw)
+    if ONLY[0] in ('eyes', 'mouth', 'cheeks'):
+        place_face(ONLY[0])
+        return False
+    return True
+
+def place_face(kind):
+    eye = STYLE['eye']
+    mouth = STYLE['mouth'] or RIG.get('mouth_kind', 'smile')
+    if kind == 'eyes':
+        use_part('eyes', False)
+        p = Vector(RIG['eye']); spread = RIG['spread']
+        for sgn in (-1, 1):
+            loc = p + Vector((spread * sgn, 0, 0))
+            if eye == 'open':
+                sphere(loc, (0.05, 0.032, 0.06), BLACK())
+            else:
+                pts = []
+                for i in range(7):
+                    t = -1 + 2 * i / 6
+                    lift = 0.035 * (1 - t * t) if eye == 'happy' else -0.028 * (1 - t * t)
+                    pts.append(loc + Vector((t * 0.07, -0.02, lift)))
+                tube(pts, 0.012, BLACK(), 'AUTO')
+        return
+    if kind == 'mouth':
+        use_part('mouth', False)
+        mp = Vector(RIG['mouth'])
+        w = RIG.get('mouth_w', 0.12)
+        bow = RIG.get('mouth_bow', 0.04)
+        if mouth in ('open', 'o'):
+            sphere(mp, (0.07, 0.04, 0.05), M('#5a1e32', rough=0.4))
+            sphere(mp + Vector((0, -0.015, -0.025)), (0.04, 0.025, 0.02), M('#ff7d9a', rough=0.5))
+        elif mouth in ('w', 'cat'):
+            pts = []
+            for i in range(9):
+                t = -1 + 2 * i / 8
+                pts.append(mp + Vector((t * w, -0.012, -bow * abs(math.sin(t * math.pi)))))
+            tube(pts, 0.012, BLACK(), 'AUTO')
         else:
             pts = []
-            for i in range(7):
-                t = -1 + 2*i/6
-                if style == 'happy':   # bows upward  ^
-                    e = el - 0.02 + 0.055*(1 - t*t)
-                else:                  # sleepy, bows downward
-                    e = el + 0.01 - 0.04*(1 - t*t)
-                pts.append(surf(C, S, a + t*0.1, e, 1.005))
-            curve(pts, 0.02, BLACK())
+            for i in range(9):
+                t = -1 + 2 * i / 8
+                pts.append(mp + Vector((t * w, -0.012, -bow * (1 - t * t))))
+            tube(pts, 0.014, BLACK(), 'AUTO')
+        return
+    if kind == 'cheeks':
+        use_part('cheeks', False)
+        c = Vector(RIG.get('cheeks', (0.28, RIG['eye'][1] - 0.08, RIG['eye'][2] - 0.12)))
+        for sgn in (-1, 1):
+            sphere((abs(c.x) * sgn, c.y, c.z), (0.055, 0.02, 0.032), M('#ff9fb6', rough=0.7, coat=0))
 
-def blush(az=0.6, el=-0.16, C=None, S=None, col='#ff9fb6'):
-    C = C or HEAD; S = S or HS
+def add_face():
+    place_face('eyes')
+    place_face('mouth')
+    place_face('cheeks')
+
+def torso(col, belly, center, scale, belly_s, neck=True):
+    use_part('body', True)
+    mat = M(col)
+    c = Vector(center)
+    sphere(c, scale, mat)
+    if neck:
+        # Neck reaches up into the head so the two volumes overlap after the runtime scale.
+        sphere((0, c.y - 0.03, c.z + scale[2] * 0.95), (scale[0] * 0.5, scale[1] * 0.46, scale[2] * 0.82), mat)
+    if belly_s:
+        use_part('belly', False)
+        depth = max(belly_s[1], 0.18)
+        front = c.y - scale[1]
+        sphere((0, front - 0.1 + depth, c.z - scale[2] * 0.02), (belly_s[0], depth, belly_s[2]), M(belly))
+
+def skull(col, center, scale):
+    use_part('head', True)
+    mat = M(col)
+    c = Vector(center)
+    sphere(c, scale, mat)
+    # Plug that sinks into the neck, so the join reads as one toy.
+    sphere((c.x, c.y + 0.03, c.z - scale[2] * 0.75), (scale[0] * 0.64, scale[1] * 0.58, scale[2] * 0.6), mat)
+
+def stand(col, feet_col, mode='arm', arm_r=0.105, arm_len=0.50, foot_s=(0.16, 0.18, 0.11)):
+    """Soft limbs. The shoulder ball stays on the arm pivot; the leg reaches into the body."""
+    arms = STYLE['arms']
+    mat = M(col)
+    for sgn in (1, -1):
+        side = 'L' if sgn > 0 else 'R'
+        sh = Vector(RIG['shoulder_L']); sh.x *= sgn
+        use_part('arm_' + side, True)
+        if mode == 'flipper':
+            socket = sh + Vector((0.03 * sgn, -0.02, 0.02))
+            if arms == 'up':
+                mid = sh + Vector((0.12 * sgn, -0.06, 0.16))
+                tip = sh + Vector((0.16 * sgn, -0.1, 0.34))
+            else:
+                mid = sh + Vector((0.14 * sgn, -0.06, -0.06))
+                tip = sh + Vector((0.2 * sgn, -0.1, -0.26))
+            sphere(socket, (arm_r * 1.45, arm_r * 1.2, arm_r * 1.35), mat)
+            sphere(mid, (arm_r * 0.9, arm_r * 1.55, arm_r * 1.2), mat)
+            sphere(tip, (arm_r * 0.55, arm_r * 1.05, arm_r * 0.75), mat)
+        elif mode == 'fin':
+            sphere(sh + Vector((0.05 * sgn, 0.0, 0.0)), (0.14, 0.12, 0.13), mat)
+            sphere(sh + Vector((0.26 * sgn, 0.0, -0.02)), (0.2, 0.075, 0.13), mat)
+        else:
+            if arms == 'up':
+                hand = sh + Vector((0.24 * sgn, -0.1, 0.26))
+            else:
+                hand = sh + Vector((0.04 * sgn, -0.03, -arm_len))
+            mid = sh.lerp(hand, 0.55)
+            sphere(sh, (arm_r * 1.55, arm_r * 1.25, arm_r * 1.4), mat)
+            sphere(mid, (arm_r * 1.15, arm_r * 1.0, arm_r * 1.2), mat)
+            sphere(hand, (arm_r * 1.25, arm_r * 1.05, arm_r * 1.05), mat)
+        ft = Vector(RIG['foot_L']); ft.x *= sgn
+        knee = Vector((ft.x * 0.72, ft.y * 0.35, ft.z + 0.2))
+        hip = Vector((ft.x * 0.5, ft.y * 0.12, max(0.5, ft.z + 0.36)))
+        if mode == 'hoof':
+            use_part('foot_' + side, True)
+            sphere(hip, (0.13, 0.12, 0.14), mat)
+            sphere(knee, (0.11, 0.11, 0.15), mat)
+            use_part('foot_' + side, False)
+            hoof = M(feet_col, rough=0.4, coat=0.35)
+            sphere(ft + Vector((0, -0.02, 0.03)), (0.11, 0.13, 0.08), hoof)
+            sphere(ft + Vector((0, -0.015, 0.07)), (0.105, 0.12, 0.06), hoof)
+        elif mode == 'flipper':
+            use_part('foot_' + side, True)
+            foot_mat = M(feet_col, rough=0.35, coat=0.45)
+            sphere(hip, (0.11, 0.12, 0.12), foot_mat)
+            sphere(knee, (0.12, 0.15, 0.1), foot_mat)
+            sphere(ft + Vector((0, -0.05, 0.03)), (max(foot_s[0], 0.15), max(foot_s[1], 0.2), 0.07), foot_mat)
+        else:
+            use_part('foot_' + side, True)
+            sphere(hip, (0.145, 0.13, 0.14), mat)
+            sphere(knee, (0.125, 0.13, 0.16), mat)
+            sphere(ft + Vector((0, -0.02, 0.02)), (foot_s[0], foot_s[1], max(foot_s[2], 0.1)), mat)
+
+def floppy_ear(sgn, col, inner, base, tip, radius=0.14, part='ears', fuse=False):
+    use_part(part, fuse)
+    base, tip = Vector(base), Vector(tip)
+    base.x *= sgn; tip.x *= sgn
+    mid = (base + tip) * 0.5
+    rot = quat_to(tip - base, 'Z', 'Y')
+    sphere(mid, (radius, radius * 0.55, (tip - base).length * 0.48), M(col), rot)
+    sphere(mid + Vector((0, -0.045, 0)), (radius * 0.62, radius * 0.28, (tip - base).length * 0.34), PINK(inner), rot)
+
+def pointy_ear(sgn, col, inner, base, height=0.42, radius=0.16, lean=0.12):
+    use_part('head', True)
+    base = Vector(base); base.x *= sgn
+    d = Vector((lean * sgn, 0.02, 1)).normalized()
+    cone(base + d * height * 0.48, radius, 0.035, height, M(col), quat_to(d, 'Z', 'Y'), verts=16, subsurf=1, scale=(1, 0.62, 1))
+    use_part('head', False)
+    cone(base + d * height * 0.5 + Vector((0, -0.03, 0)), radius * 0.55, 0.02, height * 0.72, PINK(inner), quat_to(d, 'Z', 'Y'), verts=12, subsurf=1, scale=(0.7, 0.35, 1))
+
+def whiskers(origin, length, col, spread=0.08):
+    use_part('head', False)
+    o = Vector(origin)
+    mat = M(col, rough=0.4, coat=0.1)
     for sgn in (-1, 1):
-        sphere(surf(C, S, az*sgn, el, 0.99), (0.085, 0.02, 0.05), M(col, rough=0.7, coat=0), face_rot(az*sgn, el))
+        for dz, pitch in ((0.045, 0.05), (0.0, 0.0), (-0.04, -0.04)):
+            a = o + Vector((spread * sgn, 0, dz))
+            b = a + Vector((length * sgn, -0.05, pitch + dz))
+            tube([a, b], 0.018, mat, 'VECTOR')
 
-def mouth(style='smile', C=None, S=None, el=-0.24, width=0.12, bow=0.05):
-    C = C or HEAD; S = S or HS
-    if style == 'smile':
-        pts = [surf(C, S, t*width, el - bow*(1 - t*t), 1.005) for t in [-1 + 2*i/8 for i in range(9)]]
-        curve(pts, 0.018, BLACK())
-    elif style == 'cat':  # w-shape
-        pts = []
-        for i in range(11):
-            t = -1 + 2*i/10
-            pts.append(surf(C, S, t*width, el - bow*0.8*abs(math.sin(t*math.pi)), 1.005))
-        curve(pts, 0.016, BLACK())
-    elif style == 'open':
-        p = surf(C, S, 0, el-0.02, 0.975)
-        sphere(p, (0.095, 0.05, 0.075), M('#5a1e32', rough=0.4), face_rot(0, el-0.02))
-        sphere(surf(C, S, 0, el-0.055, 0.99), (0.055, 0.03, 0.03), M('#ff7d9a', rough=0.5), face_rot(0, el-0.055))
-    elif style == 'o':
-        p = surf(C, S, 0, el, 0.99)
-        sphere(p, (0.035, 0.03, 0.035), M('#5a1e32', rough=0.4), face_rot(0, el))
+def nose(loc, scale, col='#3a2a28'):
+    use_part('head', False)
+    sphere(loc, scale, NOSE(col))
 
-def base_body(col, belly=None, arms='down', feet_col=None, arm_col=None):
-    sphere(BODY, BS, M(col))
-    if belly:
-        sphere(BODY + Vector((0, -0.24, -0.04)), (0.34, 0.22, 0.38), M(belly))
-    fc = M(feet_col or col)
-    for sgn in (-1, 1):
-        sphere((0.23*sgn, -0.12, 0.1), (0.16, 0.21, 0.11), fc)
-        sh = Vector((0.38*sgn, -0.04, 0.86))
-        d = Vector((0.45*sgn, -0.1, -0.9)) if arms == 'down' else Vector((0.95*sgn, -0.25, 0.55))
-        d.normalize()
-        sphere(sh + d*0.2, (0.12, 0.12, 0.22), M(arm_col or col), quat_to(d, 'Z', 'Y'))
-
-def head(col):
-    sphere(HEAD, HS, M(col))
-
-def ears_round(col, inner, az=0.62, el=0.75, r=0.2):
-    for sgn in (-1, 1):
-        p = surf(HEAD, HS, az*sgn, el, 0.95); d = dirv(az*sgn, el)
-        sphere(p, (r, r*0.45, r), M(col), quat_to(d, '-Y', 'Z') if False else face_rot(az*sgn*0.2, 0.1))
-        sphere(p + Vector((0, -0.05, 0)), (r*0.6, r*0.3, r*0.6), M(inner), face_rot(az*sgn*0.2, 0.1))
-
-def ears_pointy(col, inner, az=0.55, el=0.9, h=0.42, r=0.21, tilt=0.0):
-    for sgn in (-1, 1):
-        base = surf(HEAD, HS, az*sgn, el, 0.85)
-        d = (dirv(az*sgn, el) + Vector((0, tilt, 0.6))).normalized()
-        cone(base + d*h*0.5, r, 0.0, h, M(col), quat_to(d, 'Z', 'Y'), verts=10, subsurf=2, scale=(1, 0.55, 1))
-        cone(base + d*h*0.5 + Vector((0, -0.07, -0.02)), r*0.62, 0.0, h*0.75, M(inner), quat_to(d, 'Z', 'Y'), verts=10, subsurf=2, scale=(1, 0.3, 1))
-
-def tail_curve(pts, r, col):
-    curve([Vector(p) for p in pts], r, M(col))
+def tail_curve(pts, radius, col, fuse=False):
+    use_part('tail', fuse)
+    tube(pts, radius, M(col), 'AUTO')
 
 # ---------- animals ----------
-def build(name, eye='open', mth=None, arms='down', extras=True):
-    A = {}
-    if name == 'dog':
-        col, cream = '#f2b66d', '#fff1dc'
-        base_body(col, cream, arms); head(col)
-        M_C = HEAD + Vector((0, -0.5, -0.2)); M_S = Vector((0.3, 0.2, 0.2))
-        sphere(M_C, M_S, M(cream))
-        sphere(surf(M_C, M_S, 0, 0.45, 0.98), (0.09, 0.06, 0.065), BLACK())
-        sphere(surf(HEAD, HS, -0.35, 0.1, 0.95), (0.2, 0.05, 0.19), M('#c98848'), face_rot(-0.35, 0.1))  # eye patch
-        eyes(eye, el=0.1); blush(az=0.66, el=-0.08)
-        mouth(mth or 'smile', M_C, M_S, el=-0.1, width=0.4, bow=0.28)
-        for sgn in (-1, 1):  # floppy ears
-            p = HEAD + Vector((0.62*sgn, 0.02, 0.12))
-            d = Vector((0.45*sgn, 0, -1)).normalized()
-            sphere(p + d*0.12, (0.15, 0.09, 0.3), M('#b8763d'), quat_to(d, 'Z', 'Y'))
-        tail_curve([(0, 0.4, 0.45), (0, 0.6, 0.6), (0.05, 0.7, 0.85)], 0.06, col)
-        sphere(BODY + Vector((0, -0.37, 0.33)), (0.06, 0.04, 0.06), M('#ffd23f', rough=0.25, coat=1))
-    elif name == 'cat':
-        col, cream = '#b9a6ec', '#fbf5ff'
-        base_body(col, cream, arms); head(col)
-        ears_pointy(col, '#ffb3c8', az=0.5, el=0.72, h=0.52, r=0.27)
-        eyes(eye, lashes=False); blush()
-        sphere(surf(HEAD, HS, 0, -0.14, 1.0), (0.055, 0.035, 0.04), M('#ff8fb0', rough=0.3, coat=1), face_rot(0, -0.14))
-        mouth(mth or 'cat', el=-0.21, width=0.11)
-        for sgn in (-1, 1):
-            for k, de in enumerate((-0.04, 0.04)):
-                a = surf(HEAD, HS, 0.33*sgn, -0.15+de, 1.0)
-                curve([a, a + Vector((0.28*sgn, -0.04, de*2))], 0.008, M('#6d5aa8'))
-        tail_curve([(0.1, 0.4, 0.3), (0.35, 0.6, 0.4), (0.4, 0.55, 0.85), (0.25, 0.5, 1.05)], 0.07, col)
-        for z in (0.15, 0.28):  # stripes on forehead
-            pass
-    elif name == 'bunny':
-        col, inner = '#fdeaf1', '#ffa9c1'
-        base_body(col, None, arms); head(col)
-        for sgn in (-1, 1):
-            base = HEAD + Vector((0.26*sgn, 0.02, 0.5)); d = Vector((0.18*sgn, 0.05, 1)).normalized()
-            sphere(base + d*0.4, (0.14, 0.08, 0.42), M(col), quat_to(d, 'Z', 'Y'))
-            sphere(base + d*0.42 + Vector((0, -0.05, 0)), (0.08, 0.04, 0.32), M(inner), quat_to(d, 'Z', 'Y'))
-        eyes(eye); blush(col='#ff8fae')
-        sphere(surf(HEAD, HS, 0, -0.13, 1.0), (0.05, 0.035, 0.035), M('#ff7fa3', rough=0.3, coat=1), face_rot(0, -0.13))
-        mouth(mth or 'cat', el=-0.2, width=0.09)
-        sphere(surf(HEAD, HS, 0, -0.3, 0.995), (0.05, 0.02, 0.05), M('#ffffff', rough=0.3), face_rot(0, -0.3))  # tooth
-        sphere((0, 0.45, 0.42), (0.15, 0.15, 0.15), M('#ffffff', rough=0.9, coat=0))
-        sphere(BODY + Vector((0, -0.25, -0.05)), (0.3, 0.2, 0.34), M('#ffe3ec'))
-    elif name == 'penguin':
-        col, white = '#3d5a9e', '#ffffff'
-        base_body(col, white, arms, feet_col='#ffa23a'); head(col)
-        FC = HEAD + Vector((0, -0.2, -0.05)); FS = Vector((0.58, 0.46, 0.46))
-        sphere(FC, FS, M(white))  # face mask
-        eyes(eye, el=0.1, az=0.36, C=FC, S=FS); blush(az=0.62, el=-0.1, C=FC, S=FS)
-        bk = surf(FC, FS, 0, -0.05, 0.93)
-        cone(bk + Vector((0, -0.08, 0)), 0.11, 0.0, 0.18, M('#ffa23a', rough=0.35, coat=0.6), quat_to((0, -1, -0.15), 'Z', 'Y'), verts=12, subsurf=2, scale=(1.2, 0.8, 1))
-        if (mth or 'smile') in ('open', 'o'):
-            mouth(mth, C=FC, S=FS, el=-0.33)
-        elif mth == 'smile':
-            mouth('smile', C=FC, S=FS, el=-0.3, width=0.14, bow=0.07)
-        sphere(HEAD + Vector((0, 0, 0.6)), (0.07, 0.07, 0.1), M(col))  # tuft
-    elif name == 'horse':
-        col, mane, muz = '#f7c9a0', '#9b7bea', '#fde7d3'
-        base_body(col, None, arms, feet_col='#8a6a55'); head(col)
-        M_C = HEAD + Vector((0, -0.52, -0.26)); M_S = Vector((0.36, 0.32, 0.25))
-        sphere(M_C, M_S, M(muz))
-        for sgn in (-1, 1):
-            sphere(surf(M_C, M_S, 0.3*sgn, 0.35, 0.98), (0.035, 0.03, 0.025), M('#8a5a4a'), face_rot(0.3*sgn, 0.35))
-        eyes(eye, el=0.12, az=0.4); blush(az=0.7, el=-0.02)
-        mouth(mth or 'smile', M_C, M_S, el=-0.15, width=0.35, bow=0.25)
-        ears_pointy(col, '#ffb3a8', az=0.5, el=0.8, h=0.4, r=0.17)
-        for i in range(8):  # mane along the top of the head and down the neck
-            t = i/7; a = math.radians(-35 + 150*t)
-            p = HEAD + Vector((0.04, 0.66*math.sin(a), 0.62*math.cos(a)))
-            sphere(p, (0.2, 0.17, 0.17), M(mane))
-        sphere(surf(HEAD, HS, 0.08, 0.72, 1.02), (0.2, 0.14, 0.15), M(mane))  # forelock
-        tail_curve([(0, 0.42, 0.55), (0.05, 0.65, 0.45), (0.1, 0.72, 0.2)], 0.1, mane)
-    elif name == 'monkey':
-        col, face = '#a8704a', '#ffd9b0'
-        base_body(col, face, arms); head(col)
-        sphere(HEAD + Vector((0, -0.3, -0.08)), (0.52, 0.36, 0.42), M(face))
-        sphere(HEAD + Vector((0, -0.42, -0.22)), (0.3, 0.2, 0.17), M(face))
-        ears_round(col, face, az=1.45, el=0.05, r=0.2)
-        eyes(eye, el=0.05, az=0.28); blush(az=0.5, el=-0.15)
-        MZ_C = HEAD + Vector((0, -0.42, -0.22)); MZ_S = Vector((0.3, 0.2, 0.17))
-        for sgn in (-1, 1):
-            sphere(surf(MZ_C, MZ_S, 0.12*sgn, 0.45, 1.0), (0.02, 0.02, 0.02), M('#6b3f26'))
-        mouth(mth or 'smile', MZ_C, MZ_S, el=-0.05, width=0.45, bow=0.3)
-        pts = [(0, 0.42, 0.35), (0.2, 0.7, 0.4)]
-        for i in range(12):
-            a = i/11*math.pi*1.6; r = 0.2*(1 - i/16)
-            pts.append((0.2 + r*math.sin(a), 0.72, 0.62 + r*(-math.cos(a))))
-        tail_curve(pts, 0.05, col)
-    elif name == 'tiger':
-        col, white, stripe = '#ff9a3c', '#fff6ea', '#3b2a3f'
-        base_body(col, white, arms); head(col)
-        M_C = HEAD + Vector((0, -0.45, -0.2)); M_S = Vector((0.32, 0.2, 0.2))
-        sphere(M_C, M_S, M(white))
-        sphere(surf(M_C, M_S, 0, 0.45, 0.98), (0.08, 0.05, 0.05), M('#ff7a9a', rough=0.3, coat=1))
-        ears_round(col, white, az=0.6, el=0.8, r=0.18)
-        eyes(eye, el=0.12); blush(az=0.7, el=-0.05)
-        mouth(mth or 'cat', M_C, M_S, el=-0.12, width=0.35, bow=0.3)
-        for az in (-0.18, 0.0, 0.18):  # forehead stripes
-            sphere(surf(HEAD, HS, az, 0.62 + (0.06 if az == 0 else 0), 0.99), (0.05, 0.02, 0.14), M(stripe), face_rot(az, 0.62))
-        for sgn in (-1, 1):
-            for el in (0.2, 0.0):
-                sphere(surf(HEAD, HS, 1.2*sgn, el, 0.99), (0.14, 0.03, 0.04), M(stripe), face_rot(1.2*sgn, el))
-            for z in (0.72, 0.52):
-                sphere(surf(BODY, BS, 1.3*sgn, (z-0.62)*2, 0.99), (0.14, 0.03, 0.035), M(stripe), face_rot(1.3*sgn, 0))
-        tail_curve([(0, 0.4, 0.35), (0.2, 0.65, 0.4), (0.3, 0.7, 0.75)], 0.07, col)
-        sphere((0.3, 0.7, 0.8), (0.08, 0.08, 0.08), M(stripe))
-    elif name == 'shark':
-        col, white = '#5fa8e8', '#f4fbff'
-        base_body(col, white, arms); head(col)
-        sphere(HEAD + Vector((0, -0.22, -0.2)), (0.56, 0.44, 0.36), M(white))
-        eyes(eye, el=0.14, az=0.36); blush(az=0.62, el=0.0)
-        mouth(mth or 'smile', el=-0.12, width=0.22)
-        if (mth or 'smile') == 'smile':
-            for az in (-0.14, -0.05, 0.05, 0.14):  # tiny friendly teeth
-                p = surf(HEAD, HS, az, -0.155 - 0.03*(1 - (az/0.22)**2), 1.0)
-                cone(p + Vector((0, -0.01, -0.02)), 0.022, 0, 0.045, M('#ffffff'), quat_to((0, -0.3, -1), 'Z', 'Y'), verts=8)
-        cone(HEAD + Vector((0, 0.12, 0.72)), 0.28, 0.02, 0.45, M(col), quat_to((0, 0.35, 1), 'Z', 'Y'), verts=12, subsurf=2, scale=(0.35, 1, 1))
-        for sgn in (-1, 1):
-            cone(HEAD + Vector((0.66*sgn, 0.05, -0.05)), 0.12, 0.01, 0.25, M(col), quat_to((sgn, 0.2, -0.2), 'Z', 'Y'), verts=10, subsurf=2, scale=(1, 0.35, 1))
-        for sgn in (-1, 1):  # tail fin
-            cone(Vector((0, 0.62, 0.45)) + Vector((0, 0.1, 0.15*sgn)), 0.14, 0.01, 0.3, M(col), quat_to((0, 0.6, sgn), 'Z', 'Y'), verts=10, subsurf=2, scale=(0.35, 1, 1))
-        cyl((0, 0.47, 0.45), 0.12, 0.25, M(col), quat_to((0, 1, 0), 'Z', 'X'))
-    elif name == 'pig':
-        col, snout = '#ffb3c6', '#ff94b0'
-        base_body(col, '#ffd1dd', arms, feet_col='#e9829c'); head(col)
-        sn = surf(HEAD, HS, 0, -0.12, 0.93)
-        cyl(sn + Vector((0, -0.07, 0)), 0.17, 0.14, M(snout), quat_to((0, -1, 0), 'Z', 'X'), scale=(1.15, 1, 1))
-        for sgn in (-1, 1):
-            sphere(sn + Vector((0.06*sgn, -0.145, 0)), (0.03, 0.02, 0.045), M('#c85a78'))
-        eyes(eye, el=0.14, az=0.34); blush(az=0.6, el=-0.08, col='#ff7fa0')
-        mouth(mth or 'smile', el=-0.34, width=0.1)
-        for sgn in (-1, 1):
-            base = surf(HEAD, HS, 0.55*sgn, 0.8, 0.9); d = Vector((0.5*sgn, -0.55, 0.65)).normalized()
-            cone(base + d*0.14, 0.17, 0.0, 0.3, M(col), quat_to(d, 'Z', 'Y'), verts=8, subsurf=2, scale=(1, 0.45, 1))
-        pts = [(0, 0.42, 0.45)]
-        for i in range(14):
-            a = i/13*math.pi*3; pts.append((0.08*math.sin(a), 0.5 + i*0.012, 0.52 + 0.08*math.cos(a)))
-        tail_curve(pts, 0.03, col)
-    elif name == 'axolotl':
-        col, gill = '#ffb0d4', '#ff5fa2'
-        base_body(col, '#ffe0ee', arms); head(col)
-        HS_save = None
-        eyes(eye, el=0.06, az=0.42, size=0.85); blush(az=0.7, el=-0.1)
-        mouth(mth or 'smile', el=-0.12, width=0.3)
-        for sgn in (-1, 1):
-            for k, (el, ln) in enumerate(((0.45, 0.42), (0.1, 0.46), (-0.25, 0.38))):
-                base = surf(HEAD, HS, 1.35*sgn, el, 0.92)
-                d = Vector((sgn, 0.25, el*1.2 + 0.25)).normalized()
-                curve([base, base + d*ln*0.55, base + d*ln], 0.045, M(gill))
-                for j in range(3):
-                    sphere(base + d*(ln*0.45 + j*0.18*ln), (0.07, 0.07, 0.07), M(gill, rough=0.6))
-        cone((0, 0.62, 0.35), 0.25, 0.02, 0.55, M(col), quat_to((0, 1, -0.2), 'Z', 'X'), verts=12, subsurf=2, scale=(0.35, 1, 1))
-        for i in range(4):
-            sphere(HEAD + Vector((0, 0.35 - 0.25*i, 0.55 + (0.02 if i else 0))), (0.03, 0.03, 0.03), M('#ff8cc0'))
-    elif name == 'capybara':
-        col, dark = '#c88f5a', '#6a4632'
-        base_body(col, '#e2b183', arms); 
-        sphere(HEAD, Vector((0.66, 0.66, 0.56)), M(col))
-        M_C = HEAD + Vector((0, -0.46, -0.1)); M_S = Vector((0.42, 0.3, 0.32))
-        sphere(M_C, M_S, M('#d59f6a'))
-        sphere(surf(M_C, M_S, 0, 0.3, 0.99), (0.18, 0.06, 0.08), M(dark))
-        ears_round(col, dark, az=0.62, el=1.0, r=0.1)
-        eyes(eye if eye != 'open' else 'open', el=0.22, az=0.4, size=0.7)
-        blush(az=0.6, el=-0.05)
-        mouth(mth or 'smile', M_C, M_S, el=-0.2, width=0.25, bow=0.2)
-        sphere(HEAD + Vector((0.05, 0.05, 0.6)), (0.19, 0.19, 0.16), M('#ffa21f', rough=0.55))  # mandarin on head
-        cone(HEAD + Vector((0.08, 0.05, 0.78)), 0.07, 0.0, 0.06, M('#4caf50'), quat_to((0.5, 0, 1), 'Z', 'Y'), verts=8, subsurf=1, scale=(1, 0.3, 1))
-    elif name == 'dragon':
-        col, belly, wing = '#6fd6a6', '#fff0a8', '#b18cff'
-        base_body(col, belly, arms); head(col)
-        eyes(eye, el=0.06); blush(az=0.64, el=-0.12)
-        for sgn in (-1, 1):
-            sphere(surf(HEAD, HS, 0.08*sgn, -0.18, 1.0), (0.02, 0.02, 0.02), M('#2e8b64'))
-        mouth(mth or 'smile', el=-0.27, width=0.14)
-        for sgn in (-1, 1):
-            base = surf(HEAD, HS, 0.4*sgn, 0.85, 0.9); d = Vector((0.4*sgn, 0.2, 1)).normalized()
-            cone(base + d*0.15, 0.09, 0.0, 0.3, M('#fff3c4'), quat_to(d, 'Z', 'Y'), verts=12, subsurf=1)
-            w = Vector((0.35*sgn, 0.4, 0.95)); dw = Vector((sgn, 0.6, 0.5)).normalized()
-            sphere(w + dw*0.2, (0.08, 0.3, 0.2), M(wing), quat_to(dw, 'Y', 'Z'))
-            sphere(w + dw*0.32 + Vector((0, 0, 0.1)), (0.06, 0.2, 0.14), M(wing), quat_to(dw, 'Y', 'Z'))
-        for i, t in enumerate((0.0, 0.3, 0.6)):
-            p = surf(HEAD, HS, 0, 0.9 - t*1.3, 1.0) + Vector((0, 0.12 + t*0.1, 0)) if False else None
-        for (y, z) in ((0.25, 2.03), (0.5, 1.8), (0.62, 1.52)):
-            cone((0, y, z), 0.08, 0.0, 0.16, M(wing), quat_to((0, y, z-1.5), 'Z', 'Y'), verts=10, subsurf=1, scale=(0.5, 1, 1))
-        tail_curve([(0, 0.4, 0.35), (0.25, 0.7, 0.3), (0.45, 0.8, 0.5)], 0.08, col)
-        cone((0.5, 0.82, 0.58), 0.1, 0.0, 0.18, M(wing), quat_to((0.3, 0.2, 1), 'Z', 'Y'), verts=10, subsurf=1, scale=(0.5, 1, 1))
-    else:
-        raise ValueError(name)
+def dog():
+    if not begin('dog', neck=(0, 0.0, 1.08), hat=(0, -0.1, 1.98),
+                 shoulder=(0.44, -0.04, 0.98), foot=(0.24, -0.12, 0.14), tail=(0, 0.34, 0.64),
+                 eye=(0, -0.39, 1.645), spread=0.196, eye_scale=1.04,
+                 mouth=(0, -0.68, 1.24), mouth_w=0.13, mouth_bow=0.045, mouth_kind='smile',
+                 cheeks=(0.306, -0.45, 1.465)):
+        return
+    col, cream, ear = '#f2b66d', '#fff1dc', '#c4844a'
+    torso(col, cream, (0, 0.02, 0.58), (0.5, 0.46, 0.44), (0.32, 0.16, 0.28))
+    stand(col, col, arm_r=0.11, arm_len=0.48, foot_s=(0.17, 0.2, 0.11))
+    skull(col, (0, -0.04, 1.52), (0.56, 0.5, 0.52))
+    use_part('muzzle', True)
+    sphere((0, -0.5, 1.36), (0.28, 0.24, 0.2), M(cream))
+    sphere((0, -0.66, 1.3), (0.22, 0.2, 0.17), M(cream))
+    nose((0, -0.78, 1.32), (0.09, 0.07, 0.065))
+    floppy_ear(1, ear, '#f3b7c6', (0.34, 0.0, 1.66), (0.58, -0.04, 0.98), 0.16)
+    floppy_ear(-1, ear, '#f3b7c6', (0.34, 0.0, 1.66), (0.58, -0.04, 0.98), 0.16)
+    tail_curve([(0, 0.34, 0.64), (0, 0.52, 0.98), (0.16, 0.4, 1.22)], 0.085, col, fuse=True)
+    use_part('tail', True)
+    sphere((0.18, 0.36, 1.26), (0.11, 0.1, 0.11), M(col))
+    add_face()
+
+def cat():
+    if not begin('cat', neck=(0, 0, 1.1), hat=(0, -0.08, 1.9),
+                 shoulder=(0.38, -0.02, 0.96), foot=(0.2, -0.1, 0.13), tail=(0.02, 0.3, 0.5),
+                 eye=(0, -0.332, 1.595), spread=0.17, eye_scale=1.08,
+                 mouth=(0, -0.52, 1.32), mouth_w=0.07, mouth_bow=0.03, mouth_kind='w',
+                 cheeks=(0.28, -0.392, 1.415)):
+        return
+    col, cream = '#b9a6ec', '#fbf5ff'
+    torso(col, cream, (0, 0.0, 0.56), (0.42, 0.38, 0.4), (0.26, 0.14, 0.24))
+    stand(col, col, arm_r=0.095, arm_len=0.46, foot_s=(0.14, 0.16, 0.1))
+    skull(col, (0, -0.02, 1.48), (0.5, 0.46, 0.48))
+    pointy_ear(1, col, '#ffb3c8', (0.24, 0.0, 1.78), height=0.5, radius=0.16, lean=0.22)
+    pointy_ear(-1, col, '#ffb3c8', (0.24, 0.0, 1.78), height=0.5, radius=0.16, lean=0.22)
+    nose((0, -0.52, 1.4), (0.05, 0.035, 0.04), '#ff8fb0')
+    whiskers((0, -0.5, 1.36), 0.4, '#6d5aa8', spread=0.1)
+    tail_curve([(0.02, 0.3, 0.5), (0.32, 0.5, 0.66), (0.46, 0.38, 1.12), (0.16, 0.26, 1.38)], 0.07, col, fuse=False)
+    add_face()
+
+def bunny():
+    if not begin('bunny', neck=(0, 0, 1.08), hat=(0, -0.12, 1.9),
+                 shoulder=(0.4, -0.02, 0.96), foot=(0.22, -0.16, 0.12), tail=(0, 0.42, 0.58),
+                 eye=(0, -0.4, 1.58), spread=0.17, eye_scale=1.06,
+                 mouth=(0, -0.56, 1.3), mouth_w=0.06, mouth_bow=0.028, mouth_kind='w',
+                 cheeks=(0.28, -0.46, 1.4)):
+        return
+    col, inner = '#fdeaf1', '#ffa9c1'
+    torso(col, '#ffe3ec', (0, 0.0, 0.58), (0.48, 0.44, 0.44), (0.3, 0.16, 0.28))
+    stand(col, col, arm_r=0.1, arm_len=0.46, foot_s=(0.16, 0.24, 0.1))
+    skull(col, (0, -0.04, 1.48), (0.52, 0.48, 0.5))
+    # Tall ears, leaned out so a hat can sit between them.
+    use_part('head', True)
+    for sgn in (-1, 1):
+        tube([(0.28 * sgn, 0.0, 1.78), (0.4 * sgn, 0.02, 2.15), (0.5 * sgn, 0.0, 2.52)], 0.11, M(col), 'AUTO')
+    use_part('head', False)
+    for sgn in (-1, 1):
+        tube([(0.3 * sgn, -0.06, 1.84), (0.42 * sgn, -0.05, 2.16), (0.5 * sgn, -0.04, 2.42)], 0.055, PINK(inner), 'AUTO')
+    nose((0, -0.55, 1.4), (0.045, 0.03, 0.035), '#ff7fa3')
+    use_part('head', False)
+    for sgn in (-1, 1):
+        sphere((0.035 * sgn, -0.58, 1.22), (0.035, 0.03, 0.055), M('#fffaf8', rough=0.35, coat=0.2))
+    use_part('tail', False)
+    sphere((0, 0.46, 0.58), (0.16, 0.16, 0.16), M('#ffffff', rough=0.85, coat=0.05))
+    add_face()
+
+def penguin():
+    if not begin('penguin', neck=(0, 0, 1.12), hat=(0, -0.08, 1.78),
+                 shoulder=(0.4, -0.02, 1.05), foot=(0.18, -0.2, 0.08), tail=(0, 0.32, 0.48),
+                 eye=(0, -0.43, 1.459), spread=0.136, eye_scale=0.98,
+                 mouth=(0, -0.5, 1.18), mouth_w=0.08, mouth_bow=0.02, mouth_kind='closed',
+                 cheeks=(0.246, -0.49, 1.279)):
+        return
+    col, white, beak = '#3d5a9e', '#ffffff', '#ffa23a'
+    use_part('body', True)
+    sphere((0, 0.0, 0.78), (0.5, 0.46, 0.58), M(col))  # egg body
+    sphere((0, -0.02, 1.2), (0.3, 0.28, 0.32), M(col))  # neck into the head
+    use_part('belly', False)
+    sphere((0, -0.42, 0.74), (0.28, 0.2, 0.34), M(white))
+    skull(col, (0, -0.02, 1.38), (0.4, 0.38, 0.36))
+    use_part('head', False)
+    sphere((0, -0.42, 1.36), (0.24, 0.16, 0.2), M(white))  # clean face oval
+    use_part('head', False)
+    bk = Vector((0, -0.48, 1.24))
+    cone(bk, 0.12, 0.02, 0.22, M(beak, rough=0.35, coat=0.45), quat_to((0, -1, -0.15), 'Z', 'Y'), verts=16, subsurf=2, scale=(1.25, 0.7, 1))
+    stand(col, beak, mode='flipper', foot_s=(0.16, 0.26, 0.06))
+    use_part('tail', False)
+    sphere((0, 0.4, 0.5), (0.1, 0.12, 0.08), M(col))
+    add_face()
+
+def horse():
+    if not begin('horse', neck=(0, 0.02, 1.16), hat=(0, -0.16, 1.92),
+                 shoulder=(0.4, -0.02, 0.98), foot=(0.22, -0.1, 0.12), tail=(0, 0.4, 0.7),
+                 eye=(0, -0.354, 1.644), spread=0.136, eye_scale=0.96,
+                 mouth=(0, -0.78, 1.28), mouth_w=0.1, mouth_bow=0.035, mouth_kind='smile',
+                 cheeks=(0.246, -0.414, 1.464)):
+        return
+    col, mane, muz = '#f7c9a0', '#9b7bea', '#fde7d3'
+    torso(col, muz, (0, 0.02, 0.58), (0.44, 0.4, 0.46), (0.26, 0.14, 0.24), neck=False)
+    use_part('body', True)
+    sphere((0, 0.02, 1.08), (0.26, 0.24, 0.4), M(col))  # longer neck into the head
+    stand(col, '#8a6a55', mode='hoof', arm_r=0.1, arm_len=0.5)
+    skull(col, (0, -0.06, 1.56), (0.4, 0.36, 0.38))
+    use_part('muzzle', True)
+    sphere((0, -0.36, 1.5), (0.24, 0.22, 0.2), M(muz))
+    sphere((0, -0.56, 1.4), (0.22, 0.22, 0.18), M(muz))
+    sphere((0, -0.72, 1.32), (0.18, 0.18, 0.16), M(muz))
+    nose((0.06, -0.84, 1.32), (0.04, 0.03, 0.028), '#8a5a4a')
+    nose((-0.06, -0.84, 1.32), (0.04, 0.03, 0.028), '#8a5a4a')
+    pointy_ear(1, col, '#ffb3a8', (0.16, 0.02, 1.82), height=0.36, radius=0.12, lean=0.18)
+    pointy_ear(-1, col, '#ffb3a8', (0.16, 0.02, 1.82), height=0.36, radius=0.12, lean=0.18)
+    use_part('mane', True)
+    for i in range(6):
+        t = i / 5
+        sphere((0.0, -0.02 + t * 0.32, 1.9 - t * 0.72), (0.11, 0.16, 0.13), M(mane))
+    sphere((0, -0.2, 1.78), (0.12, 0.12, 0.11), M(mane))  # forelock
+    tail_curve([(0, 0.4, 0.7), (0.02, 0.58, 0.4), (0.04, 0.6, 0.14)], 0.1, mane, fuse=False)
+    add_face()
+
+def monkey():
+    if not begin('monkey', neck=(0, 0, 1.08), hat=(0, -0.08, 1.96),
+                 shoulder=(0.44, -0.02, 0.98), foot=(0.22, -0.1, 0.13), tail=(0.05, 0.36, 0.58),
+                 eye=(0, -0.469, 1.606), spread=0.17, eye_scale=1.0,
+                 mouth=(0, -0.62, 1.32), mouth_w=0.12, mouth_bow=0.05, mouth_kind='smile',
+                 cheeks=(0.28, -0.529, 1.426)):
+        return
+    col, face = '#a8704a', '#ffd9b0'
+    torso(col, face, (0, 0.0, 0.58), (0.46, 0.42, 0.44), (0.28, 0.16, 0.26))
+    stand(col, col, arm_r=0.1, arm_len=0.56, foot_s=(0.15, 0.17, 0.1))
+    skull(col, (0, -0.02, 1.5), (0.5, 0.44, 0.48))
+    # Heart-shaped face: wide cheeks narrowing to a chin, one smooth volume.
+    use_part('muzzle', True)
+    sphere((0, -0.42, 1.48), (0.36, 0.2, 0.26), M(face))
+    sphere((0, -0.52, 1.3), (0.18, 0.16, 0.15), M(face))
+    use_part('ears', False)
+    for sgn in (-1, 1):
+        sphere((0.58 * sgn, -0.02, 1.52), (0.16, 0.1, 0.16), M(col))
+        sphere((0.6 * sgn, -0.08, 1.52), (0.09, 0.05, 0.09), M(face))
+    nose((0, -0.55, 1.4), (0.06, 0.04, 0.045), '#c4896a')
+    pts = [(0.05, 0.36, 0.58)]
+    for i in range(22):
+        t = i / 21
+        a = t * math.tau * 1.35
+        rad = 0.05 + t * 0.16
+        pts.append((0.18 + rad * math.sin(a), 0.46, 0.78 + rad * math.cos(a)))
+    tail_curve(pts, 0.04, col, fuse=False)
+    add_face()
+
+def tiger():
+    if not begin('tiger', neck=(0, 0, 1.08), hat=(0, -0.08, 1.98),
+                 shoulder=(0.46, -0.02, 1.0), foot=(0.24, -0.1, 0.14), tail=(0, 0.36, 0.62),
+                 eye=(0, -0.375, 1.645), spread=0.19, eye_scale=1.02,
+                 mouth=(0, -0.64, 1.28), mouth_w=0.12, mouth_bow=0.04, mouth_kind='w',
+                 cheeks=(0.3, -0.435, 1.465)):
+        return
+    col, white, stripe = '#ff9a3c', '#fff6ea', '#3b2a3f'
+    torso(col, white, (0, 0.0, 0.6), (0.5, 0.46, 0.46), (0.32, 0.16, 0.3))
+    stand(col, col, arm_r=0.115, arm_len=0.48, foot_s=(0.17, 0.2, 0.11))
+    use_part('body', False)
+    band = M(stripe, rough=0.5, coat=0.1)
+    for z, rad in ((0.42, 0.4), (0.62, 0.46), (0.82, 0.4)):
+        torus((0, 0.0, z), rad, 0.05, band)
+    skull(col, (0, -0.02, 1.52), (0.56, 0.5, 0.52))
+    use_part('muzzle', True)
+    sphere((0, -0.52, 1.38), (0.28, 0.2, 0.18), M(white))
+    sphere((0, -0.64, 1.32), (0.2, 0.16, 0.14), M(white))
+    for sgn in (-1, 1):
+        sphere((0.42 * sgn, 0.02, 1.78), (0.16, 0.1, 0.16), M(col))
+        sphere((0.42 * sgn, -0.04, 1.78), (0.09, 0.045, 0.09), M(white))
+    use_part('head', False)
+    for x, z, s in ((-0.1, 1.78, (0.045, 0.03, 0.16)), (0.1, 1.78, (0.045, 0.03, 0.16)), (0, 1.86, (0.04, 0.03, 0.18))):
+        sphere((x, -0.08, z), s, band)
+    for sgn in (-1, 1):
+        sphere((0.4 * sgn, -0.2, 1.5), (0.14, 0.03, 0.045), band, quat_to((sgn, -0.4, 0), 'X', 'Z'))
+        sphere((0.36 * sgn, -0.28, 1.4), (0.12, 0.03, 0.04), band, quat_to((sgn, -0.5, -0.2), 'X', 'Z'))
+    nose((0, -0.62, 1.42), (0.07, 0.045, 0.04), '#ff7a9a')
+    whiskers((0, -0.55, 1.36), 0.38, '#5c4a58', spread=0.12)
+    tail_curve([(0, 0.36, 0.6), (0.18, 0.55, 0.72), (0.32, 0.5, 1.05)], 0.075, col, fuse=False)
+    use_part('tail', False)
+    for p in ((0.12, 0.5, 0.7), (0.24, 0.52, 0.9)):
+        sphere(p, (0.09, 0.09, 0.07), band)
+    sphere((0.34, 0.48, 1.1), (0.1, 0.1, 0.1), band)
+    add_face()
+
+def shark():
+    if not begin('shark', neck=(0, -0.02, 1.05), hat=(0, -0.18, 1.7),
+                 shoulder=(0.4, 0.0, 0.95), foot=(0.2, -0.06, 0.12), tail=(0, 0.4, 0.62),
+                 eye=(0, -0.462, 1.368), spread=0.173, eye_scale=1.02,
+                 mouth=(0, -0.7, 1.16), mouth_w=0.13, mouth_bow=0.04, mouth_kind='smile',
+                 cheeks=(0.283, -0.522, 1.188)):
+        return
+    col, white = '#5fa8e8', '#f4fbff'
+    use_part('body', True)
+    sphere((0, 0.02, 0.7), (0.46, 0.52, 0.4), M(col))
+    sphere((0, -0.05, 1.0), (0.38, 0.4, 0.28), M(col))
+    # Dorsal fin, thick enough to survive remesh and read in silhouette.
+    base = Vector((0, 0.22, 1.15))
+    d = Vector((0, 0.45, 1)).normalized()
+    cone(base + d * 0.24, 0.22, 0.05, 0.52, M(col), quat_to(d, 'Z', 'Y'), verts=14, subsurf=1, scale=(0.55, 1, 1))
+    use_part('belly', False)
+    sphere((0, -0.48, 0.66), (0.26, 0.18, 0.24), M(white))
+    skull(col, (0, -0.12, 1.28), (0.54, 0.48, 0.4))
+    use_part('head', False)
+    sphere((0, -0.58, 1.18), (0.26, 0.16, 0.14), M(white))  # smooth chin oval
+    stand(col, col, mode='fin', foot_s=(0.14, 0.16, 0.09))
+    use_part('tail', True)
+    tube([(0, 0.4, 0.62), (0, 0.62, 0.66)], 0.1, M(col), 'VECTOR')
+    cone((0, 0.7, 0.82), 0.16, 0.03, 0.36, M(col), quat_to((0, 0.45, 1), 'Z', 'Y'), verts=12, subsurf=1, scale=(0.4, 1, 1))
+    cone((0, 0.68, 0.5), 0.12, 0.03, 0.26, M(col), quat_to((0, 0.5, -0.8), 'Z', 'Y'), verts=12, subsurf=1, scale=(0.4, 1, 1))
+    use_part('head', False)
+    tooth = M('#fffef8', rough=0.22, coat=0.5)
+    for t in (-1.0, -0.5, 0.0, 0.5, 1.0):
+        sphere((t * 0.1, -0.74, 1.14 - 0.04 * t * t), (0.034, 0.024, 0.042), tooth)
+    add_face()
+
+def pig():
+    if not begin('pig', neck=(0, 0, 1.06), hat=(0, -0.1, 1.98),
+                 shoulder=(0.46, -0.02, 0.98), foot=(0.24, -0.1, 0.13), tail=(0, 0.4, 0.58),
+                 eye=(0, -0.376, 1.625), spread=0.184, eye_scale=1.0,
+                 mouth=(0, -0.62, 1.16), mouth_w=0.1, mouth_bow=0.03, mouth_kind='smile',
+                 cheeks=(0.294, -0.436, 1.445)):
+        return
+    col, snout = '#ffb3c6', '#ff94b0'
+    torso(col, '#ffd1dd', (0, 0.0, 0.58), (0.52, 0.5, 0.5), (0.32, 0.16, 0.3))
+    stand(col, '#e07090', mode='hoof', arm_r=0.11, arm_len=0.46, foot_s=(0.14, 0.16, 0.1))
+    skull(col, (0, -0.02, 1.5), (0.54, 0.5, 0.52))
+    floppy_ear(1, col, '#ff8eae', (0.32, 0.02, 1.72), (0.55, -0.08, 1.22), 0.15, part='head', fuse=True)
+    floppy_ear(-1, col, '#ff8eae', (0.32, 0.02, 1.72), (0.55, -0.08, 1.22), 0.15, part='head', fuse=True)
+    use_part('muzzle', True)
+    sn = M(snout, rough=0.38, coat=0.4)
+    sphere((0, -0.46, 1.4), (0.26, 0.18, 0.2), sn)
+    sphere((0, -0.62, 1.36), (0.2, 0.14, 0.15), sn)
+    nose((0.07, -0.7, 1.38), (0.035, 0.025, 0.04), '#c85a78')
+    nose((-0.07, -0.7, 1.38), (0.035, 0.025, 0.04), '#c85a78')
+    pts = [(0, 0.4, 0.58)]
+    for i in range(18):
+        t = i / 17
+        a = t * math.tau * 1.5
+        rad = 0.04 + t * 0.1
+        pts.append((0.2 + rad * math.sin(a), 0.48, 0.66 + rad * math.cos(a)))
+    tail_curve(pts, 0.032, col, fuse=False)
+    add_face()
+
+def axolotl():
+    if not begin('axolotl', neck=(0, 0, 1.02), hat=(0, -0.06, 1.68),
+                 shoulder=(0.4, -0.02, 0.9), foot=(0.22, -0.08, 0.12), tail=(0, 0.36, 0.55),
+                 eye=(0, -0.32, 1.42), spread=0.26, eye_scale=0.86,
+                 mouth=(0, -0.5, 1.22), mouth_w=0.16, mouth_bow=0.035, mouth_kind='smile',
+                 cheeks=(0.36, -0.36, 1.28)):
+        return
+    col, gill = '#ffb0d4', '#ff5fa2'
+    torso(col, '#ffe0ee', (0, 0.02, 0.55), (0.42, 0.4, 0.36), (0.26, 0.14, 0.22))
+    stand(col, col, arm_r=0.09, arm_len=0.42, foot_s=(0.13, 0.15, 0.09))
+    skull(col, (0, -0.06, 1.32), (0.66, 0.46, 0.36))  # wide flat head
+    use_part('gills', False)
+    gmat = M(gill, rough=0.45, coat=0.2)
+    for sgn in (-1, 1):
+        for el, length in ((0.2, 0.46), (0.02, 0.52), (-0.16, 0.44)):
+            base = Vector((0.5 * sgn, 0.0, 1.34 + el))
+            mid = base + Vector((0.24 * sgn, 0.1, 0.08))
+            tip = base + Vector((0.46 * sgn, 0.18, 0.02))
+            tube([base, mid, tip], 0.05, gmat, 'AUTO')
+            sphere(tip, (0.1, 0.1, 0.1), gmat)
+            for t in (0.45, 0.7, 0.9):
+                p = base * (1 - t) + tip * t
+                sphere(p + Vector((0, -0.02, 0.07)), (0.07, 0.055, 0.07), gmat)
+                sphere(p + Vector((0.04 * sgn, 0.04, -0.05)), (0.06, 0.05, 0.06), gmat)
+    use_part('tail', True)
+    sphere((0, 0.48, 0.48), (0.08, 0.28, 0.22), M(col))  # paddle
+    add_face()
+
+def capybara():
+    if not begin('capybara', neck=(0, 0, 1.02), hat=(0, -0.06, 1.78),
+                 shoulder=(0.48, -0.02, 0.9), foot=(0.26, -0.08, 0.13), tail=None,
+                 eye=(0, -0.41, 1.452), spread=0.209, eye_scale=0.86,
+                 mouth=(0, -0.62, 1.16), mouth_w=0.14, mouth_bow=0.03, mouth_kind='smile',
+                 cheeks=(0.319, -0.47, 1.272)):
+        return
+    col, belly, snout = '#c88f5a', '#e2b183', '#a87442'
+    torso(col, belly, (0, 0.02, 0.55), (0.56, 0.48, 0.4), (0.36, 0.16, 0.24), neck=False)
+    use_part('body', True)
+    sphere((0, -0.02, 0.9), (0.4, 0.36, 0.22), M(col))
+    stand(col, col, arm_r=0.12, arm_len=0.4, foot_s=(0.16, 0.18, 0.1))
+    skull(col, (0, -0.04, 1.36), (0.58, 0.5, 0.42))
+    use_part('head', True)
+    for sgn in (-1, 1):
+        sphere((0.34 * sgn, 0.1, 1.7), (0.1, 0.08, 0.1), M(col))  # tiny ears
+    use_part('head', False)
+    softbox((0, -0.5, 1.24), (0.5, 0.32, 0.26), M(snout, rough=0.48, coat=0.2), bevel=0.08)
+    use_part('head', False)
+    sphere((0, -0.68, 1.28), (0.16, 0.04, 0.06), M('#5c3a28', rough=0.5, coat=0.1))  # nostril pad
+    nose((0.06, -0.72, 1.3), (0.035, 0.025, 0.03), '#3a2418')
+    nose((-0.06, -0.72, 1.3), (0.035, 0.025, 0.03), '#3a2418')
+    use_part('head', False)
+    sphere((0.32, 0.02, 1.62), (0.16, 0.15, 0.14), M('#ff9a2e', rough=0.5, coat=0.15))
+    cone((0.36, 0.02, 1.76), 0.05, 0.0, 0.08, M('#4caf50'), quat_to((0.4, 0, 1), 'Z', 'Y'), verts=8, subsurf=1, scale=(1, 0.35, 1))
+    add_face()
+
+def dragon():
+    if not begin('dragon', neck=(0, 0, 1.08), hat=(0, -0.14, 1.92),
+                 shoulder=(0.42, -0.02, 0.98), foot=(0.22, -0.1, 0.13), tail=(0, 0.36, 0.58),
+                 eye=(0, -0.358, 1.615), spread=0.17, eye_scale=1.02,
+                 mouth=(0, -0.58, 1.28), mouth_w=0.08, mouth_bow=0.03, mouth_kind='smile',
+                 cheeks=(0.28, -0.418, 1.435)):
+        return
+    col, belly, wing = '#6fd6a6', '#fff0a8', '#b18cff'
+    torso(col, belly, (0, 0.0, 0.58), (0.48, 0.44, 0.46), (0.3, 0.16, 0.3))
+    stand(col, col, arm_r=0.105, arm_len=0.48, foot_s=(0.15, 0.17, 0.1))
+    skull(col, (0, -0.04, 1.5), (0.5, 0.46, 0.48))
+    use_part('head', True)
+    sphere((0, -0.46, 1.4), (0.2, 0.18, 0.15), M(col))  # short blunt snout, fused into the head
+    nose((0.05, -0.58, 1.42), (0.028, 0.02, 0.02), '#2e8b64')
+    nose((-0.05, -0.58, 1.42), (0.028, 0.02, 0.02), '#2e8b64')
+    use_part('horns', False)
+    horn = M('#fff3c4', rough=0.35, coat=0.4)
+    for sgn in (-1, 1):
+        base = Vector((0.22 * sgn, 0.06, 1.82))
+        d = Vector((0.28 * sgn, 0.35, 0.85)).normalized()
+        cone(base + d * 0.2, 0.1, 0.04, 0.42, horn, quat_to(d, 'Z', 'Y'), verts=14, subsurf=1)
+    wmat = M(wing, rough=0.42, coat=0.25)
+    for sgn, part in ((1, 'wing_L'), (-1, 'wing_R')):
+        use_part(part, True)
+        root = Vector((0.22 * sgn, 0.14, 1.02))
+        tip = Vector((1.05 * sgn, 0.34, 1.38))
+        mid = (root + tip) * 0.5
+        sphere(mid, (0.4, 0.12, 0.22), wmat, quat_to(tip - root, 'X', 'Z'))
+        sphere(mid + Vector((0.06 * sgn, 0.06, -0.16)), (0.26, 0.1, 0.16), wmat)
+        sphere(root + Vector((0.12 * sgn, 0.02, 0.04)), (0.14, 0.1, 0.12), wmat)
+    tail_curve([(0, 0.36, 0.58), (0.22, 0.55, 0.5), (0.42, 0.62, 0.72)], 0.08, col, fuse=False)
+    use_part('tail', False)
+    spike = M(wing, rough=0.4, coat=0.2)
+    for p, d in (((0.12, 0.48, 0.62), (0.1, 0.2, 1)), ((0.28, 0.56, 0.62), (0.15, 0.15, 1)), ((0.4, 0.6, 0.78), (0.2, 0.1, 1))):
+        dv = Vector(d).normalized()
+        cone(Vector(p) + dv * 0.08, 0.08, 0.03, 0.2, spike, quat_to(dv, 'Z', 'Y'), verts=10, subsurf=1, scale=(0.75, 1, 1))
+    cone((0.52, 0.68, 0.86), 0.12, 0.045, 0.22, spike, quat_to((0.35, 0.15, 0.85), 'Z', 'Y'), verts=10, subsurf=1, scale=(1.5, 0.5, 1))
+    add_face()
 
 ANIMALS = ['dog', 'cat', 'bunny', 'penguin', 'horse', 'monkey', 'tiger', 'shark', 'pig', 'axolotl', 'capybara', 'dragon']
+GEO = {n: globals()[n] for n in ANIMALS}
+
+def build(name, eye='open', mth=None, arms='down', extras=True, only=None):
+    STYLE['eye'] = eye
+    STYLE['mouth'] = mth
+    STYLE['arms'] = arms
+    ONLY[0] = only
+    if name not in GEO:
+        raise ValueError(name)
+    GEO[name]()
 
 def scene_setup(res=(900, 900), samples=96):
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -453,13 +751,10 @@ def single(name, samples):
 def emotes(samples):
     scene_setup(res=(1800, 620), samples=samples)
     xs = [-3.3, -1.1, 1.1, 3.3]
-    # happy
     make_character('penguin', (xs[0], 0, 0), yaw=-15, eye='open', mth='open')
-    # cheering: arms up, happy eyes, open mouth, sparkles
     make_character('penguin', (xs[1], 0, 0), yaw=-5, eye='happy', mth='open', arms='up')
     for (dx, dz, s) in ((-0.85, 2.35, 0.2), (0.9, 2.25, 0.16), (-0.95, 1.55, 0.12), (0.95, 1.6, 0.13)):
         star((xs[1] + dx, -0.4, dz), s, M('#ffd23f', rough=0.2, coat=1, emit=0.4))
-    # sleepy
     r = make_character('penguin', (xs[2], 0, 0), yaw=0, eye='sleepy', mth='o')
     r.rotation_euler = (0, math.radians(8), 0)
     nightcap = M('#8f7cf0')
@@ -468,7 +763,6 @@ def emotes(samples):
     zm = M('#8f7cf0', rough=0.3)
     for (dx, dz, s) in ((0.7, 2.0, 0.28), (0.95, 2.35, 0.36), (1.2, 2.75, 0.44)):
         text('z', (xs[2] + dx, -0.2, dz), s, zm)
-    # proud: happy eyes, smile, medal
     make_character('penguin', (xs[3], 0, 0), yaw=5, eye='happy', mth='smile')
     cyl((xs[3], -0.52, 0.72), 0.14, 0.05, M('#ffc83d', rough=0.2, coat=1), quat_to((0, -1, 0.1), 'Z', 'X'))
     curve([Vector((xs[3] - 0.22, -0.4, 1.05)), Vector((xs[3], -0.53, 0.8)), Vector((xs[3] + 0.22, -0.4, 1.05))], 0.03, M('#ff5f7e'))

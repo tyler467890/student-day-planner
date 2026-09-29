@@ -781,7 +781,10 @@ test('screenshots', async ({ browser }) => {
 
   await page.getByRole('button', { name: /Mark Finish essay intro done, hard, 20 points/ }).click();
   await expect(page.locator('.points-float, .particle').first()).toBeVisible();
-  await page.waitForFunction(() => ['wave', 'jump', 'celebrate'].includes(window.__dayli.petMode()));
+  await page.waitForFunction(() => {
+    const mode = window.__dayli.petMode();
+    return Boolean(mode) && mode !== 'idle' && mode !== 'sleepy';
+  });
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${ART}/pet-reaction.png` });
   await page.screenshot({ path: `${ART}/completion-moment.png` });
@@ -799,6 +802,8 @@ test('screenshots', async ({ browser }) => {
 
   await page.getByRole('button', { name: 'Your pet' }).click();
   await expect(page.getByRole('heading', { name: 'Your pet' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Stretch', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Dance', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Hat', exact: true }).click();
   await page.getByRole('button', { name: 'Pet colour Sunny yellow' }).click();
   await page.waitForTimeout(300);

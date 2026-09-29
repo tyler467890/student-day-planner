@@ -4,8 +4,9 @@ import {
   addDays, plannerDate, levelForPoints, levelBounds, levelTitle, computeStreak,
   instancesOn, upcomingReminders, reminderText, headerContrast, cardContrast,
   THEMES, ACCENTS, TEXT_COLOURS, BG_COLOURS, contrastRatio, onAccent, POINTS, defaultSettings,
-  paintColors, fixTextColor, migrateSettings, hexToRgb, relativeLuminance,
+  paintColors, fixTextColor,   migrateSettings, hexToRgb, relativeLuminance, normalizePet,
 } from '../js/model.js';
+import { pickCelebration, signatureLabel } from '../js/celebrations.js';
 
 test('planner date rolls at 4:00', () => {
   const before = new Date(2026, 8, 22, 3, 30, 0);
@@ -196,6 +197,21 @@ test('text and background palettes are compact bright sets', () => {
   assert.equal(new Set(BG_COLOURS).size, BG_COLOURS.length);
 });
 
+test('new pets celebrate with the signature move selected', () => {
+  const pet = normalizePet({});
+  assert.equal(defaultSettings().sound, true);
+  assert.ok(pet.celebrations.includes('signature'));
+  assert.ok(pet.celebrations.includes('dance'));
+  assert.equal(signatureLabel('dog'), 'Tail wag');
+  assert.equal(signatureLabel('lion'), 'Roar');
+  assert.equal(signatureLabel('chick'), 'Wing flap');
+  const kept = normalizePet({ animal: 'fox', celebrations: ['cheer', 'nope', 'cheer'] });
+  assert.deepEqual(kept.celebrations, ['cheer']);
+  assert.deepEqual(normalizePet({ celebrations: [] }).celebrations, ['signature']);
+  assert.equal(pickCelebration(['dance', 'stars'], () => 0), 'dance');
+  assert.equal(pickCelebration(['dance', 'stars'], () => 0.99), 'stars');
+});
+
 test('low contrast text is reported and fixed to a readable shade', () => {
   const settings = { theme: 'calm', bgColor: '#FFF6D8', textColor: '#FFF3B0' };
   const before = paintColors(settings);
@@ -281,6 +297,19 @@ test('a v1 save keeps its theme, accent, and categories', () => {
   assert.equal(custom.textColor, '#6A1040');
   assert.equal(custom.bgColor, '#FFD4E8');
   assert.equal(custom.title, "Sam's Day");
+});
+
+test('retired pets migrate onto the cube lineup', () => {
+  assert.equal(normalizePet({ animal: 'horse', hat: true, eyes: 'sparkly' }).animal, 'fox');
+  assert.equal(normalizePet({ animal: 'horse', hat: true }).hat, true);
+  assert.equal(normalizePet({ animal: 'shark', color: '#ffd23f' }).animal, 'penguin');
+  assert.equal(normalizePet({ animal: 'shark', color: '#ffd23f' }).color, '#FFD23F');
+  assert.equal(normalizePet({ animal: 'axolotl' }).animal, 'bunny');
+  assert.equal(normalizePet({ animal: 'capybara' }).animal, 'koala');
+  assert.equal(normalizePet({ animal: 'dragon' }).animal, 'lion');
+  assert.equal(normalizePet({ animal: 'tiger' }).animal, 'tiger');
+  assert.equal(normalizePet({ animal: 'chick' }).animal, 'chick');
+  assert.equal(normalizePet({ animal: 'nope' }).animal, 'penguin');
 });
 
 test('photo dimming still counts toward text contrast', () => {

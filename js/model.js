@@ -3,6 +3,8 @@
  * No DOM and no storage, so it can run in the browser and in Node tests.
  */
 
+import { defaultCelebrations, normalizeCelebrations } from './celebrations.js';
+
 export const POINTS = { easy: 5, medium: 10, hard: 20 };
 export const DAY_COMPLETE_BONUS = 10;
 export const GOAL_BONUS = 5;
@@ -76,15 +78,24 @@ export const PET_ANIMALS = [
   ['cat', 'Cat'],
   ['bunny', 'Bunny'],
   ['penguin', 'Penguin'],
-  ['horse', 'Horse'],
   ['monkey', 'Monkey'],
   ['tiger', 'Tiger'],
-  ['shark', 'Shark'],
   ['pig', 'Pig'],
-  ['axolotl', 'Axolotl'],
-  ['capybara', 'Capybara'],
-  ['dragon', 'Dragon'],
+  ['lion', 'Lion'],
+  ['panda', 'Panda'],
+  ['fox', 'Fox'],
+  ['koala', 'Koala'],
+  ['chick', 'Chick'],
 ];
+
+/** Saves from the retired procedural lineup land on a cube pet. */
+const PET_MIGRATION = {
+  horse: 'fox',
+  shark: 'penguin',
+  axolotl: 'bunny',
+  capybara: 'koala',
+  dragon: 'lion',
+};
 
 export const PET_COLOURS = [
   { name: 'Natural', hex: null },
@@ -106,13 +117,15 @@ export function defaultPet() {
     hat: false,
     height: 1,
     body: 1,
+    celebrations: defaultCelebrations(),
   };
 }
 
 export function normalizePet(saved) {
   const base = defaultPet();
   if (!saved || typeof saved !== 'object') return base;
-  const animal = PET_ANIMALS.some(([id]) => id === saved.animal) ? saved.animal : base.animal;
+  const migrated = PET_MIGRATION[saved.animal] || saved.animal;
+  const animal = PET_ANIMALS.some(([id]) => id === migrated) ? migrated : base.animal;
   const eyes = saved.eyes === 'happy' || saved.eyes === 'sparkly' ? saved.eyes : 'round';
   const height = Number(saved.height);
   const body = Number(saved.body);
@@ -124,6 +137,7 @@ export function normalizePet(saved) {
     hat: Boolean(saved.hat),
     height: Number.isFinite(height) ? Math.min(1.4, Math.max(0.75, height)) : 1,
     body: Number.isFinite(body) ? Math.min(1.3, Math.max(0.8, body)) : 1,
+    celebrations: normalizeCelebrations(saved.celebrations),
   };
 }
 
@@ -138,7 +152,7 @@ export function defaultSettings() {
     font: 'nunito',
     format: 'list',
     celebrations: 'full',
-    sound: false,
+    sound: true,
     dayStart: '04:00',
     weekStart: 'mon',
     clock24: false,
