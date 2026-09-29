@@ -207,7 +207,7 @@ Also seen: a Reddit post titled "New shop selling a wedding planner web app" on 
 ---
 ## Part 2: The spec
 ### 1. Product summary and target user
-A calm, very simple day planner for students. Open it, see today, tap to add a class or task, and get a nudge before it starts. Checking things off feels good: points, a level bar, a streak, and a little celebration, bigger for harder tasks. When the day is done, you get a "day complete" moment. Users can make it their own with a title, colours, fonts and their own photo as the background. **Target user:** high school and college students (and anyone) who want a planner that takes 10 seconds to use and makes finishing things satisfying. It runs as a no-account app on phone, tablet or laptop, bought once on Etsy.
+A calm, very simple day planner for students. Open it, see today, tap to add a class or task, and get a nudge before it starts. Checking things off feels good: points, a level bar, a streak, and a little celebration, bigger for harder tasks. When the day is done, you get a "day complete" moment. Users can make it their own with a title, colours, and their own photo as the background. **Target user:** high school and college students (and anyone) who want a planner that takes 10 seconds to use and makes finishing things satisfying. It runs as a no-account app on phone, tablet or laptop, bought once on Etsy.
 ### 2. Screens and flows
 **Principle:** one main screen, one pop-up sheet, one settings screen, plus a 3-step first run. No menus inside menus.
 #### 2.0 First-run setup (3 steps, shown once; each skippable except step 1)
@@ -268,8 +268,8 @@ After setup → Today screen with a friendly empty state.
 - **Quick-add shortcut:** typing a title and pressing Enter saves with the defaults (fast path).
 #### 2.3 Customize (settings screen)
 Grouped, short list. Every change previews live.
-- **Look:** Title · Theme (6) · Text colour and background colour (20 swatches each, one scrolling row, plus a colour picker) · Accent colour (8 tested swatches) · Background photo (add/change/remove, crop, scrim Auto/Dark/Light, blur 0–12) · Font (4) · Format (List / Timeline) · Celebrations (Full / Subtle / Off) · Sound (on/off, **default off**).
-- **Plan:** Categories (rename, colour, emoji, add up to 8 total) · Daily goal (Off / number of tasks / points target) · Streak counts on (Every day / Weekdays only) · Day starts at (default 4:00 AM) · Week starts on (Mon/Sun) · 12h/24h.
+- **Look:** Title · Theme (6) · Text colour and background colour (20 swatches each, one scrolling row, plus a colour wheel) · Accent colour (8 tested swatches) · Background photo (add/change/remove, crop, scrim Auto/Dark/Light, blur 0–12) · Celebrations (Full / Subtle / Off) · Sound (on/off, **default off**).
+- **Plan:** Categories (rename, colour, emoji, add up to 8 total) · Daily goal (Off / number of tasks / points target) · Streak counts on (Every day / Weekdays only) · Day starts at (default 4:00 AM) · Week starts on (Mon/Sun).
 - **Reminders:** status line ("On", "Off", or "Needs Home Screen install") · Default lead time · Show task names in notifications (on/off) · Morning check-in (time) · Test reminder button.
 - **Your data:** Back up now (download file) · Restore from backup · Last backup date · Erase everything (double confirm).
 - **About:** version, "Install app" (if not installed), Help (opens the in-app quick guide), privacy note.
@@ -294,7 +294,7 @@ flowchart TD
   L -- "No" --> I
   K --> N{"Level threshold passed?"}
   N -- "Yes" --> O["Level up badge"]
-  I -- "Palette icon" --> P["Customize: theme, photo, font, format, categories"]
+  I -- "Palette icon" --> P["Customize: theme, photo, colours, categories"]
   P --> I
 ```
 - **Adding 3 college classes (example):** "+" → "Biology 101" → Class → Medium → 9:00 → Repeat M/W/F → Remind 10 min → Save. Repeat for the other two. On class days all three appear automatically.
@@ -485,7 +485,7 @@ A badge pops over the ring: **"Level 5 · Steady"** with a ring refill animation
 <tr>
 <td>**Text colour**</td>
 <td>20 swatches, plus a colour picker</td>
-<td>One horizontal row. Empty means the theme text. If text and background (or a photo plus its dimming) fall under 4.5:1, Customize shows “These colours are hard to read.” and **Fix it** stores the nearest readable shade.</td>
+<td>One horizontal row, then a colour wheel: tap or drag to pick, with brightness and a preview swatch. Empty means the theme text. If text and background (or a photo plus its dimming) fall under 4.5:1, Customize shows “These colours are hard to read.” and **Fix it** stores the nearest readable shade.</td>
 </tr>
 <tr>
 <td>**Background colour**</td>
@@ -504,8 +504,8 @@ A badge pops over the ring: **"Level 5 · Steady"** with a ring refill animation
 </tr>
 <tr>
 <td>**Font**</td>
-<td>4: Nunito (default), Inter, Lexend, Caveat (titles only)</td>
-<td>See 6.2.</td>
+<td>Nunito</td>
+<td>Not a setting. A saved font choice loads as Nunito. See 6.2.</td>
 </tr>
 <tr>
 <td>**Categories / goal types**</td>
@@ -519,8 +519,8 @@ A badge pops over the ring: **"Level 5 · Steady"** with a ring refill animation
 </tr>
 <tr>
 <td>**Format**</td>
-<td>List (default) / Timeline</td>
-<td>Timeline hours auto-fit to tasks.</td>
+<td>List</td>
+<td>Not a setting. The day is always a list. A saved timeline choice loads as list.</td>
 </tr>
 <tr>
 <td>**Celebrations**</td>
@@ -539,8 +539,8 @@ A badge pops over the ring: **"Level 5 · Steady"** with a ring refill animation
 </tr>
 <tr>
 <td>**Time format, week start, day start**</td>
-<td>12h/24h · Mon/Sun · default 4:00 AM</td>
-<td></td>
+<td>12-hour clock · Mon/Sun · default 4:00 AM</td>
+<td>The clock is always 12-hour. A saved 24-hour choice loads as 12-hour. Week start and day start stay settings.</td>
 </tr>
 </table>
 ### 6. Visual style guide
@@ -619,7 +619,7 @@ WCAG 2.2 AA requires **4.5:1** for normal text and **3:1** for large text (≥18
 </tr>
 </table>
 **Shared colours:** Done/success #15803D (5.0:1 on white; use #5DFFB0 in Night). **Difficulty tags** (white text on the tag): Easy #15803D (5.0:1) · Medium #B45309 (5.0:1) · Hard #B91C1C (6.5:1). Always pair colour with the word (Easy/Medium/Hard), never colour alone.
-**Accent swatches:** #6D4AFF, #00C2A8, #FF4D1A, #1A8CFF, #FF2D87, #38BDF8, #7C3AED, #00B4D8. Pair each with white or #12131A, whichever clears 4.5:1. **Text and background rows** are the 20 swatches in `TEXT_COLOURS` and `BG_COLOURS`, then a native colour input. A v1 settings row (schemaVersion 1, no text or background field) loads as schemaVersion 2 with those fields empty, so the saved theme id and accent stay.
+**Accent swatches:** #6D4AFF, #00C2A8, #FF4D1A, #1A8CFF, #FF2D87, #38BDF8, #7C3AED, #00B4D8. Pair each with white or #12131A, whichever clears 4.5:1. **Text and background rows** are the 20 swatches in `TEXT_COLOURS` and `BG_COLOURS`, then a colour wheel (same wheel for a custom pet colour). A v1 settings row (schemaVersion 1, no text or background field) loads as schemaVersion 2 with those fields empty, so the saved theme id and accent stay. Saved font, layout format, and 24-hour clock values load as Nunito, list, and 12-hour.
 #### 6.2 Typography (all free, open-licence fonts from Google Fonts)
 <table header-row="true">
 <tr>
@@ -813,7 +813,7 @@ Short, warm, peer-to-peer. No exclamation-mark spam, no guilt, no jargon.
 - [ ] Three classes set to repeat Mon/Wed/Fri appear on those days only.
 - [ ] Editing a repeating item asks "Just today / All", and both options behave correctly.
 - [ ] Move to tomorrow, Delete and Undo (5 s) work.
-- [ ] List and Timeline formats show the same tasks. Timeline shows a "now" line.
+- [ ] The day is a list. Saved font, layout, and 24-hour clock choices load as Nunito, list, and 12-hour.
 - [ ] Works at 360 px wide, and on a laptop at 1440 px (content centred, ≤560 px).
 **Rewards**
 - [ ] Completing Easy / Medium / Hard adds 5 / 10 / 20 points. Undo removes exactly those points.
@@ -832,7 +832,7 @@ Short, warm, peer-to-peer. No exclamation-mark spam, no guilt, no jargon.
 - [ ] Changing a task's time or deleting it updates or removes its scheduled push.
 - [ ] Customize → Reminders shows the correct status line in each state (on / off / blocked / needs install / open-only).
 **Customization**
-- [ ] All 6 themes and 4 fonts apply instantly and persist after restart.
+- [ ] All 6 themes apply instantly and persist after restart. The typeface stays Nunito.
 - [ ] Photo upload → crop → save works for a 12 MP phone photo. The stored image is ≤1600 px on the long edge.
 - [ ] With a pure white photo and a pure black photo, all text on the header and cards still passes 4.5:1 (check with a contrast tool).
 - [ ] Categories can be renamed, re-coloured and added (max 8).

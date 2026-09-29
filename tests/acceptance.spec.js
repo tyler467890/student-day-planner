@@ -258,18 +258,46 @@ test('move, delete and undo work, including the 5 second toast', async ({ page }
   await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(0);
 });
 
-test('list and timeline show the same tasks and the timeline has a now line', async ({ page }) => {
+test('saved layout, font, and clock choices stay on the defaults', async ({ page }) => {
   await useClock(page, '2026-09-25T15:00:00-04:00');
   await skipToToday(page);
   await addItem(page, { title: 'Biology 101', category: 'Class', time: '09:00' });
   await addItem(page, { title: 'Gym', time: '17:00' });
   await expect(page.locator('.card-title')).toHaveCount(2);
   await page.getByRole('button', { name: 'Customize' }).click();
-  await page.getByRole('button', { name: 'Timeline', exact: true }).click();
+  await expect(page.getByText('Font', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Format', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Timeline', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '12 hour' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '24 hour' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await page.evaluate(async () => {
+    const settings = window.__dayli.getState().settings;
+    settings.font = 'lexend';
+    settings.format = 'timeline';
+    settings.clock24 = true;
+    await new Promise((resolve, reject) => {
+      const req = indexedDB.open('dayli', 1);
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const db = req.result;
+        const tx = db.transaction(['settings'], 'readwrite');
+        tx.objectStore('settings').put(settings);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      };
+    });
+  });
+  await page.reload();
   await expect(page.locator('.card-title')).toHaveCount(2);
-  await expect(page.locator('.now-line')).toBeVisible();
-  await expect(page.getByText('Now')).toBeVisible();
+  await expect(page.locator('.now-line')).toHaveCount(0);
+  await expect(page.locator('html')).toHaveAttribute('data-font', 'nunito');
+  await expect(page.getByText('9:00 AM').first()).toBeVisible();
+  const locked = await page.evaluate(() => {
+    const settings = window.__dayli.getState().settings;
+    return { font: settings.font, format: settings.format, clock24: settings.clock24 };
+  });
+  expect(locked).toEqual({ font: 'nunito', format: 'list', clock24: false });
 });
 
 test('layout at 360px and at 1440px', async ({ page }) => {
@@ -587,7 +615,7 @@ test('reminder status lines', async ({ browser }) => {
   await openOnly.close();
 });
 
-test('themes and fonts apply and persist', async ({ page }) => {
+test('themes apply and persist', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('radio', { name: 'Mint theme' }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
@@ -596,13 +624,10 @@ test('themes and fonts apply and persist', async ({ page }) => {
   await page.getByRole('button', { name: 'This is my pet' }).click();
   await expect(page.getByRole('button', { name: 'Customize' })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'mint');
+  await expect(page.locator('html')).toHaveAttribute('data-font', 'nunito');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'mint');
-  await page.getByRole('button', { name: 'Customize' }).click();
-  await page.getByRole('button', { name: 'Lexend', exact: true }).click();
-  await expect(page.locator('html')).toHaveAttribute('data-font', 'lexend');
-  await page.reload();
-  await expect(page.locator('html')).toHaveAttribute('data-font', 'lexend');
+  await expect(page.locator('html')).toHaveAttribute('data-font', 'nunito');
   for (const theme of ['Calm', 'Sunset', 'Ocean', 'Blossom', 'Night']) {
     await page.getByRole('button', { name: 'Customize' }).click();
     await page.getByRole('button', { name: `${theme} theme` }).click();
@@ -789,12 +814,6 @@ test('screenshots', async ({ browser }) => {
   await page.screenshot({ path: `${ART}/pet-reaction.png` });
   await page.screenshot({ path: `${ART}/completion-moment.png` });
 
-  await page.getByRole('button', { name: 'Customize' }).click();
-  await page.getByRole('button', { name: 'Timeline', exact: true }).click();
-  await page.getByRole('button', { name: 'Back', exact: true }).click();
-  await expect(page.locator('.now-line')).toBeVisible();
-  await page.screenshot({ path: `${ART}/today-timeline.png` });
-
   await openCard(page, 'Biology 101');
   await expect(page.getByRole('heading', { name: 'Edit' })).toBeVisible();
   await page.screenshot({ path: `${ART}/add-edit-sheet.png` });
@@ -815,7 +834,6 @@ test('screenshots', async ({ browser }) => {
   await page.getByRole('button', { name: 'Save photo' }).click();
   await expect(page.getByRole('button', { name: 'Remove photo' })).toBeVisible();
   await page.screenshot({ path: `${ART}/customize-photo.png` });
-  await page.getByRole('button', { name: 'List', exact: true }).click();
   await page.getByRole('button', { name: 'Back', exact: true }).click();
 
   await page.getByRole('button', { name: /Mark Biology 101 done, medium, 10 points/ }).click();
@@ -854,6 +872,40 @@ test('screenshots', async ({ browser }) => {
 test('text and background colours, contrast fix, and v1 settings', async ({ page }) => {
   await skipToToday(page);
   await page.getByRole('button', { name: 'Customize' }).click();
+  await expect(page.getByText('Font', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Format', { exact: true })).toHaveCount(0);
+  await page.screenshot({ path: `${ART}/settings-phone.png` });
+  await page.getByRole('button', { name: 'Custom background colour' }).click();
+  await expect(page.getByLabel('Colour wheel')).toBeVisible();
+  await expect(page.getByLabel('Brightness')).toBeVisible();
+  await page.getByLabel('Colour wheel').evaluate((el) => el.scrollIntoView({ block: 'center' }));
+  const wheel = page.getByLabel('Colour wheel');
+  const box = await wheel.boundingBox();
+  await page.mouse.click(box.x + box.width * 0.85, box.y + box.height * 0.3);
+  await expect(page.locator('.wheel-preview')).toBeVisible();
+  await page.screenshot({ path: `${ART}/colour-wheel-phone.png` });
+  const picked = await page.evaluate(() => {
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    return {
+      bg: bg.toUpperCase(),
+      saved: window.__dayli.getState().settings.bgColor,
+      hsv: window.__dayli.model.hexToHsv(bg),
+    };
+  });
+  expect(picked.saved.toUpperCase()).toBe(picked.bg);
+  expect(picked.hsv.s).toBeGreaterThan(40);
+  expect(picked.hsv.h).toBeGreaterThan(250);
+  expect(picked.hsv.h).toBeLessThan(360);
+  await page.getByLabel('Brightness').evaluate((el) => {
+    el.value = '100';
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  const bright = await page.evaluate(() => window.__dayli.model.hexToHsv(
+    getComputedStyle(document.documentElement).getPropertyValue('--bg').trim(),
+  ));
+  expect(bright.v).toBeGreaterThan(99);
+
   await page.getByRole('button', { name: 'Background #C8FFE6' }).click();
   await page.getByRole('button', { name: 'Text #4C1D95' }).click();
   await expect(page.locator('#contrast-note')).toHaveCount(0);
@@ -864,12 +916,6 @@ test('text and background colours, contrast fix, and v1 settings', async ({ page
       text: style.getPropertyValue('--text').trim().toUpperCase(),
     };
   })).toEqual({ bg: '#C8FFE6', text: '#4C1D95' });
-
-  await page.getByLabel('Custom background colour').evaluate((el) => {
-    el.value = '#123abc';
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  await expect.poll(async () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim().toUpperCase())).toBe('#123ABC');
 
   await page.getByRole('button', { name: 'Text #FFF3B0' }).click();
   await page.getByRole('button', { name: 'Background #FFF6D8' }).click();
@@ -888,6 +934,24 @@ test('text and background colours, contrast fix, and v1 settings', async ({ page
   expect(readable.bg).toBe('#FFF6D8');
   expect(readable.ratio).toBeGreaterThanOrEqual(4.5);
 
+  await page.getByRole('button', { name: 'Change pet' }).click();
+  await page.getByRole('button', { name: 'Custom pet colour' }).click();
+  const petWheel = page.getByLabel('Colour wheel');
+  await expect(petWheel).toBeVisible();
+  await petWheel.scrollIntoViewIfNeeded();
+  const petBox = await petWheel.boundingBox();
+  await page.mouse.move(petBox.x + petBox.width / 2, petBox.y + petBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(petBox.x + petBox.width / 2, petBox.y + 12, { steps: 6 });
+  await page.mouse.up();
+  const petColour = await page.evaluate(() => window.__dayli.getState().settings.pet.color);
+  expect(petColour).toMatch(/^#[0-9A-F]{6}$/);
+  const petHsv = await page.evaluate((hex) => window.__dayli.model.hexToHsv(hex), petColour);
+  expect(petHsv.s).toBeGreaterThan(70);
+  expect(petHsv.h).toBeGreaterThan(240);
+  expect(petHsv.h).toBeLessThan(300);
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+
   await page.reload();
   await page.getByRole('button', { name: 'Customize' }).click();
   const kept = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim().toUpperCase());
@@ -900,7 +964,9 @@ test('text and background colours, contrast fix, and v1 settings', async ({ page
       title: 'Lab Day',
       theme: 'ocean',
       accent: '#1D63B8',
-      font: 'nunito',
+      font: 'caveat',
+      format: 'timeline',
+      clock24: true,
       schemaVersion: 1,
       setupComplete: true,
       setupStep: 3,
@@ -950,8 +1016,13 @@ test('text and background colours, contrast fix, and v1 settings', async ({ page
   expect(migrated.settings.theme).toBe('ocean');
   expect(migrated.settings.accent).toBe('#1D63B8');
   expect(migrated.settings.categories[0].color).toBe('#1D63B8');
+  expect(migrated.settings.font).toBe('nunito');
+  expect(migrated.settings.format).toBe('list');
+  expect(migrated.settings.clock24).toBe(false);
   expect(migrated.bg).toBe('#D2EFFF');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'ocean');
+  await expect(page.locator('html')).toHaveAttribute('data-font', 'nunito');
+  await expect(page.getByText('9:00 AM')).toBeVisible();
 });
 
 test('bright colour screenshots', async ({ page }) => {

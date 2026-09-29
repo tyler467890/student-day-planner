@@ -4,8 +4,9 @@ import {
   addDays, plannerDate, levelForPoints, levelBounds, levelTitle, computeStreak,
   instancesOn, upcomingReminders, reminderText, headerContrast, cardContrast,
   THEMES, ACCENTS, TEXT_COLOURS, BG_COLOURS, contrastRatio, onAccent, POINTS, defaultSettings,
-  paintColors, fixTextColor,   migrateSettings, hexToRgb, relativeLuminance, normalizePet,
+  paintColors, fixTextColor, migrateSettings, hexToRgb, relativeLuminance, normalizePet,
   occursOn, repeatFromDays, formatDaySelection, formatTimeRange, minutesBetween,
+  hsvToHex, hexToHsv, wheelPointToHs, hsToWheelPoint, COLOUR_WHEEL_SIZE,
 } from '../js/model.js';
 import { pickCelebration, signatureLabel } from '../js/celebrations.js';
 
@@ -240,7 +241,7 @@ test('a v1 save keeps its theme, accent, and categories', () => {
     sound: false,
     dayStart: '04:00',
     weekStart: 'mon',
-    clock24: false,
+    clock24: true,
     streakMode: 'everyday',
     dailyGoal: { mode: 'points', n: 30 },
     defaultLead: 15,
@@ -262,8 +263,9 @@ test('a v1 save keeps its theme, accent, and categories', () => {
   assert.equal(next.theme, 'ocean');
   assert.equal(next.accent, '#1D63B8');
   assert.equal(next.title, "Sam's Day");
-  assert.equal(next.font, 'lexend');
-  assert.equal(next.format, 'timeline');
+  assert.equal(next.font, 'nunito');
+  assert.equal(next.format, 'list');
+  assert.equal(next.clock24, false);
   assert.equal(next.showNames, false);
   assert.equal(next.dailyGoal.n, 30);
   assert.equal(next.morningCheckin.time, '07:30');
@@ -288,6 +290,9 @@ test('a v1 save keeps its theme, accent, and categories', () => {
   assert.equal(kept.pet.hat, true);
   assert.equal(kept.pet.height, 1.2);
   assert.equal(kept.title, "Sam's Day");
+  assert.equal(kept.font, defaultSettings().font);
+  assert.equal(kept.format, 'list');
+  assert.equal(kept.clock24, false);
   const painted = paintColors(next);
   assert.equal(painted.bg, THEMES.ocean.bg);
   assert.equal(painted.text, THEMES.ocean.text);
@@ -378,6 +383,54 @@ test('a repeating goal reminds on each matching day', () => {
   assert.ok(days.includes('2026-09-25'));
   assert.equal(days.includes('2026-09-26'), false);
   assert.ok(list.every((item) => item.title === 'Work' || item.kind !== 'task'));
+});
+
+test('colour wheel hue, saturation, and brightness round-trip', () => {
+  assert.equal(hsvToHex({ h: 0, s: 100, v: 100 }), '#FF0000');
+  assert.equal(hsvToHex({ h: 120, s: 100, v: 100 }), '#00FF00');
+  assert.equal(hsvToHex({ h: 240, s: 100, v: 100 }), '#0000FF');
+  assert.equal(hsvToHex({ h: 180, s: 100, v: 100 }), '#00FFFF');
+  assert.equal(hsvToHex({ h: 0, s: 0, v: 100 }), '#FFFFFF');
+  assert.equal(hsvToHex({ h: 40, s: 80, v: 0 }), '#000000');
+  const sample = '#6D4AFF';
+  const back = hsvToHex(hexToHsv(sample));
+  const a = hexToRgb(sample);
+  const b = hexToRgb(back);
+  assert.ok(Math.abs(a.r - b.r) <= 1 && Math.abs(a.g - b.g) <= 1 && Math.abs(a.b - b.b) <= 1, back);
+  const size = COLOUR_WHEEL_SIZE;
+  const edge = wheelPointToHs(size, size / 2, size);
+  assert.ok(edge.h < 1 || edge.h > 359);
+  assert.equal(Math.round(edge.s), 100);
+  const center = wheelPointToHs(size / 2, size / 2, size);
+  assert.equal(Math.round(center.s), 0);
+  const outside = wheelPointToHs(size + 40, size / 2, size);
+  assert.equal(Math.round(outside.s), 100);
+  const spot = hsToWheelPoint(120, 100, size);
+  const backHs = wheelPointToHs(spot.x, spot.y, size);
+  assert.ok(Math.abs(backHs.h - 120) < 0.02, backHs.h);
+  assert.ok(Math.abs(backHs.s - 100) < 0.02, backHs.s);
+  assert.equal(hsvToHex({ ...backHs, v: 100 }), '#00FF00');
+});
+
+test('saved font, layout, and clock choices reset to the defaults', () => {
+  const next = migrateSettings({
+    schemaVersion: 2,
+    title: 'Lab Day',
+    theme: 'mint',
+    font: 'caveat',
+    format: 'timeline',
+    clock24: true,
+    textColor: '#064536',
+    weekStart: 'sun',
+  });
+  const base = defaultSettings();
+  assert.equal(next.font, base.font);
+  assert.equal(next.format, base.format);
+  assert.equal(next.clock24, base.clock24);
+  assert.equal(next.title, 'Lab Day');
+  assert.equal(next.theme, 'mint');
+  assert.equal(next.textColor, '#064536');
+  assert.equal(next.weekStart, 'sun');
 });
 
 test('photo dimming still counts toward text contrast', () => {

@@ -11,13 +11,15 @@ import { celebrationChoices, pickCelebration } from './celebrations.js';
 import { playCelebrationAudio, playChime } from './sounds.js';
 
 const {
-  POINTS, DAY_COMPLETE_BONUS, THEMES, ACCENTS, FONTS, WEEKDAY_LABELS,
+  POINTS, DAY_COMPLETE_BONUS, THEMES, ACCENTS, WEEKDAY_LABELS,
   TEXT_COLOURS, BG_COLOURS, defaultSettings, defaultDifficulty, addDays, plannerDate, formatDayLabel,
   formatTime, dayOfWeek, instancesOn, computeStreak, sumPoints, pointsOnDate,
   isDayComplete, levelForPoints, levelProgress, levelTitle, displayLevel,
   upcomingReminders, reminderText, onAccent, autoScrim, burstCount, clone,
   zonedDateTime, weekStartOf, parseHM, migrateSettings, paintColors, fixTextColor,
   normalizeHex, relativeLuminance, PET_ANIMALS, PET_COLOURS,
+  COLOUR_WHEEL_SIZE, hsvToHex, hsvToRgb, hexToHsv, wheelPointToHs, hsToWheelPoint,
+  applyPresentationDefaults,
 } = model;
 
 const S = {
@@ -48,6 +50,9 @@ let petBoot = null;
 let petKey = '';
 let petPending = null;
 let petReturn = 'today';
+let openWheel = null;
+let wheelBitmap = null;
+let wheelBitmapDpr = 0;
 const highWater = { level: 1, celebrated: 1, shown: {} };
 
 const appEl = () => document.getElementById('app');
@@ -184,7 +189,7 @@ function resolvedScrim() {
 }
 
 function applyChrome() {
-  const settings = S.settings;
+  const settings = applyPresentationDefaults(S.settings);
   const painted = paintColors(settings, photoArg());
   const root = document.documentElement;
   root.dataset.theme = settings.theme;
@@ -1113,6 +1118,8 @@ function renderPetControls() {
       }, choice.label);
     })));
   wrap.append(h('p', { class: 'field-label', text: 'Colour' }));
+  const petPresets = PET_COLOURS.map((swatch) => swatch.hex).filter(Boolean);
+  const petHex = normalizeHex(pet.color);
   const colours = h('div', { class: 'pet-colours', role: 'group', 'aria-label': 'Pet colour' });
   for (const swatch of PET_COLOURS) {
     const selected = swatch.hex ? pet.color === swatch.hex : !pet.color;
@@ -1120,22 +1127,29 @@ function renderPetControls() {
       type: 'button',
       'aria-label': swatch.hex ? `Pet colour ${swatch.name}` : 'Natural pet colour',
       'aria-pressed': selected ? 'true' : 'false',
+      dataset: swatch.hex ? { hex: swatch.hex } : { natural: '1' },
       style: swatch.hex ? `background:${swatch.hex}` : 'background:linear-gradient(135deg,#fff,#d9d3ea)',
-      onclick: () => updatePet({ color: swatch.hex }),
+      onclick: () => {
+        openWheel = null;
+        updatePet({ color: swatch.hex });
+      },
     }));
   }
-  const picker = h('input', {
-    type: 'color',
-    'aria-label': 'Custom pet colour',
-    value: (pet.color || '#7EC8FF').toLowerCase(),
-  });
-  picker.addEventListener('change', () => {
-    const hex = normalizeHex(picker.value);
-    if (hex) updatePet({ color: hex });
-  });
-  const customOn = Boolean(pet.color && !PET_COLOURS.some((swatch) => swatch.hex === pet.color));
-  colours.append(h('label', { class: `color-chip${customOn ? ' is-selected' : ''}` }, picker));
+  colours.append(colourChip({
+    id: 'pet',
+    label: 'Custom pet colour',
+    shown: petHex || '#7EC8FF',
+    selected: Boolean(petHex && !petPresets.includes(petHex)),
+  }));
   wrap.append(colours);
+  if (openWheel === 'pet') {
+    wrap.append(colourWheelPanel(petHex || '#7EC8FF', (hex, commit) => {
+      S.settings.pet = { ...(S.settings.pet || model.defaultPet()), color: hex };
+      applyPetConfig();
+      syncPetColour(hex);
+      if (commit) persistAll();
+    }));
+  }
   wrap.append(h('p', { class: 'field-label', text: 'Face' }));
   wrap.append(h('div', { class: 'chips' },
     ['round', 'happy', 'sparkly'].map((eyes) => h('button', {
@@ -1189,6 +1203,7 @@ function renderPet() {
 }
 
 function render() {
+  const scrollY = window.scrollY;
   applyChrome();
   const root = appEl();
   if (petHolder) petHolder.remove();
@@ -1199,6 +1214,10 @@ function render() {
   else if (S.screen === 'pet') root.append(renderPet());
   else root.append(renderToday());
   renderOverlayBits();
+  if (openWheel) {
+    window.scrollTo(0, scrollY);
+    document.getElementById('colour-wheel-panel')?.scrollIntoView({ block: 'nearest' });
+  }
   if (petStage) {
     petStage.setActive(petOnScreen());
     if (petOnScreen()) {
@@ -2127,6 +2146,180 @@ function closeSheet() {
   document.body.classList.remove('sheet-open');
 }
 
+function syncPetColour(hex) {
+  const group = document.querySelector('.pet-colours');
+  if (!group) return;
+  const presets = PET_COLOURS.map((swatch) => swatch.hex).filter(Boolean);
+  const custom = Boolean(hex && !presets.includes(hex));
+  group.querySelectorAll('button').forEach((btn) => {
+    if (btn.classList.contains('color-chip')) {
+      btn.classList.toggle('is-selected', custom);
+      return;
+    }
+    const on = hex ? btn.dataset.hex === hex : btn.dataset.natural === '1';
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  const dot = group.querySelector('.color-chip-dot');
+  if (dot) dot.style.background = hex || '#7EC8FF';
+}
+
+function syncThemeColour(kind, hex, presets) {
+  const row = document.querySelector(`[data-colour-row="${kind}"]`);
+  if (!row) return;
+  const custom = Boolean(hex && !presets.includes(hex));
+  row.querySelectorAll('.swatch').forEach((el) => {
+    const on = custom ? false : (hex ? el.dataset.hex === hex : el.dataset.theme === '1');
+    el.classList.toggle('is-selected', on);
+  });
+  row.querySelector('.color-chip')?.classList.toggle('is-selected', custom);
+  const dot = row.querySelector('.color-chip-dot');
+  if (dot && hex) dot.style.background = hex;
+}
+
+function syncContrast() {
+  const slot = document.getElementById('contrast-slot');
+  if (!slot) return;
+  const note = contrastNote();
+  slot.replaceChildren();
+  if (note) slot.append(note);
+}
+
+function colourChip({ id, label, shown, selected }) {
+  return h('button', {
+    type: 'button',
+    class: `color-chip${selected ? ' is-selected' : ''}${openWheel === id ? ' is-open' : ''}`,
+    'aria-label': label,
+    'aria-expanded': openWheel === id ? 'true' : 'false',
+    onclick: () => {
+      openWheel = openWheel === id ? null : id;
+      render();
+    },
+  }, h('span', { class: 'color-chip-dot', style: `background:${shown}` }));
+}
+
+function paintColourWheel(canvas) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (!wheelBitmap || wheelBitmapDpr !== dpr) {
+    const px = Math.round(COLOUR_WHEEL_SIZE * dpr);
+    const scratch = document.createElement('canvas');
+    scratch.width = px;
+    scratch.height = px;
+    const ctx = scratch.getContext('2d');
+    const image = ctx.createImageData(px, px);
+    const data = image.data;
+    const radius = px / 2;
+    for (let y = 0; y < px; y += 1) {
+      for (let x = 0; x < px; x += 1) {
+        const dx = x + 0.5 - radius;
+        const dy = y + 0.5 - radius;
+        const dist = Math.hypot(dx, dy);
+        const i = (y * px + x) * 4;
+        if (dist > radius) continue;
+        const { h, s } = wheelPointToHs(x + 0.5, y + 0.5, px);
+        const rgb = hsvToRgb({ h, s, v: 100 });
+        data[i] = Math.round(rgb.r);
+        data[i + 1] = Math.round(rgb.g);
+        data[i + 2] = Math.round(rgb.b);
+        const edge = radius - dist;
+        data[i + 3] = edge >= 1 ? 255 : Math.max(0, Math.round(edge * 255));
+      }
+    }
+    ctx.putImageData(image, 0, 0);
+    wheelBitmap = scratch;
+    wheelBitmapDpr = dpr;
+  }
+  const px = wheelBitmap.width;
+  canvas.width = px;
+  canvas.height = px;
+  canvas.getContext('2d').drawImage(wheelBitmap, 0, 0);
+}
+
+function colourWheelPanel(startHex, onPick) {
+  const hsv = hexToHsv(startHex || '#FF4D6D');
+  const panel = h('div', {
+    class: 'wheel-panel',
+    id: 'colour-wheel-panel',
+    role: 'group',
+    'aria-label': 'Custom colour',
+  });
+  const stage = h('div', { class: 'wheel-stage', role: 'group', 'aria-label': 'Colour wheel', tabindex: '0' });
+  const canvas = h('canvas', { class: 'colour-wheel', 'aria-hidden': 'true' });
+  const shade = h('div', { class: 'wheel-shade', 'aria-hidden': 'true' });
+  const thumb = h('div', { class: 'wheel-thumb', 'aria-hidden': 'true' });
+  stage.append(canvas, shade, thumb);
+  const preview = h('span', { class: 'wheel-preview', role: 'img', 'aria-label': 'Colour preview' });
+  const slider = h('input', {
+    type: 'range',
+    min: '0',
+    max: '100',
+    step: '1',
+    value: String(Math.round(hsv.v)),
+  });
+  panel.append(stage, h('div', { class: 'wheel-row' }, preview, h('label', { class: 'wheel-bright' }, 'Brightness', slider)));
+  paintColourWheel(canvas);
+
+  function paintUi() {
+    const next = hsvToHex(hsv);
+    const pt = hsToWheelPoint(hsv.h, hsv.s, COLOUR_WHEEL_SIZE);
+    thumb.style.left = `${pt.x}px`;
+    thumb.style.top = `${pt.y}px`;
+    thumb.style.background = next;
+    preview.style.background = next;
+    preview.setAttribute('aria-label', `Colour preview ${next}`);
+    shade.style.opacity = String(1 - Math.min(100, Math.max(0, hsv.v)) / 100);
+    slider.style.setProperty('--wheel-thumb', next);
+    return next;
+  }
+
+  function apply(commit) {
+    onPick(paintUi(), commit);
+  }
+
+  function take(event, commit) {
+    const rect = stage.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const x = ((event.clientX - rect.left) / rect.width) * COLOUR_WHEEL_SIZE;
+    const y = ((event.clientY - rect.top) / rect.height) * COLOUR_WHEEL_SIZE;
+    const hs = wheelPointToHs(x, y, COLOUR_WHEEL_SIZE);
+    hsv.h = hs.h;
+    hsv.s = hs.s;
+    apply(commit);
+  }
+
+  stage.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    stage.setPointerCapture(event.pointerId);
+    take(event, false);
+  }, { passive: false });
+  stage.addEventListener('pointermove', (event) => {
+    if (!stage.hasPointerCapture(event.pointerId)) return;
+    take(event, false);
+  });
+  stage.addEventListener('pointerup', (event) => take(event, true));
+  stage.addEventListener('pointercancel', (event) => take(event, true));
+  stage.addEventListener('keydown', (event) => {
+    const step = event.shiftKey ? 12 : 4;
+    if (event.key === 'ArrowLeft') hsv.h -= step;
+    else if (event.key === 'ArrowRight') hsv.h += step;
+    else if (event.key === 'ArrowUp') hsv.s = Math.min(100, hsv.s + step);
+    else if (event.key === 'ArrowDown') hsv.s = Math.max(0, hsv.s - step);
+    else return;
+    event.preventDefault();
+    apply(true);
+  });
+  slider.addEventListener('input', () => {
+    hsv.v = Number(slider.value);
+    apply(false);
+  });
+  slider.addEventListener('change', () => {
+    hsv.v = Number(slider.value);
+    apply(true);
+  });
+  slider.addEventListener('pointerdown', (event) => event.stopPropagation());
+  paintUi();
+  return panel;
+}
+
 function colourRow(kind) {
   const s = S.settings;
   const theme = THEMES[s.theme] || THEMES.calm;
@@ -2134,13 +2327,15 @@ function colourRow(kind) {
   const current = normalizeHex(kind === 'text' ? s.textColor : s.bgColor);
   const themeHex = normalizeHex(kind === 'text' ? theme.text : theme.bg);
   const label = kind === 'text' ? 'Text' : 'Background';
-  const row = h('div', { class: 'swatch-row' });
+  const row = h('div', { class: 'swatch-row', dataset: { colourRow: kind } });
   row.append(h('button', {
     type: 'button',
     class: `swatch dot${current ? '' : ' is-selected'}`,
     'aria-label': `${label} colour from theme`,
+    dataset: { theme: '1' },
     style: `background:${themeHex}`,
     onclick: async () => {
+      openWheel = null;
       if (kind === 'text') s.textColor = null;
       else s.bgColor = null;
       await persistAll();
@@ -2152,8 +2347,10 @@ function colourRow(kind) {
       type: 'button',
       class: `swatch dot${current === hex ? ' is-selected' : ''}`,
       'aria-label': `${label} ${hex}`,
+      dataset: { hex },
       style: `background:${hex}`,
       onclick: async () => {
+        openWheel = null;
         if (kind === 'text') s.textColor = hex;
         else s.bgColor = hex;
         await persistAll();
@@ -2161,22 +2358,27 @@ function colourRow(kind) {
       },
     }));
   }
-  const picker = h('input', {
-    type: 'color',
-    'aria-label': `Custom ${label.toLowerCase()} colour`,
-    value: (current || themeHex).toLowerCase(),
-  });
-  picker.addEventListener('change', async () => {
-    const hex = normalizeHex(picker.value);
-    if (!hex) return;
-    if (kind === 'text') s.textColor = hex;
-    else s.bgColor = hex;
-    await persistAll();
-    render();
-  });
-  const customSelected = Boolean(current && !colours.includes(current));
-  row.append(h('label', { class: `color-chip${customSelected ? ' is-selected' : ''}` }, picker));
-  return row;
+  row.append(colourChip({
+    id: kind,
+    label: `Custom ${label.toLowerCase()} colour`,
+    shown: current || themeHex,
+    selected: Boolean(current && !colours.includes(current)),
+  }));
+  const block = h('div', { class: 'colour-block' });
+  block.append(row);
+  if (openWheel === kind) {
+    block.append(colourWheelPanel(current || themeHex, (hex, commit) => {
+      if (kind === 'text') s.textColor = hex;
+      else s.bgColor = hex;
+      applyChrome();
+      syncThemeColour(kind, hex, colours);
+      if (commit) {
+        syncContrast();
+        persistAll();
+      }
+    }));
+  }
+  return block;
 }
 
 function contrastNote() {
@@ -2235,7 +2437,7 @@ function renderCustomize() {
     colourRow('text'),
     h('p', { class: 'field-label', text: 'Background colour' }),
     colourRow('bg'),
-    contrastNote(),
+    h('div', { id: 'contrast-slot' }, contrastNote()),
     h('p', { class: 'field-label', text: 'Accent colour' }),
     h('div', { class: 'swatch-row' }, ACCENTS.map((hex) => h('button', {
       type: 'button',
@@ -2244,18 +2446,6 @@ function renderCustomize() {
       style: `background:${hex}`,
       onclick: async () => { s.accent = hex; await persistAll(); render(); },
     }))),
-    h('p', { class: 'field-label', text: 'Font' }),
-    h('div', { class: 'chips' }, FONTS.map((font) => h('button', {
-      type: 'button',
-      class: `chip${s.font === font.id ? ' is-selected' : ''}`,
-      onclick: async () => { s.font = font.id; await persistAll(); render(); },
-    }, font.label))),
-    h('p', { class: 'field-label', text: 'Format' }),
-    h('div', { class: 'chips' }, ['list', 'timeline'].map((fmt) => h('button', {
-      type: 'button',
-      class: `chip${s.format === fmt ? ' is-selected' : ''}`,
-      onclick: async () => { s.format = fmt; await persistAll(); render(); },
-    }, fmt === 'list' ? 'List' : 'Timeline'))),
     h('p', { class: 'field-label', text: 'Celebrations' }),
     h('div', { class: 'chips' }, ['full', 'subtle', 'off'].map((c) => h('button', {
       type: 'button',
@@ -2317,7 +2507,7 @@ function renderCustomize() {
     h('h2', { text: 'About' }),
     h('p', { text: `${PRODUCT_NAME} ${APP_VERSION}` }),
     h('p', { class: 'privacy', text: "Your planner lives on this device. We don't see your tasks. If you turn on reminders while the app is closed, only the reminder time and text are sent to our reminder service, and deleted after sending." }),
-    h('p', { class: 'fine', text: 'Nunito, Inter, Lexend and Caveat are used under the SIL Open Font License. Icons in the app are original.' }),
+    h('p', { class: 'fine', text: 'Nunito is used under the SIL Open Font License. Icons in the app are original.' }),
     !isStandalone() ? h('button', { type: 'button', class: 'btn secondary', onclick: () => promptInstall() }, 'Install app') : null,
     h('button', { type: 'button', class: 'btn ghost', onclick: () => { S.screen = 'help'; render(); } }, 'Help')));
   return page;
@@ -2411,12 +2601,6 @@ function renderPlanSettings() {
       type: 'button',
       class: `chip${s.weekStart === id ? ' is-selected' : ''}`,
       onclick: () => { s.weekStart = id; persistAll(); },
-    }, label))),
-    h('p', { class: 'field-label', text: 'Clock' }),
-    h('div', { class: 'chips' }, [[false, '12 hour'], [true, '24 hour']].map(([val, label]) => h('button', {
-      type: 'button',
-      class: `chip${Boolean(s.clock24) === val ? ' is-selected' : ''}`,
-      onclick: () => { s.clock24 = val; persistAll(); render(); },
     }, label))));
 }
 

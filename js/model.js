@@ -30,7 +30,7 @@ export const THEMES = {
 
 export const ACCENTS = ['#6D4AFF', '#00C2A8', '#FF4D1A', '#1A8CFF', '#FF2D87', '#38BDF8', '#7C3AED', '#00B4D8'];
 
-/** Solid background choices. The last control in the row is a native colour picker. */
+/** Solid background choices. The last control in the row opens the colour wheel. */
 export const BG_COLOURS = [
   '#FFFFFF', '#FFF6D8', '#FFE0C2', '#FFD4E8', '#FFD6D6', '#E4DEFF',
   '#D2EFFF', '#C8FFE6', '#E8FFC2', '#FFE38A', '#FFC8A3', '#F5C8FF',
@@ -38,7 +38,7 @@ export const BG_COLOURS = [
   '#16142B', '#2A1858',
 ];
 
-/** Text choices, dark inks and bright lights. The last control is a native colour picker. */
+/** Text choices, dark inks and bright lights. The last control opens the colour wheel. */
 export const TEXT_COLOURS = [
   '#2A1860', '#4C1D95', '#064536', '#14532D', '#5C2208', '#6A1040',
   '#062E52', '#3B0764', '#1C1917', '#FFFFFF', '#FFF3B0', '#C8FFE6',
@@ -46,12 +46,16 @@ export const TEXT_COLOURS = [
   '#FFD0D0', '#E7FFB0',
 ];
 
+/** Bundled faces. The app always uses Nunito; the others are not settings. */
 export const FONTS = [
   { id: 'nunito', label: 'Nunito' },
   { id: 'inter', label: 'Inter' },
   { id: 'lexend', label: 'Lexend' },
   { id: 'caveat', label: 'Caveat' },
 ];
+
+/** Diameter of the custom colour wheel, in CSS pixels. */
+export const COLOUR_WHEEL_SIZE = 220;
 
 export const WEEKDAY_LABELS = [
   { dow: 1, short: 'M', name: 'Monday' },
@@ -654,6 +658,74 @@ function hue2rgb(p, q, t) {
   return p;
 }
 
+export function hsvToRgb({ h, s, v }) {
+  const H = (((Number(h) || 0) % 360) + 360) % 360 / 60;
+  const S = clamp(Number(s) || 0, 0, 100) / 100;
+  const V = clamp(Number(v) || 0, 0, 100) / 100;
+  const c = V * S;
+  const x = c * (1 - Math.abs((H % 2) - 1));
+  const m = V - c;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (H < 1) { r = c; g = x; }
+  else if (H < 2) { r = x; g = c; }
+  else if (H < 3) { g = c; b = x; }
+  else if (H < 4) { g = x; b = c; }
+  else if (H < 5) { r = x; b = c; }
+  else { r = c; b = x; }
+  return {
+    r: (r + m) * 255,
+    g: (g + m) * 255,
+    b: (b + m) * 255,
+  };
+}
+
+export function hsvToHex(hsv) {
+  return rgbToHex(hsvToRgb(hsv));
+}
+
+export function hexToHsv(hex) {
+  const norm = normalizeHex(hex) || '#000000';
+  const { r, g, b } = hexToRgb(norm);
+  const R = r / 255;
+  const G = g / 255;
+  const B = b / 255;
+  const max = Math.max(R, G, B);
+  const min = Math.min(R, G, B);
+  const d = max - min;
+  let h = 0;
+  if (d !== 0) {
+    if (max === R) h = ((G - B) / d) % 6;
+    else if (max === G) h = (B - R) / d + 2;
+    else h = (R - G) / d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  return { h, s: max === 0 ? 0 : (d / max) * 100, v: max * 100 };
+}
+
+/** Hue and saturation for a point on the colour wheel. Points outside the disc land on the rim. */
+export function wheelPointToHs(x, y, size) {
+  const radius = size / 2;
+  if (!radius) return { h: 0, s: 0 };
+  const dx = x - radius;
+  const dy = y - radius;
+  const dist = Math.min(Math.hypot(dx, dy), radius);
+  let h = (Math.atan2(dy, dx) * 180) / Math.PI;
+  if (h < 0) h += 360;
+  return { h, s: (dist / radius) * 100 };
+}
+
+export function hsToWheelPoint(h, s, size) {
+  const radius = (size / 2) * (clamp(Number(s) || 0, 0, 100) / 100);
+  const rad = ((((Number(h) || 0) % 360) + 360) % 360 * Math.PI) / 180;
+  return {
+    x: size / 2 + Math.cos(rad) * radius,
+    y: size / 2 + Math.sin(rad) * radius,
+  };
+}
+
 export function hslToHex({ h, s, l }) {
   const H = (((h % 360) + 360) % 360) / 360;
   const S = clamp(s, 0, 100) / 100;
@@ -800,6 +872,7 @@ export function migrateSettings(saved) {
   merged.textColor = normalizeHex(saved.textColor);
   merged.bgColor = normalizeHex(saved.bgColor);
   if (!THEMES[merged.theme]) merged.theme = base.theme;
+  applyPresentationDefaults(merged);
   return merged;
 }
 
@@ -876,6 +949,16 @@ export function formatDaySelection(days) {
     return `${groups[0]} & ${groups[1]}`;
   }
   return groups.join(', ');
+}
+
+/** Font, list layout, and 12-hour clock. Saved choices for these are dropped. */
+export function applyPresentationDefaults(settings) {
+  if (!settings || typeof settings !== 'object') return settings;
+  const base = defaultSettings();
+  settings.font = base.font;
+  settings.format = base.format;
+  settings.clock24 = base.clock24;
+  return settings;
 }
 
 export function burstCount(difficulty) {
