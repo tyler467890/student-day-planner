@@ -3,6 +3,8 @@
  * No DOM and no storage, so it can run in the browser and in Node tests.
  */
 
+import { defaultCelebrations, normalizeCelebrations } from './celebrations.js';
+
 export const POINTS = { easy: 5, medium: 10, hard: 20 };
 export const DAY_COMPLETE_BONUS = 10;
 export const GOAL_BONUS = 5;
@@ -115,6 +117,7 @@ export function defaultPet() {
     hat: false,
     height: 1,
     body: 1,
+    celebrations: defaultCelebrations(),
   };
 }
 
@@ -134,6 +137,7 @@ export function normalizePet(saved) {
     hat: Boolean(saved.hat),
     height: Number.isFinite(height) ? Math.min(1.4, Math.max(0.75, height)) : 1,
     body: Number.isFinite(body) ? Math.min(1.3, Math.max(0.8, body)) : 1,
+    celebrations: normalizeCelebrations(saved.celebrations),
   };
 }
 
@@ -148,7 +152,7 @@ export function defaultSettings() {
     font: 'nunito',
     format: 'list',
     celebrations: 'full',
-    sound: false,
+    sound: true,
     dayStart: '04:00',
     weekStart: 'mon',
     clock24: false,

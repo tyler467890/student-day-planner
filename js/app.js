@@ -6,6 +6,8 @@ import { PRODUCT_NAME, APP_VERSION } from './config.js';
 import * as model from './model.js';
 import * as db from './db.js';
 import * as push from './push.js';
+import { celebrationChoices, pickCelebration } from './celebrations.js';
+import { playCelebrationAudio, playChime } from './sounds.js';
 
 const {
   POINTS, DAY_COMPLETE_BONUS, THEMES, ACCENTS, FONTS, WEEKDAY_LABELS,
@@ -375,7 +377,10 @@ function playComplete(inst, points, result) {
   const mode = celebrationMode();
   const onToday = inst.date === plannerToday();
   announce(`+${points}`);
-  if (S.settings.sound) playTone(mode === 'reduced' ? 0 : 520, 0.12);
+  if (S.settings.sound && mode !== 'off') {
+    if (mode === 'reduced') playChime(0.16);
+    else playCelebrationAudio(S.settings.pet?.animal);
+  }
   if (mode === 'full' && navigator.vibrate) {
     try { navigator.vibrate(inst.difficulty === 'hard' ? [20, 40, 20] : 15); } catch { /* ignore */ }
   }
@@ -422,6 +427,30 @@ function spawnBurst(inst) {
     p.style.background = ['#6D4AFF', '#FFD60A', '#00C2A8', '#FF2D87', '#1A8CFF'][i % 5];
     layer.append(p);
     setTimeout(() => p.remove(), 1300);
+  }
+}
+
+function spawnPetFlourish(kind) {
+  const hero = document.getElementById('pet-hero');
+  const rect = hero?.getBoundingClientRect();
+  const layer = document.getElementById('celebrate');
+  if (!layer) return;
+  const cx = rect ? rect.left + rect.width / 2 : window.innerWidth / 2;
+  const cy = rect ? rect.top + rect.height * 0.42 : 160;
+  const n = kind === 'stars' ? 8 : 16;
+  for (let i = 0; i < n; i += 1) {
+    const p = document.createElement('span');
+    p.className = kind === 'stars' ? 'particle star' : 'particle confetti';
+    p.style.left = `${cx}px`;
+    p.style.top = `${cy}px`;
+    const angle = (Math.PI * 2 * i) / n;
+    const dist = 28 + (i % 4) * 16;
+    p.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
+    p.style.setProperty('--dy', `${Math.sin(angle) * dist - 18}px`);
+    p.style.background = ['#6D4AFF', '#FFD60A', '#00C2A8', '#FF2D87', '#1A8CFF'][i % 5];
+    if (kind === 'stars') p.textContent = '✦';
+    layer.append(p);
+    setTimeout(() => p.remove(), 1200);
   }
 }
 
@@ -907,17 +936,16 @@ function isLateNight() {
   return mins >= 21 * 60 || mins < start.h * 60 + start.m;
 }
 
-function petReactionKind(inst, result) {
+function petReactionKind() {
   const mode = celebrationMode();
   if (mode === 'off') return null;
   if (mode !== 'full') return 'wave';
-  if (result.leveled || result.showDay || inst.difficulty === 'hard') return 'celebrate';
-  if (inst.difficulty === 'medium') return 'jump';
-  return 'wave';
+  return pickCelebration(S.settings.pet?.celebrations);
 }
 
 function reactPet(kind) {
   if (!kind) return;
+  if (kind === 'confetti' || kind === 'stars') spawnPetFlourish(kind);
   if (!petStage || petHolder?.dataset.state !== 'ready') {
     petPending = kind;
     return;
@@ -1053,6 +1081,24 @@ function renderPetControls() {
   const pet = S.settings.pet || model.defaultPet();
   const wrap = h('div', { class: 'pet-controls' });
   wrap.append(h('p', { class: 'field-label', text: 'Animal' }), renderAnimalGrid());
+  const selected = new Set(pet.celebrations || []);
+  wrap.append(h('p', { class: 'field-label', text: 'Celebrations' }));
+  wrap.append(h('p', { class: 'fine', text: 'Pick more than one. Finishing a task plays a random choice.' }));
+  wrap.append(h('div', { class: 'chips', role: 'group', 'aria-label': 'Celebrations' },
+    celebrationChoices(pet.animal).map((choice) => {
+      const on = selected.has(choice.id);
+      return h('button', {
+        type: 'button',
+        class: `chip${on ? ' is-selected' : ''}`,
+        'aria-pressed': on ? 'true' : 'false',
+        onclick: () => {
+          const current = pet.celebrations || [];
+          let next = on ? current.filter((id) => id !== choice.id) : [...current, choice.id];
+          if (!next.length) next = ['signature'];
+          updatePet({ celebrations: next });
+        },
+      }, choice.label);
+    })));
   wrap.append(h('p', { class: 'field-label', text: 'Colour' }));
   const colours = h('div', { class: 'pet-colours', role: 'group', 'aria-label': 'Pet colour' });
   for (const swatch of PET_COLOURS) {
@@ -2115,8 +2161,12 @@ function renderCustomize() {
     }, c[0].toUpperCase() + c.slice(1)))),
     h('label', { class: 'check-row' }, (() => {
       const box = h('input', { type: 'checkbox', 'aria-label': 'Sound' });
-      box.checked = Boolean(s.sound);
-      box.addEventListener('change', () => { s.sound = box.checked; persistAll(); });
+      box.checked = s.sound !== false;
+      box.addEventListener('change', () => {
+        s.sound = box.checked;
+        persistAll();
+        if (box.checked) playChime(0.28);
+      });
       return box;
     })(), 'Sound')));
 
@@ -2816,6 +2866,7 @@ async function boot() {
     }),
     checkReminders: () => { checkDue(); },
     petMode: () => petStage?.mode || null,
+    posePet: (mode, t) => petStage?.poseAt(mode, t),
     buildUpcoming: () => upcomingReminders({
       tasks: S.tasks,
       overrides: S.overrides,

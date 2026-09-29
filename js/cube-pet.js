@@ -18,10 +18,21 @@ const CLIP = {
   jump: 'dance',
   spin: 'dance',
   celebrate: 'dance',
+  dance: 'dance',
+  wiggle: 'idle',
+  confetti: 'dance',
+  stars: 'gesture-positive',
+  cheer: 'gesture-positive',
+  signature: 'idle',
 };
 
 export function clipFor(mode) {
   return CLIP[mode] || 'idle';
+}
+
+function smooth(p) {
+  const t = Math.min(1, Math.max(0, p));
+  return t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2;
 }
 
 /** Highest wide slice of the head cube, above the shoulder and below ear tips. */
@@ -67,14 +78,16 @@ function faceFront(geometry, y) {
   return maxZ;
 }
 
-export function prepareCube(gltf) {
+export function prepareCube(gltf, animal = '') {
   const root = gltf.scene;
   const clips = {};
   for (const clip of gltf.animations) clips[clip.name] = clip;
   const mixer = new AnimationMixer(root);
   let body = null;
+  const nodes = {};
   const materials = [];
   root.traverse((obj) => {
+    if (obj.name && !nodes[obj.name]) nodes[obj.name] = obj;
     if (obj.name === 'body' && !body) body = obj;
     if (!obj.isMesh) return;
     obj.castShadow = true;
@@ -114,7 +127,16 @@ export function prepareCube(gltf) {
   action.setLoop(LoopRepeat, Infinity);
   action.play();
   mixer.setTime(0);
+  for (const node of [body, nodes.tail, nodes['wing-left'], nodes['wing-right']]) {
+    if (!node) continue;
+    node.userData.bind = {
+      q: node.quaternion.clone(),
+      s: node.scale.clone(),
+    };
+  }
   return {
+    animal,
+    nodes,
     root,
     mixer,
     clips,
@@ -210,4 +232,123 @@ export function limitLightness(hex) {
   }
   const channel = (v) => Math.round(v * 255).toString(16).padStart(2, '0');
   return `#${channel(rr)}${channel(gg)}${channel(bb)}`;
+}
+
+/** Put procedural nodes back to the pose captured before any flourish. */
+export function restoreBinds(pet) {
+  if (!pet) return;
+  const nodes = [pet.body, pet.nodes?.tail, pet.nodes?.['wing-left'], pet.nodes?.['wing-right']];
+  for (const node of nodes) {
+    const bind = node?.userData?.bind;
+    if (!bind) continue;
+    node.quaternion.copy(bind.q);
+    node.scale.copy(bind.s);
+  }
+}
+
+/**
+ * Extra motion on top of the GLB clip. Holder offsets are returned so the
+ * stage can move the whole pet; tail, wing, and body tweaks land on nodes
+ * the mixer just posed.
+ */
+export function applyFlourish(pet, mode, t) {
+  const out = { x: 0, y: 0, z: 0, rx: 0, rz: 0, spin: 0 };
+  if (!pet) return out;
+  const body = pet.body;
+  const tail = pet.nodes?.tail;
+  const wings = [pet.nodes?.['wing-left'], pet.nodes?.['wing-right']].filter(Boolean);
+  const wag = (amp, speed) => {
+    if (tail) tail.rotateY(Math.sin(t * speed) * amp);
+  };
+  const flap = (amp, speed) => {
+    wings.forEach((wing, i) => {
+      wing.rotateZ(Math.sin(t * speed) * amp * (i === 0 ? 1 : -1));
+    });
+  };
+
+  if (mode === 'jump') {
+    const p = Math.min(t / 1.2, 1);
+    out.y = Math.sin(p * Math.PI) * 0.32;
+    out.spin = smooth(p) * Math.PI * 2;
+  } else if (mode === 'celebrate' || mode === 'dance') {
+    const p = Math.min(t / 1.2, 1);
+    out.y = Math.sin(p * Math.PI) * (mode === 'celebrate' ? 0.28 : 0.16);
+  } else if (mode === 'spin') {
+    out.spin = smooth(Math.min(t / 1.35, 1)) * Math.PI * 2;
+  } else if (mode === 'wiggle') {
+    if (body) body.rotateZ(Math.sin(t * 14) * 0.18);
+    wag(0.75, 16);
+  } else if (mode === 'confetti') {
+    out.y = Math.abs(Math.sin(t * Math.PI * 3)) * 0.16;
+  } else if (mode === 'stars' || mode === 'cheer') {
+    out.y = Math.sin(Math.min(t / 1.2, 1) * Math.PI) * 0.12;
+  } else if (mode === 'signature') {
+    signatureFlourish(pet, t, out, { body, wag, flap });
+  }
+  return out;
+}
+
+function signatureFlourish(pet, t, out, { body, wag, flap }) {
+  const animal = pet.animal;
+  if (animal === 'dog') {
+    if (body) body.rotateY(Math.sin(t * 18) * 0.55);
+    wag(0.95, 22);
+  } else if (animal === 'lion') {
+    const pulse = Math.max(0, Math.sin(Math.min(t, 1.05) * 9));
+    if (body) {
+      const s = 1 + pulse * 0.14;
+      body.scale.x *= s;
+      body.scale.y *= s;
+      body.scale.z *= 1 + pulse * 0.22;
+      const open = Math.min(1, t / 0.22) * (t < 1.05 ? 1 : Math.max(0, 1 - (t - 1.05) / 0.35));
+      body.rotateX(-0.32 * open);
+    }
+    wag(0.35, 8);
+  } else if (animal === 'cat') {
+    const k = t < 0.4 ? t / 0.4 : t < 1 ? 1 : Math.max(0, 1 - (t - 1) / 0.5);
+    if (body) {
+      body.scale.y *= 1 + k * 0.22;
+      body.rotateX(-0.24 * k);
+    }
+    wag(0.28, 6);
+  } else if (animal === 'bunny') {
+    out.y = Math.abs(Math.sin(t * Math.PI * 2.2)) * 0.4;
+  } else if (animal === 'penguin') {
+    out.x = Math.sin(t * 8) * 0.16;
+    out.z = Math.sin(Math.min(t / 1.2, 1) * Math.PI) * 0.22;
+    flap(0.75, 10);
+  } else if (animal === 'monkey') {
+    const p = Math.min(t / 1.15, 1);
+    out.rx = smooth(p) * Math.PI * 2;
+    out.y = Math.sin(p * Math.PI) * 0.42;
+    if (body) body.scale.x *= 1 + Math.sin(t * 18) * 0.05;
+    wag(0.4, 12);
+  } else if (animal === 'tiger') {
+    const p = Math.min(t / 1.15, 1);
+    out.z = Math.sin(p * Math.PI) * 0.55;
+    out.y = Math.sin(p * Math.PI) * 0.3;
+    wag(0.55, 11);
+  } else if (animal === 'pig') {
+    const bounce = Math.abs(Math.sin(t * 12));
+    if (body) {
+      body.scale.y *= 1 + bounce * 0.16;
+      body.scale.x *= 1 - bounce * 0.06;
+    }
+    out.y = bounce * 0.08;
+  } else if (animal === 'panda') {
+    const p = Math.min(t / 1.35, 1);
+    out.rz = smooth(p) * Math.PI * 2;
+    out.x = Math.sin(p * Math.PI) * 0.12;
+  } else if (animal === 'fox') {
+    const p = Math.min(t / 0.95, 1);
+    out.y = Math.sin(p * Math.PI) * 0.36;
+    out.z = Math.sin(p * Math.PI) * 0.28;
+    wag(0.65, 14);
+  } else if (animal === 'koala') {
+    out.rz = Math.sin(t * 3.2) * 0.24;
+    if (body) body.scale.x *= 0.9 + Math.sin(t * 3.2) * 0.04;
+  } else if (animal === 'chick') {
+    flap(0.95, 16);
+    out.y = Math.abs(Math.sin(t * 14)) * 0.07;
+  }
 }

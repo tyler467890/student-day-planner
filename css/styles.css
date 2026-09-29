@@ -592,6 +592,14 @@ body.sheet-open .fab { visibility: hidden; }
   animation: burst 900ms ease-out forwards;
 }
 .particle.confetti { width: 8px; height: 12px; border-radius: 2px; animation-duration: 1200ms; }
+.particle.star {
+  width: auto;
+  height: auto;
+  background: none;
+  color: #FFD60A;
+  font-size: 18px;
+  line-height: 1;
+}
 .particle.fall { animation-name: fall; animation-duration: 1500ms; }
 
 @keyframes rise { from { transform: translateY(16px); opacity: 0.6; } to { transform: none; opacity: 1; } }

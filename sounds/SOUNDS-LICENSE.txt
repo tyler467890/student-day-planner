@@ -1,0 +1,103 @@
+Dayli celebration sounds
+========================
+
+Every file in this folder is short, mono, and from a CC0 source
+(public domain; commercial use is fine and credit is not required).
+The clips were trimmed and, where noted, pitch-shifted so each animal
+has its own short call. Nothing here requires attribution.
+
+chime.mp3
+  Celebration chime.
+  Source: confirmation_001.ogg
+  Pack: Kenney Interface Sounds
+  Author: Kenney (www.kenney.nl)
+  License: CC0
+  https://kenney.nl/assets/interface-sounds
+
+dog.mp3
+  Bark.
+  Source: barking_01.ogg
+  Pack: 80 CC0 creature SFX
+  Author: rubberduck
+  License: CC0
+  https://opengameart.org/content/80-cc0-creature-sfx
+
+cat.mp3
+  Meow.
+  Source: Meow.ogg
+  Author: IgnasD
+  License: CC0
+  https://opengameart.org/content/meow
+
+bunny.mp3
+  Squeak. Pitched up from cute_07.ogg.
+  Pack: 80 CC0 creature SFX
+  Author: rubberduck
+  License: CC0
+  https://opengameart.org/content/80-cc0-creature-sfx
+
+penguin.mp3
+  Penguin call. Pitched down from cute_04.ogg.
+  Pack: 80 CC0 creature SFX
+  Author: rubberduck
+  License: CC0
+  https://opengameart.org/content/80-cc0-creature-sfx
+
+monkey.mp3
+  Ooh-ooh.
+  Source: ooh.ogg
+  Pack: 80 CC0 creature SFX
+  Author: rubberduck
+  License: CC0
+  https://opengameart.org/content/80-cc0-creature-sfx
+
+tiger.mp3
+  Growl.
+  Source: roar_01.ogg, pitched slightly down.
+  Pack: 80 CC0 creature SFX
+  Author: rubberduck
+  License: CC0
+  https://opengameart.org/content/80-cc0-creature-sfx
+
+pig.mp3
+  Oink. Pitched up from grunt_02.ogg.
+  Pack: 80 CC0 creature SFX
+  Author: rubberduck
+  License: CC0
+  https://opengameart.org/content/80-cc0-creature-sfx
+
+lion.mp3
+  Roar.
+  Source: roar_02.ogg
+  Pack: 80 CC0 creature SFX
+  Author: rubberduck
+  License: CC0
+  https://opengameart.org/content/80-cc0-creature-sfx
+
+panda.mp3
+  Soft grunt. Pitched down from grunt_01.ogg.
+  Pack: 80 CC0 creature SFX
+  Author: rubberduck
+  License: CC0
+  https://opengameart.org/content/80-cc0-creature-sfx
+
+fox.mp3
+  Yip. Pitched up and trimmed from howl.ogg.
+  Pack: 80 CC0 creature SFX
+  Author: rubberduck
+  License: CC0
+  https://opengameart.org/content/80-cc0-creature-sfx
+
+koala.mp3
+  Soft grunt. Pitched down from grunt_04.ogg.
+  Pack: 80 CC0 creature SFX
+  Author: rubberduck
+  License: CC0
+  https://opengameart.org/content/80-cc0-creature-sfx
+
+chick.mp3
+  Cheep. Pitched up from cute_08.ogg.
+  Pack: 80 CC0 creature SFX
+  Author: rubberduck
+  License: CC0
+  https://opengameart.org/content/80-cc0-creature-sfx

@@ -6,6 +6,7 @@ import {
   THEMES, ACCENTS, TEXT_COLOURS, BG_COLOURS, contrastRatio, onAccent, POINTS, defaultSettings,
   paintColors, fixTextColor,   migrateSettings, hexToRgb, relativeLuminance, normalizePet,
 } from '../js/model.js';
+import { pickCelebration, signatureLabel } from '../js/celebrations.js';
 
 test('planner date rolls at 4:00', () => {
   const before = new Date(2026, 8, 22, 3, 30, 0);
@@ -194,6 +195,21 @@ test('text and background palettes are compact bright sets', () => {
   assert.ok(BG_COLOURS.length >= 16 && BG_COLOURS.length <= 24);
   assert.equal(new Set(TEXT_COLOURS).size, TEXT_COLOURS.length);
   assert.equal(new Set(BG_COLOURS).size, BG_COLOURS.length);
+});
+
+test('new pets celebrate with the signature move selected', () => {
+  const pet = normalizePet({});
+  assert.equal(defaultSettings().sound, true);
+  assert.ok(pet.celebrations.includes('signature'));
+  assert.ok(pet.celebrations.includes('dance'));
+  assert.equal(signatureLabel('dog'), 'Tail wag');
+  assert.equal(signatureLabel('lion'), 'Roar');
+  assert.equal(signatureLabel('chick'), 'Wing flap');
+  const kept = normalizePet({ animal: 'fox', celebrations: ['cheer', 'nope', 'cheer'] });
+  assert.deepEqual(kept.celebrations, ['cheer']);
+  assert.deepEqual(normalizePet({ celebrations: [] }).celebrations, ['signature']);
+  assert.equal(pickCelebration(['dance', 'stars'], () => 0), 'dance');
+  assert.equal(pickCelebration(['dance', 'stars'], () => 0.99), 'stars');
 });
 
 test('low contrast text is reported and fixed to a readable shade', () => {

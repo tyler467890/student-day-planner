@@ -11,9 +11,21 @@ import {
   SRGBColorSpace, NoToneMapping, PCFSoftShadowMap,
 } from 'three';
 import { GLTFLoader } from '../vendor/examples/jsm/loaders/GLTFLoader.js';
-import { prepareCube, poseClip, tintMaterials, limitLightness, NATURAL } from './cube-pet.js';
+import { prepareCube, poseClip, tintMaterials, limitLightness, NATURAL, applyFlourish, restoreBinds } from './cube-pet.js';
 
-const DURATION = { wave: 1.55, jump: 1.2, spin: 1.35, celebrate: 2.55, sleepy: 2.8 };
+const DURATION = {
+  wave: 1.55,
+  jump: 1.35,
+  spin: 1.35,
+  celebrate: 2.2,
+  sleepy: 2.8,
+  dance: 1.7,
+  wiggle: 1.5,
+  confetti: 1.6,
+  stars: 1.35,
+  cheer: 1.45,
+  signature: 1.75,
+};
 
 export function webglAvailable() {
   try {
@@ -132,6 +144,7 @@ export function createPetStage(canvas) {
     idleFor: 0,
     active: false,
     poseToken: 0,
+    frozen: false,
   };
 
   let current = null;
@@ -147,7 +160,7 @@ export function createPetStage(canvas) {
     if (cache.has(name)) return Promise.resolve(cache.get(name));
     if (inflight.has(name)) return inflight.get(name);
     const task = loader.loadAsync(modelUrl(name)).then((gltf) => {
-      const pet = prepareCube(gltf);
+      const pet = prepareCube(gltf, name);
       cache.set(name, pet);
       inflight.delete(name);
       return pet;
@@ -169,28 +182,21 @@ export function createPetStage(canvas) {
     if (!current) return;
     const pet = current;
     pet.root.scale.set(state.body, state.height, state.body);
+    restoreBinds(pet);
     poseClip(pet, state.mode, dt, null, state.poseToken);
     if (pet.blush) pet.blush.visible = state.cheeks;
     hat.visible = state.hat;
     const mode = state.mode;
     const t = state.modeT;
-    holder.position.set(0, 0, 0);
     zzz.visible = mode === 'sleepy';
     if (mode === 'sleepy') {
       zzz.position.set(0.42, pet.hatAnchor.position.y + 0.12, 0.12);
       zzz.position.y += Math.sin(state.time * 1.6) * 0.04;
     }
-    if (mode === 'jump' || mode === 'celebrate') {
-      const p = Math.min(t / DURATION.jump, 1);
-      holder.position.y = Math.sin(p * Math.PI) * (mode === 'celebrate' ? 0.28 : 0.32);
-    }
-    let spin = 0;
-    if (mode === 'spin') {
-      const p = Math.min(t / DURATION.spin, 1);
-      const e = p < 0.5 ? 2 * p * p : 1 - ((-2 * p + 2) ** 2) / 2;
-      spin = e * Math.PI * 2;
-    }
-    turntable.rotation.y = -0.38 + spin;
+    const fx = applyFlourish(pet, mode, t);
+    holder.position.set(fx.x, fx.y, fx.z);
+    holder.rotation.set(fx.rx, 0, fx.rz);
+    turntable.rotation.y = -0.38 + fx.spin;
     camera.position.set(lookX, camY, camZ);
     camera.lookAt(lookX, lookY, 0);
   }
@@ -227,6 +233,11 @@ export function createPetStage(canvas) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     if (!state.active || !current) return;
+    if (state.frozen) {
+      applyPose(0);
+      renderer.render(scene, camera);
+      return;
+    }
     state.time += dt;
     if (state.mode === 'idle' || state.mode === 'sleepy') {
       state.idleFor += dt;
@@ -279,11 +290,22 @@ export function createPetStage(canvas) {
       }
     },
     react(kind) {
-      const name = kind === 'celebrate' || kind === 'jump' || kind === 'wave' ? kind : 'wave';
-      state.mode = name;
+      const known = DURATION[kind] ? kind : 'wave';
+      state.mode = known;
       state.modeT = 0;
       state.idleFor = 0;
       state.poseToken += 1;
+      state.frozen = false;
+    },
+    poseAt(mode, t) {
+      const known = DURATION[mode] ? mode : 'wave';
+      if (state.mode !== known) state.poseToken += 1;
+      state.mode = known;
+      state.modeT = t;
+      state.active = true;
+      state.frozen = true;
+      applyPose(0);
+      renderer.render(scene, camera);
     },
     calm() {
       state.mode = restingMode();
