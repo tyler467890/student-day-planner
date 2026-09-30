@@ -17,6 +17,7 @@ const {
   isDayComplete, levelForPoints, levelProgress, levelTitle, displayLevel,
   upcomingReminders, reminderText, onAccent, autoScrim, burstCount, clone,
   zonedDateTime, weekStartOf, parseHM, migrateSettings, paintColors, fixTextColor,
+  isPlannerYmd, earliestStoredDate,
   normalizeHex, relativeLuminance, PET_ANIMALS, PET_COLOURS,
   COLOUR_WHEEL_SIZE, hsvToHex, hsvToRgb, hexToHsv, wheelPointToHs, hsToWheelPoint,
   applyPresentationDefaults,
@@ -53,6 +54,8 @@ let petReturn = 'today';
 let openWheel = null;
 let wheelBitmap = null;
 let wheelBitmapDpr = 0;
+let categoryForm = null;
+let openCatColour = null;
 const highWater = { level: 1, celebrated: 1, shown: {} };
 
 const appEl = () => document.getElementById('app');
@@ -145,7 +148,16 @@ function celebrationMode() {
 }
 
 function plannerToday() {
-  return plannerDate(currentDate(), S.settings.dayStart || '04:00');
+  return plannerDate(currentDate());
+}
+
+function ensureInstalledOn() {
+  if (isPlannerYmd(S.settings.installedOn)) return;
+  S.settings.installedOn = earliestStoredDate(S.tasks, S.completions, S.bonuses) || plannerToday();
+}
+
+function weekAnchorDow() {
+  return isPlannerYmd(S.settings.installedOn) ? dayOfWeek(S.settings.installedOn) : 1;
 }
 
 function viewedYMD() {
@@ -276,7 +288,7 @@ function announce(text) {
 
 function streakInfo(today = plannerToday()) {
   const dates = [...new Set(S.completions.map((c) => c.completedOn || c.date).filter(Boolean))];
-  return computeStreak(dates, today, { weekdaysOnly: S.settings.streakMode === 'weekdays' });
+  return computeStreak(dates, today, { weekdaysOnly: false, weekAnchor: weekAnchorDow() });
 }
 
 function recomputeStreakBonuses() {
@@ -312,8 +324,7 @@ function syncDayBonuses(ymd) {
       S.bonuses = S.bonuses.filter((b) => b.id !== `day:${ymd}`);
     }
   }
-  const earned = comps.reduce((sum, c) => sum + (c.points || 0), 0);
-  const met = model.goalMet(S.settings, instances, comps, earned);
+  const met = model.goalMet(S.settings, instances, comps);
   const goalId = `goal:${ymd}`;
   if (met && !S.bonuses.some((b) => b.id === goalId)) {
     S.bonuses.push({ id: goalId, kind: 'goal', date: ymd, points: model.GOAL_BONUS });
@@ -585,10 +596,11 @@ async function deleteInstance(inst, scope) {
 }
 
 function blankDraft(date) {
+  const category = S.settings.categories?.[0];
   return {
     title: '',
-    categoryId: 'task',
-    difficulty: 'easy',
+    categoryId: category?.id || 'goals',
+    difficulty: defaultDifficulty(category?.id),
     difficultyTouched: false,
     time: '',
     endTime: '',
@@ -948,10 +960,7 @@ function petOnScreen() {
 }
 
 function isLateNight() {
-  const now = currentDate();
-  const mins = now.getHours() * 60 + now.getMinutes();
-  const start = parseHM(S.settings.dayStart || '04:00');
-  return mins >= 21 * 60 || mins < start.h * 60 + start.m;
+  return currentDate().getHours() >= 21;
 }
 
 function petReactionKind() {
@@ -1440,8 +1449,6 @@ function renderToday() {
   const progress = levelProgress(total, level);
   const streak = streakInfo(today);
   const dayPoints = pointsOnDate(S.completions, S.bonuses, viewingToday ? today : viewed);
-  const goal = S.settings.dailyGoal;
-  const compsToday = S.completions.filter((c) => c.date === viewed);
 
   const shell = h('main', { class: 'shell today' });
   const header = h('header', { class: 'top' });
@@ -1481,24 +1488,6 @@ function renderToday() {
   const petSlot = h('div', { class: 'pet-slot' });
   mountPet(petSlot);
   shell.append(petSlot);
-
-  if (goal && goal.mode !== 'off') {
-    const n = Number(goal.n) || 0;
-    let label = '';
-    let ratio = 0;
-    if (goal.mode === 'tasks') {
-      const count = compsToday.length;
-      label = `${Math.min(count, n)} of ${n} done`;
-      ratio = n ? Math.min(1, count / n) : 0;
-    } else {
-      const earned = compsToday.reduce((sum, c) => sum + c.points, 0);
-      label = `${Math.min(earned, n)} of ${n} points`;
-      ratio = n ? Math.min(1, earned / n) : 0;
-    }
-    shell.append(h('div', { class: 'goal' },
-      h('div', { class: 'goal-label', text: label }),
-      h('div', { class: 'goal-track', 'aria-hidden': 'true' }, h('div', { class: 'goal-fill', style: `width:${ratio * 100}%` }))));
-  }
 
   if (viewingToday && S.settings.installSkipped && deviceKind() === 'ios' && !isStandalone()) {
     shell.append(h('p', { class: 'note', text: 'Reminders and saving work best from your Home Screen.' }));
@@ -1634,15 +1623,13 @@ function labelDifficulty(d) {
 
 function isEarlier(inst) {
   if (!inst.time) return false;
-  const when = zonedDateTime(inst.date, inst.time, S.settings.dayStart || '04:00');
+  const when = zonedDateTime(inst.date, inst.time);
   return when.getTime() < currentMs();
 }
 
 function isEvening() {
   const now = currentDate();
-  const mins = now.getHours() * 60 + now.getMinutes();
-  const start = parseHM(S.settings.dayStart || '04:00');
-  return mins >= 17 * 60 || mins < start.h * 60 + start.m;
+  return now.getHours() * 60 + now.getMinutes() >= 17 * 60;
 }
 
 function renderDone(done) {
@@ -1847,7 +1834,7 @@ function openProgress() {
   const info = streakInfo(today);
   const total = sumPoints(S.completions, S.bonuses);
   const level = displayLevel(total, S.settings.highestLevel);
-  const start = weekStartOf(today, S.settings.weekStart || 'mon');
+  const start = weekStartOf(today, S.settings.installedOn);
   const dates = new Set(S.completions.map((c) => c.completedOn || c.date));
   const days = [];
   for (let i = 0; i < 7; i += 1) {
@@ -2500,7 +2487,6 @@ function renderCustomize() {
     h('div', { class: 'split' }, blur, blurVal)));
 
   page.append(renderCategories());
-  page.append(renderPlanSettings());
   page.append(renderReminderSettings());
   page.append(renderDataSettings());
   page.append(h('section', {},
@@ -2514,46 +2500,107 @@ function renderCustomize() {
 }
 
 function renderCategories() {
-  const section = h('section', {});
+  const section = h('section', { class: 'categories' });
   section.append(h('h2', { text: 'Categories' }));
   for (const cat of S.settings.categories) {
     const name = h('input', { class: 'text-input', 'aria-label': `Category name ${cat.name}`, value: cat.name, maxlength: '24' });
-    name.addEventListener('change', () => { cat.name = name.value.trim() || cat.name; persistAll(); render(); });
-    const emoji = h('input', { class: 'text-input emoji-input', 'aria-label': `Emoji for ${cat.name}`, value: cat.emoji, maxlength: '4' });
-    emoji.addEventListener('change', () => { cat.emoji = emoji.value.trim() || cat.emoji; persistAll(); render(); });
-    const colors = h('div', { class: 'swatches tiny' }, ACCENTS.map((hex) => h('button', {
-      type: 'button',
-      class: `swatch accent${cat.color.toLowerCase() === hex.toLowerCase() ? ' is-selected' : ''}`,
-      'aria-label': `${cat.name} colour ${hex}`,
-      style: `background:${hex}`,
-      onclick: () => { cat.color = hex; persistAll(); render(); },
-    })));
-    const row = h('div', { class: 'cat-row' }, emoji, name);
+    name.addEventListener('change', () => {
+      cat.name = name.value.trim() || cat.name;
+      persistAll();
+      render();
+    });
+    const colour = cat.color || ACCENTS[0];
+    const row = h('div', { class: 'cat-row' },
+      name,
+      h('button', {
+        type: 'button',
+        class: 'cat-colour',
+        'aria-label': `Colour for ${cat.name}`,
+        'aria-expanded': openCatColour === cat.id ? 'true' : 'false',
+        style: `background:${colour}`,
+        onclick: () => {
+          openCatColour = openCatColour === cat.id ? null : cat.id;
+          render();
+        },
+      }));
     if (S.settings.categories.length > 1) {
       row.append(h('button', {
         type: 'button',
         class: 'text-btn danger',
-        'aria-label': `Remove ${cat.name}`,
+        'aria-label': `Delete ${cat.name}`,
         onclick: () => removeCategory(cat.id),
-      }, 'Remove'));
+      }, 'Delete'));
     }
-    section.append(row, colors);
+    section.append(row);
+    if (openCatColour === cat.id) section.append(categorySwatches(colour, (hex) => {
+      cat.color = hex;
+      persistAll();
+      render();
+    }));
   }
-  if (S.settings.categories.length < 8) {
-    section.append(h('button', { type: 'button', class: 'btn secondary', onclick: addCategory }, 'Add category'));
+  if (categoryForm) section.append(renderCategoryForm());
+  else {
+    section.append(h('button', {
+      type: 'button',
+      class: 'btn secondary',
+      onclick: () => {
+        categoryForm = { name: '', color: '' };
+        openCatColour = null;
+        render();
+        document.querySelector('[aria-label="New category name"]')?.focus();
+      },
+    }, '+ Add category'));
   }
   return section;
 }
 
-function addCategory() {
-  if (S.settings.categories.length >= 8) return;
-  const n = S.settings.categories.length + 1;
+function categorySwatches(selected, onPick) {
+  return h('div', { class: 'swatches tiny', role: 'group', 'aria-label': 'Category colour' }, ACCENTS.map((hex) => h('button', {
+    type: 'button',
+    class: `swatch accent${selected && selected.toLowerCase() === hex.toLowerCase() ? ' is-selected' : ''}`,
+    'aria-label': `Colour ${hex}`,
+    'aria-pressed': selected && selected.toLowerCase() === hex.toLowerCase() ? 'true' : 'false',
+    style: `background:${hex}`,
+    onclick: () => onPick(hex),
+  })));
+}
+
+function renderCategoryForm() {
+  const name = h('input', {
+    class: 'text-input',
+    'aria-label': 'New category name',
+    placeholder: 'Category name',
+    maxlength: '24',
+    value: categoryForm.name,
+  });
+  name.addEventListener('input', () => { categoryForm.name = name.value; });
+  const form = h('div', { class: 'cat-form' },
+    name,
+    h('p', { class: 'field-label', text: 'Colour (optional)' }),
+    categorySwatches(categoryForm.color, (hex) => {
+      categoryForm.color = categoryForm.color.toLowerCase() === hex.toLowerCase() ? '' : hex;
+      render();
+    }),
+    h('div', { class: 'row-btns' },
+      h('button', { type: 'button', class: 'btn primary', onclick: commitCategory }, 'Add'),
+      h('button', {
+        type: 'button',
+        class: 'btn ghost',
+        onclick: () => { categoryForm = null; render(); },
+      }, 'Cancel')));
+  return form;
+}
+
+function commitCategory() {
+  const name = (categoryForm?.name || '').trim() || 'New category';
+  const n = S.settings.categories.length;
   S.settings.categories.push({
     id: crypto.randomUUID(),
-    name: `Category ${n}`,
+    name,
     emoji: '⭐',
-    color: ACCENTS[n % ACCENTS.length],
+    color: categoryForm?.color || ACCENTS[n % ACCENTS.length],
   });
+  categoryForm = null;
   persistAll();
   render();
 }
@@ -2563,45 +2610,9 @@ function removeCategory(id) {
   const fallback = S.settings.categories.find((c) => c.id !== id);
   S.settings.categories = S.settings.categories.filter((c) => c.id !== id);
   for (const task of S.tasks) if (task.categoryId === id) task.categoryId = fallback.id;
+  if (openCatColour === id) openCatColour = null;
   persistAll();
   render();
-}
-
-function renderPlanSettings() {
-  const s = S.settings;
-  const goalMode = h('select', { 'aria-label': 'Daily goal' });
-  for (const [val, label] of [['off', 'Off'], ['tasks', 'Finish N tasks'], ['points', 'Earn N points']]) {
-    const opt = h('option', { value: val, text: label });
-    if (s.dailyGoal.mode === val) opt.selected = true;
-    goalMode.append(opt);
-  }
-  const goalN = h('input', { type: 'number', min: '1', max: '100', 'aria-label': 'Goal amount', value: String(s.dailyGoal.n || 5), class: 'text-input' });
-  goalMode.addEventListener('change', () => { s.dailyGoal.mode = goalMode.value; persistAll(); render(); });
-  goalN.addEventListener('change', () => { s.dailyGoal.n = Math.max(1, Number(goalN.value) || 1); persistAll(); });
-  const dayStart = h('input', { type: 'time', 'aria-label': 'Day starts at', value: s.dayStart || '04:00', class: 'text-input' });
-  dayStart.addEventListener('change', () => { s.dayStart = dayStart.value || '04:00'; persistAll(); render(); });
-  return h('section', {},
-    h('h2', { text: 'Plan' }),
-    h('label', { class: 'field-label', text: 'Daily goal' }),
-    goalMode,
-    s.dailyGoal.mode === 'off' ? null : goalN,
-    h('p', { class: 'field-label', text: 'Streak counts on' }),
-    h('div', { class: 'chips' }, [
-      ['everyday', 'Every day'],
-      ['weekdays', 'Weekdays only'],
-    ].map(([id, label]) => h('button', {
-      type: 'button',
-      class: `chip${s.streakMode === id ? ' is-selected' : ''}`,
-      onclick: () => { s.streakMode = id; persistAll(); render(); },
-    }, label))),
-    h('label', { class: 'field-label', text: 'Day starts at' }),
-    dayStart,
-    h('p', { class: 'field-label', text: 'Week starts on' }),
-    h('div', { class: 'chips' }, [['mon', 'Monday'], ['sun', 'Sunday']].map(([id, label]) => h('button', {
-      type: 'button',
-      class: `chip${s.weekStart === id ? ' is-selected' : ''}`,
-      onclick: () => { s.weekStart = id; persistAll(); },
-    }, label))));
 }
 
 function renderReminderSettings() {
@@ -2668,7 +2679,7 @@ function renderDataSettings() {
     if (f) confirmRestore(f);
     file.value = '';
   });
-  const last = S.settings.lastBackup ? formatDayLabel(plannerDate(new Date(S.settings.lastBackup), S.settings.dayStart)) : 'Not yet';
+  const last = S.settings.lastBackup ? formatDayLabel(plannerDate(new Date(S.settings.lastBackup))) : 'Not yet';
   return h('section', {},
     h('h2', { text: 'Your data' }),
     h('p', { text: `Last backup: ${last}` }),
@@ -2743,6 +2754,7 @@ async function restoreFile(file) {
     S.completions = data.completions || [];
     S.bonuses = data.bonuses || [];
     S.settings = mergeSettings(data.settings || {});
+    ensureInstalledOn();
     S.settings.setupComplete = true;
     S.reminders = data.reminders || [];
     if (data.photo?.dataUrl) {
@@ -2798,6 +2810,7 @@ async function eraseAll() {
   S.reminders = [];
   S.background = null;
   S.settings = defaultSettings();
+  S.settings.installedOn = plannerToday();
   S.screen = 'today';
   viewDate = null;
   refreshPhotoUrl();
@@ -2840,7 +2853,7 @@ function renderHelp() {
       h('h2', { text: 'Levels' }),
       h('p', { text: 'Points add up. Level 2 is 40 points, level 5 is 280, level 10 is 1,180. Levels never go down.' }),
       h('h2', { text: 'Streaks' }),
-      h('p', { text: 'Finish at least one task and the day counts. The day rolls over at 4:00 AM, unless you change it. You get one rest day each week. A second missed day that week starts the streak over, quietly. Your best streak stays.' }),
+      h('p', { text: 'Finish at least one task and the day counts. The day ends at midnight. You get one rest day each week. A second missed day that week starts the streak over, quietly. Your best streak stays.' }),
       h('h2', { text: 'Repeating' }),
       h('p', { text: 'Pick Every day, Weekdays, Weekends, or your own days. Checking one off finishes that day only. Describe my week turns a sentence into repeating goals, and nothing is saved until you tap Add these.' }),
       h('h2', { text: 'Backup' }),
@@ -3372,6 +3385,7 @@ async function boot() {
   S.completions = loaded.completions;
   S.bonuses = loaded.bonuses;
   S.settings = mergeSettings(loaded.settings);
+  ensureInstalledOn();
   S.reminders = loaded.reminders;
   S.background = loaded.background;
   S.screen = 'today';

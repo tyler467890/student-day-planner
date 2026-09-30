@@ -69,11 +69,7 @@ export const WEEKDAY_LABELS = [
 
 export function defaultCategories() {
   return [
-    { id: 'class', name: 'Class', emoji: '📚', color: '#1A8CFF' },
-    { id: 'study', name: 'Study', emoji: '✏️', color: '#7C3AED' },
-    { id: 'task', name: 'Task', emoji: '✅', color: '#15803D' },
-    { id: 'personal', name: 'Personal', emoji: '🌱', color: '#00C2A8' },
-    { id: 'goal', name: 'Goal', emoji: '🎯', color: '#FF4D1A' },
+    { id: 'goals', name: 'My goals', emoji: '🎯', color: '#6D4AFF' },
   ];
 }
 
@@ -157,11 +153,8 @@ export function defaultSettings() {
     format: 'list',
     celebrations: 'full',
     sound: true,
-    dayStart: '04:00',
-    weekStart: 'mon',
     clock24: false,
-    streakMode: 'everyday',
-    dailyGoal: { mode: 'tasks', n: 5 },
+    installedOn: null,
     defaultLead: 10,
     showNames: true,
     morningCheckin: { on: false, time: '08:00' },
@@ -223,16 +216,14 @@ export function hmToMinutes(hm) {
   return h * 60 + m;
 }
 
-/** Planner date for a Date, using the local day-start boundary (default 4:00). */
-export function plannerDate(date, dayStart = '04:00') {
+export function isPlannerYmd(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
+}
+
+/** Planner date for a Date. The day ends at local midnight. */
+export function plannerDate(date) {
   const local = date instanceof Date ? date : new Date(date);
-  const mins = local.getHours() * 60 + local.getMinutes();
-  const start = hmToMinutes(dayStart);
-  const y = local.getFullYear();
-  const m = local.getMonth() + 1;
-  const d = local.getDate();
-  const ymd = ymdFromParts(y, m, d);
-  return mins < start ? addDays(ymd, -1) : ymd;
+  return ymdFromParts(local.getFullYear(), local.getMonth() + 1, local.getDate());
 }
 
 export function formatDayLabel(ymd) {
@@ -255,12 +246,9 @@ export function formatTime(hm, clock24) {
   return `${h12}:${pad(m)} ${suffix}`;
 }
 
-/** Calendar Date for a clock time that belongs to a planner day. */
-export function zonedDateTime(plannerYmd, hm, dayStart = '04:00') {
-  const mins = hmToMinutes(hm);
-  const start = hmToMinutes(dayStart);
-  const ymd = mins < start ? addDays(plannerYmd, 1) : plannerYmd;
-  const { y, m, d } = parseYMD(ymd);
+/** Calendar Date for a clock time on a planner day. Times stay on that calendar day. */
+export function zonedDateTime(plannerYmd, hm) {
+  const { y, m, d } = parseYMD(plannerYmd);
   const { h, m: min } = parseHM(hm);
   return new Date(y, m - 1, d, h, min, 0, 0);
 }
@@ -271,10 +259,29 @@ export function mondayOf(ymd) {
   return addDays(ymd, delta);
 }
 
-export function weekStartOf(ymd, weekStart) {
+function weekStarting(ymd, anchorDow) {
+  const anchor = ((Number(anchorDow) % 7) + 7) % 7;
   const dow = dayOfWeek(ymd);
-  if (weekStart === 'sun') return addDays(ymd, -dow);
-  return mondayOf(ymd);
+  return addDays(ymd, -((dow - anchor + 7) % 7));
+}
+
+/** Week containing `ymd`, starting on the weekday of `installedOn`. Monday when that date is missing. */
+export function weekStartOf(ymd, installedOn) {
+  const anchor = isPlannerYmd(installedOn) ? dayOfWeek(installedOn) : 1;
+  return weekStarting(ymd, anchor);
+}
+
+/** Earliest planner date already stored, for people who open the app after they have data. */
+export function earliestStoredDate(tasks, completions, bonuses) {
+  const dates = [];
+  for (const task of tasks || []) if (isPlannerYmd(task?.date)) dates.push(task.date);
+  for (const item of completions || []) {
+    if (isPlannerYmd(item?.completedOn)) dates.push(item.completedOn);
+    if (isPlannerYmd(item?.date)) dates.push(item.date);
+  }
+  for (const bonus of bonuses || []) if (isPlannerYmd(bonus?.date)) dates.push(bonus.date);
+  dates.sort();
+  return dates[0] || null;
 }
 
 function isCountable(ymd, weekdaysOnly) {
@@ -285,10 +292,11 @@ function isCountable(ymd, weekdaysOnly) {
 
 /**
  * Streak as of a planner day. Today is still open: a miss counts only after
- * the day has ended. One rest day per Mon–Sun week. A second miss that week
- * resets the current streak. Best streak is the highest run in the history.
+ * the day has ended. One rest day per week. The week starts on `weekAnchor`
+ * (0 Sunday … 6 Saturday, default Monday). A second miss that week resets
+ * the current streak. Best streak is the highest run in the history.
  */
-export function computeStreak(completionDates, today, { weekdaysOnly = false } = {}) {
+export function computeStreak(completionDates, today, { weekdaysOnly = false, weekAnchor = 1 } = {}) {
   const set = new Set((completionDates || []).filter((d) => d && d <= today));
   const milestones = [];
   if (set.size === 0) {
@@ -302,7 +310,7 @@ export function computeStreak(completionDates, today, { weekdaysOnly = false } =
   const restDays = [];
 
   function applyMiss(day) {
-    const week = mondayOf(day);
+    const week = weekStarting(day, weekAnchor);
     if (restWeek !== week) {
       restWeek = week;
       restDays.push(day);
@@ -470,14 +478,11 @@ export function isDayComplete(instances, completions) {
   return instances.every((inst) => (completions || []).some((c) => c.instanceId === inst.instanceId));
 }
 
-export function goalMet(settings, instances, completions, earnedPoints) {
-  const goal = settings?.dailyGoal;
-  if (!goal || goal.mode === 'off') return false;
-  const n = Number(goal.n) || 0;
-  if (n <= 0) return false;
-  if (goal.mode === 'tasks') return (completions || []).length >= n;
-  if (goal.mode === 'points') return (earnedPoints || 0) >= n;
-  return false;
+/** The day's goal is every task scheduled that day. An empty day is not met. */
+export function goalMet(_settings, instances, completions) {
+  const list = instances || [];
+  if (!list.length) return false;
+  return list.every((inst) => (completions || []).some((c) => c.instanceId === inst.instanceId));
 }
 
 export function reminderText({ title, time, note, showNames, clock24 }) {
@@ -495,8 +500,7 @@ export function reminderText({ title, time, note, showNames, clock24 }) {
  * showNames is false, so a push payload built from this list cannot leak them.
  */
 export function upcomingReminders({ tasks, overrides, settings, now, showNames }) {
-  const dayStart = settings?.dayStart || '04:00';
-  const today = plannerDate(now, dayStart);
+  const today = plannerDate(now);
   const horizon = now.getTime() + 7 * 24 * 60 * 60 * 1000;
   const names = showNames !== false && settings?.showNames !== false;
   const clock24 = Boolean(settings?.clock24);
@@ -506,7 +510,7 @@ export function upcomingReminders({ tasks, overrides, settings, now, showNames }
     const ymd = addDays(today, i);
     const instances = instancesOn(ymd, tasks, overrides);
     if (settings?.morningCheckin?.on) {
-      const at = zonedDateTime(ymd, settings.morningCheckin.time || '08:00', dayStart);
+      const at = zonedDateTime(ymd, settings.morningCheckin.time || '08:00');
       const ts = at.getTime();
       if (ts > now.getTime() && ts <= horizon) {
         const n = instances.length;
@@ -525,7 +529,7 @@ export function upcomingReminders({ tasks, overrides, settings, now, showNames }
     }
     for (const inst of instances) {
       if (!inst.time || inst.remindLeadMin == null) continue;
-      const at = zonedDateTime(ymd, inst.time, dayStart);
+      const at = zonedDateTime(ymd, inst.time);
       at.setMinutes(at.getMinutes() - Number(inst.remindLeadMin));
       const ts = at.getTime();
       if (ts <= now.getTime() || ts > horizon) continue;
@@ -860,14 +864,18 @@ export function migrateSettings(saved) {
   const merged = {
     ...base,
     ...saved,
-    dailyGoal: { ...base.dailyGoal, ...(saved.dailyGoal || {}) },
     morningCheckin: { ...base.morningCheckin, ...(saved.morningCheckin || {}) },
     dayCompleteShown: { ...(saved.dayCompleteShown || {}) },
     dayCompleteAwarded: { ...(saved.dayCompleteAwarded || {}) },
     categories: Array.isArray(saved.categories) && saved.categories.length ? saved.categories : base.categories,
+    installedOn: isPlannerYmd(saved.installedOn) ? saved.installedOn : null,
     pet: normalizePet(saved.pet),
     id: 'main',
   };
+  delete merged.dayStart;
+  delete merged.weekStart;
+  delete merged.streakMode;
+  delete merged.dailyGoal;
   if (version < 2) merged.schemaVersion = 2;
   merged.textColor = normalizeHex(saved.textColor);
   merged.bgColor = normalizeHex(saved.bgColor);
@@ -951,13 +959,17 @@ export function formatDaySelection(days) {
   return groups.join(', ');
 }
 
-/** Font, list layout, and 12-hour clock. Saved choices for these are dropped. */
+/** Locked presentation, and the plan choices that are no longer settings. */
 export function applyPresentationDefaults(settings) {
   if (!settings || typeof settings !== 'object') return settings;
   const base = defaultSettings();
   settings.font = base.font;
   settings.format = base.format;
   settings.clock24 = base.clock24;
+  delete settings.dayStart;
+  delete settings.weekStart;
+  delete settings.streakMode;
+  delete settings.dailyGoal;
   return settings;
 }
 
