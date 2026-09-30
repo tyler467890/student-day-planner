@@ -30,7 +30,7 @@ export const THEMES = {
 
 export const ACCENTS = ['#6D4AFF', '#00C2A8', '#FF4D1A', '#1A8CFF', '#FF2D87', '#38BDF8', '#7C3AED', '#00B4D8'];
 
-/** Solid background choices. The last control in the row is a native colour picker. */
+/** Solid background choices. The last control in the row opens the colour wheel. */
 export const BG_COLOURS = [
   '#FFFFFF', '#FFF6D8', '#FFE0C2', '#FFD4E8', '#FFD6D6', '#E4DEFF',
   '#D2EFFF', '#C8FFE6', '#E8FFC2', '#FFE38A', '#FFC8A3', '#F5C8FF',
@@ -38,7 +38,7 @@ export const BG_COLOURS = [
   '#16142B', '#2A1858',
 ];
 
-/** Text choices, dark inks and bright lights. The last control is a native colour picker. */
+/** Text choices, dark inks and bright lights. The last control opens the colour wheel. */
 export const TEXT_COLOURS = [
   '#2A1860', '#4C1D95', '#064536', '#14532D', '#5C2208', '#6A1040',
   '#062E52', '#3B0764', '#1C1917', '#FFFFFF', '#FFF3B0', '#C8FFE6',
@@ -46,12 +46,16 @@ export const TEXT_COLOURS = [
   '#FFD0D0', '#E7FFB0',
 ];
 
+/** Bundled faces. The app always uses Nunito; the others are not settings. */
 export const FONTS = [
   { id: 'nunito', label: 'Nunito' },
   { id: 'inter', label: 'Inter' },
   { id: 'lexend', label: 'Lexend' },
   { id: 'caveat', label: 'Caveat' },
 ];
+
+/** Diameter of the custom colour wheel, in CSS pixels. */
+export const COLOUR_WHEEL_SIZE = 220;
 
 export const WEEKDAY_LABELS = [
   { dow: 1, short: 'M', name: 'Monday' },
@@ -65,11 +69,7 @@ export const WEEKDAY_LABELS = [
 
 export function defaultCategories() {
   return [
-    { id: 'class', name: 'Class', emoji: '📚', color: '#1A8CFF' },
-    { id: 'study', name: 'Study', emoji: '✏️', color: '#7C3AED' },
-    { id: 'task', name: 'Task', emoji: '✅', color: '#15803D' },
-    { id: 'personal', name: 'Personal', emoji: '🌱', color: '#00C2A8' },
-    { id: 'goal', name: 'Goal', emoji: '🎯', color: '#FF4D1A' },
+    { id: 'goals', name: 'My goals', emoji: '🎯', color: '#6D4AFF' },
   ];
 }
 
@@ -108,10 +108,28 @@ export const PET_COLOURS = [
   { name: 'Cocoa', hex: '#A8704A' },
 ];
 
+export function defaultPetColors() {
+  return { eyes: null, primary: null, secondary: null };
+}
+
+/** Old saves stored one tint on `color`. That tint becomes the main colour. */
+export function normalizePetColors(saved) {
+  const base = defaultPetColors();
+  if (!saved || typeof saved !== 'object') return base;
+  if (saved.colors && typeof saved.colors === 'object') {
+    return {
+      eyes: normalizeHex(saved.colors.eyes),
+      primary: normalizeHex(saved.colors.primary),
+      secondary: normalizeHex(saved.colors.secondary),
+    };
+  }
+  return { ...base, primary: normalizeHex(saved.color) };
+}
+
 export function defaultPet() {
   return {
     animal: 'penguin',
-    color: null,
+    colors: defaultPetColors(),
     eyes: 'round',
     cheeks: true,
     hat: false,
@@ -131,7 +149,7 @@ export function normalizePet(saved) {
   const body = Number(saved.body);
   return {
     animal,
-    color: normalizeHex(saved.color),
+    colors: normalizePetColors(saved),
     eyes,
     cheeks: saved.cheeks !== false,
     hat: Boolean(saved.hat),
@@ -153,11 +171,8 @@ export function defaultSettings() {
     format: 'list',
     celebrations: 'full',
     sound: true,
-    dayStart: '04:00',
-    weekStart: 'mon',
     clock24: false,
-    streakMode: 'everyday',
-    dailyGoal: { mode: 'tasks', n: 5 },
+    installedOn: null,
     defaultLead: 10,
     showNames: true,
     morningCheckin: { on: false, time: '08:00' },
@@ -219,16 +234,14 @@ export function hmToMinutes(hm) {
   return h * 60 + m;
 }
 
-/** Planner date for a Date, using the local day-start boundary (default 4:00). */
-export function plannerDate(date, dayStart = '04:00') {
+export function isPlannerYmd(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
+}
+
+/** Planner date for a Date. The day ends at local midnight. */
+export function plannerDate(date) {
   const local = date instanceof Date ? date : new Date(date);
-  const mins = local.getHours() * 60 + local.getMinutes();
-  const start = hmToMinutes(dayStart);
-  const y = local.getFullYear();
-  const m = local.getMonth() + 1;
-  const d = local.getDate();
-  const ymd = ymdFromParts(y, m, d);
-  return mins < start ? addDays(ymd, -1) : ymd;
+  return ymdFromParts(local.getFullYear(), local.getMonth() + 1, local.getDate());
 }
 
 export function formatDayLabel(ymd) {
@@ -251,12 +264,9 @@ export function formatTime(hm, clock24) {
   return `${h12}:${pad(m)} ${suffix}`;
 }
 
-/** Calendar Date for a clock time that belongs to a planner day. */
-export function zonedDateTime(plannerYmd, hm, dayStart = '04:00') {
-  const mins = hmToMinutes(hm);
-  const start = hmToMinutes(dayStart);
-  const ymd = mins < start ? addDays(plannerYmd, 1) : plannerYmd;
-  const { y, m, d } = parseYMD(ymd);
+/** Calendar Date for a clock time on a planner day. Times stay on that calendar day. */
+export function zonedDateTime(plannerYmd, hm) {
+  const { y, m, d } = parseYMD(plannerYmd);
   const { h, m: min } = parseHM(hm);
   return new Date(y, m - 1, d, h, min, 0, 0);
 }
@@ -267,10 +277,29 @@ export function mondayOf(ymd) {
   return addDays(ymd, delta);
 }
 
-export function weekStartOf(ymd, weekStart) {
+function weekStarting(ymd, anchorDow) {
+  const anchor = ((Number(anchorDow) % 7) + 7) % 7;
   const dow = dayOfWeek(ymd);
-  if (weekStart === 'sun') return addDays(ymd, -dow);
-  return mondayOf(ymd);
+  return addDays(ymd, -((dow - anchor + 7) % 7));
+}
+
+/** Week containing `ymd`, starting on the weekday of `installedOn`. Monday when that date is missing. */
+export function weekStartOf(ymd, installedOn) {
+  const anchor = isPlannerYmd(installedOn) ? dayOfWeek(installedOn) : 1;
+  return weekStarting(ymd, anchor);
+}
+
+/** Earliest planner date already stored, for people who open the app after they have data. */
+export function earliestStoredDate(tasks, completions, bonuses) {
+  const dates = [];
+  for (const task of tasks || []) if (isPlannerYmd(task?.date)) dates.push(task.date);
+  for (const item of completions || []) {
+    if (isPlannerYmd(item?.completedOn)) dates.push(item.completedOn);
+    if (isPlannerYmd(item?.date)) dates.push(item.date);
+  }
+  for (const bonus of bonuses || []) if (isPlannerYmd(bonus?.date)) dates.push(bonus.date);
+  dates.sort();
+  return dates[0] || null;
 }
 
 function isCountable(ymd, weekdaysOnly) {
@@ -281,10 +310,11 @@ function isCountable(ymd, weekdaysOnly) {
 
 /**
  * Streak as of a planner day. Today is still open: a miss counts only after
- * the day has ended. One rest day per Mon–Sun week. A second miss that week
- * resets the current streak. Best streak is the highest run in the history.
+ * the day has ended. One rest day per week. The week starts on `weekAnchor`
+ * (0 Sunday … 6 Saturday, default Monday). A second miss that week resets
+ * the current streak. Best streak is the highest run in the history.
  */
-export function computeStreak(completionDates, today, { weekdaysOnly = false } = {}) {
+export function computeStreak(completionDates, today, { weekdaysOnly = false, weekAnchor = 1 } = {}) {
   const set = new Set((completionDates || []).filter((d) => d && d <= today));
   const milestones = [];
   if (set.size === 0) {
@@ -298,7 +328,7 @@ export function computeStreak(completionDates, today, { weekdaysOnly = false } =
   const restDays = [];
 
   function applyMiss(day) {
-    const week = mondayOf(day);
+    const week = weekStarting(day, weekAnchor);
     if (restWeek !== week) {
       restWeek = week;
       restDays.push(day);
@@ -466,14 +496,11 @@ export function isDayComplete(instances, completions) {
   return instances.every((inst) => (completions || []).some((c) => c.instanceId === inst.instanceId));
 }
 
-export function goalMet(settings, instances, completions, earnedPoints) {
-  const goal = settings?.dailyGoal;
-  if (!goal || goal.mode === 'off') return false;
-  const n = Number(goal.n) || 0;
-  if (n <= 0) return false;
-  if (goal.mode === 'tasks') return (completions || []).length >= n;
-  if (goal.mode === 'points') return (earnedPoints || 0) >= n;
-  return false;
+/** The day's goal is every task scheduled that day. An empty day is not met. */
+export function goalMet(_settings, instances, completions) {
+  const list = instances || [];
+  if (!list.length) return false;
+  return list.every((inst) => (completions || []).some((c) => c.instanceId === inst.instanceId));
 }
 
 export function reminderText({ title, time, note, showNames, clock24 }) {
@@ -491,8 +518,7 @@ export function reminderText({ title, time, note, showNames, clock24 }) {
  * showNames is false, so a push payload built from this list cannot leak them.
  */
 export function upcomingReminders({ tasks, overrides, settings, now, showNames }) {
-  const dayStart = settings?.dayStart || '04:00';
-  const today = plannerDate(now, dayStart);
+  const today = plannerDate(now);
   const horizon = now.getTime() + 7 * 24 * 60 * 60 * 1000;
   const names = showNames !== false && settings?.showNames !== false;
   const clock24 = Boolean(settings?.clock24);
@@ -502,7 +528,7 @@ export function upcomingReminders({ tasks, overrides, settings, now, showNames }
     const ymd = addDays(today, i);
     const instances = instancesOn(ymd, tasks, overrides);
     if (settings?.morningCheckin?.on) {
-      const at = zonedDateTime(ymd, settings.morningCheckin.time || '08:00', dayStart);
+      const at = zonedDateTime(ymd, settings.morningCheckin.time || '08:00');
       const ts = at.getTime();
       if (ts > now.getTime() && ts <= horizon) {
         const n = instances.length;
@@ -521,7 +547,7 @@ export function upcomingReminders({ tasks, overrides, settings, now, showNames }
     }
     for (const inst of instances) {
       if (!inst.time || inst.remindLeadMin == null) continue;
-      const at = zonedDateTime(ymd, inst.time, dayStart);
+      const at = zonedDateTime(ymd, inst.time);
       at.setMinutes(at.getMinutes() - Number(inst.remindLeadMin));
       const ts = at.getTime();
       if (ts <= now.getTime() || ts > horizon) continue;
@@ -652,6 +678,74 @@ function hue2rgb(p, q, t) {
   if (x < 1 / 2) return q;
   if (x < 2 / 3) return p + (q - p) * (2 / 3 - x) * 6;
   return p;
+}
+
+export function hsvToRgb({ h, s, v }) {
+  const H = (((Number(h) || 0) % 360) + 360) % 360 / 60;
+  const S = clamp(Number(s) || 0, 0, 100) / 100;
+  const V = clamp(Number(v) || 0, 0, 100) / 100;
+  const c = V * S;
+  const x = c * (1 - Math.abs((H % 2) - 1));
+  const m = V - c;
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  if (H < 1) { r = c; g = x; }
+  else if (H < 2) { r = x; g = c; }
+  else if (H < 3) { g = c; b = x; }
+  else if (H < 4) { g = x; b = c; }
+  else if (H < 5) { r = x; b = c; }
+  else { r = c; b = x; }
+  return {
+    r: (r + m) * 255,
+    g: (g + m) * 255,
+    b: (b + m) * 255,
+  };
+}
+
+export function hsvToHex(hsv) {
+  return rgbToHex(hsvToRgb(hsv));
+}
+
+export function hexToHsv(hex) {
+  const norm = normalizeHex(hex) || '#000000';
+  const { r, g, b } = hexToRgb(norm);
+  const R = r / 255;
+  const G = g / 255;
+  const B = b / 255;
+  const max = Math.max(R, G, B);
+  const min = Math.min(R, G, B);
+  const d = max - min;
+  let h = 0;
+  if (d !== 0) {
+    if (max === R) h = ((G - B) / d) % 6;
+    else if (max === G) h = (B - R) / d + 2;
+    else h = (R - G) / d + 4;
+    h *= 60;
+    if (h < 0) h += 360;
+  }
+  return { h, s: max === 0 ? 0 : (d / max) * 100, v: max * 100 };
+}
+
+/** Hue and saturation for a point on the colour wheel. Points outside the disc land on the rim. */
+export function wheelPointToHs(x, y, size) {
+  const radius = size / 2;
+  if (!radius) return { h: 0, s: 0 };
+  const dx = x - radius;
+  const dy = y - radius;
+  const dist = Math.min(Math.hypot(dx, dy), radius);
+  let h = (Math.atan2(dy, dx) * 180) / Math.PI;
+  if (h < 0) h += 360;
+  return { h, s: (dist / radius) * 100 };
+}
+
+export function hsToWheelPoint(h, s, size) {
+  const radius = (size / 2) * (clamp(Number(s) || 0, 0, 100) / 100);
+  const rad = ((((Number(h) || 0) % 360) + 360) % 360 * Math.PI) / 180;
+  return {
+    x: size / 2 + Math.cos(rad) * radius,
+    y: size / 2 + Math.sin(rad) * radius,
+  };
 }
 
 export function hslToHex({ h, s, l }) {
@@ -788,18 +882,23 @@ export function migrateSettings(saved) {
   const merged = {
     ...base,
     ...saved,
-    dailyGoal: { ...base.dailyGoal, ...(saved.dailyGoal || {}) },
     morningCheckin: { ...base.morningCheckin, ...(saved.morningCheckin || {}) },
     dayCompleteShown: { ...(saved.dayCompleteShown || {}) },
     dayCompleteAwarded: { ...(saved.dayCompleteAwarded || {}) },
     categories: Array.isArray(saved.categories) && saved.categories.length ? saved.categories : base.categories,
+    installedOn: isPlannerYmd(saved.installedOn) ? saved.installedOn : null,
     pet: normalizePet(saved.pet),
     id: 'main',
   };
+  delete merged.dayStart;
+  delete merged.weekStart;
+  delete merged.streakMode;
+  delete merged.dailyGoal;
   if (version < 2) merged.schemaVersion = 2;
   merged.textColor = normalizeHex(saved.textColor);
   merged.bgColor = normalizeHex(saved.bgColor);
   if (!THEMES[merged.theme]) merged.theme = base.theme;
+  applyPresentationDefaults(merged);
   return merged;
 }
 
@@ -876,6 +975,20 @@ export function formatDaySelection(days) {
     return `${groups[0]} & ${groups[1]}`;
   }
   return groups.join(', ');
+}
+
+/** Locked presentation, and the plan choices that are no longer settings. */
+export function applyPresentationDefaults(settings) {
+  if (!settings || typeof settings !== 'object') return settings;
+  const base = defaultSettings();
+  settings.font = base.font;
+  settings.format = base.format;
+  settings.clock24 = base.clock24;
+  delete settings.dayStart;
+  delete settings.weekStart;
+  delete settings.streakMode;
+  delete settings.dailyGoal;
+  return settings;
 }
 
 export function burstCount(difficulty) {

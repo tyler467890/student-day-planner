@@ -170,7 +170,7 @@ test('notification permission is requested only from Turn on reminders', async (
   await expect.poll(() => page.evaluate(() => window.__permCalls)).toBe(1);
 });
 
-test('enter saves a title with defaults; class defaults are medium, 50 min, 10 min remind', async ({ page }) => {
+test('enter saves a title with easy defaults; a kept Class category stays medium', async ({ page }) => {
   await useClock(page, '2026-09-25T15:00:00-04:00');
   await skipToToday(page);
   await page.getByRole('button', { name: 'Add a class or task' }).click();
@@ -180,8 +180,28 @@ test('enter saves a title with defaults; class defaults are medium, 50 min, 10 m
   await expect(page.locator('.tag-easy')).toBeVisible();
   const easy = await page.evaluate(() => window.__dayli.getState().tasks[0]);
   expect(easy.difficulty).toBe('easy');
+  expect(easy.categoryId).toBe('goals');
   expect(easy.remindLeadMin).toBeNull();
 
+  await page.evaluate(async () => {
+    const settings = window.__dayli.getState().settings;
+    settings.categories = [
+      { id: 'class', name: 'Class', emoji: '📚', color: '#1A8CFF' },
+      { id: 'personal', name: 'Personal', emoji: '🌱', color: '#00C2A8' },
+    ];
+    await new Promise((resolve, reject) => {
+      const req = indexedDB.open('dayli', 1);
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const db = req.result;
+        const tx = db.transaction('settings', 'readwrite');
+        tx.objectStore('settings').put(settings);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      };
+    });
+  });
+  await page.reload();
   await addItem(page, {
     title: 'Biology 101',
     category: 'Class',
@@ -194,6 +214,8 @@ test('enter saves a title with defaults; class defaults are medium, 50 min, 10 m
   expect(bio.remindLeadMin).toBe(10);
   expect(bio.repeat).toBe('days');
   expect(bio.days.sort()).toEqual([1, 3, 5]);
+  const kept = await page.evaluate(() => window.__dayli.getState().settings.categories.map((c) => c.name));
+  expect(kept).toEqual(['Class', 'Personal']);
 });
 
 test('MWF classes show on those days only; just today and all repeats both work', async ({ page }) => {
@@ -202,7 +224,6 @@ test('MWF classes show on those days only; just today and all repeats both work'
   for (const title of ['Biology 101', 'Chemistry lab', 'English seminar']) {
     await addItem(page, {
       title,
-      category: 'Class',
       time: title === 'Chemistry lab' ? '11:00' : title === 'English seminar' ? '13:00' : '09:00',
       days: ['Monday', 'Wednesday', 'Friday'],
     });
@@ -258,18 +279,46 @@ test('move, delete and undo work, including the 5 second toast', async ({ page }
   await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(0);
 });
 
-test('list and timeline show the same tasks and the timeline has a now line', async ({ page }) => {
+test('saved layout, font, and clock choices stay on the defaults', async ({ page }) => {
   await useClock(page, '2026-09-25T15:00:00-04:00');
   await skipToToday(page);
-  await addItem(page, { title: 'Biology 101', category: 'Class', time: '09:00' });
+  await addItem(page, { title: 'Biology 101', time: '09:00' });
   await addItem(page, { title: 'Gym', time: '17:00' });
   await expect(page.locator('.card-title')).toHaveCount(2);
   await page.getByRole('button', { name: 'Customize' }).click();
-  await page.getByRole('button', { name: 'Timeline', exact: true }).click();
+  await expect(page.getByText('Font', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Format', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Timeline', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '12 hour' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '24 hour' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await page.evaluate(async () => {
+    const settings = window.__dayli.getState().settings;
+    settings.font = 'lexend';
+    settings.format = 'timeline';
+    settings.clock24 = true;
+    await new Promise((resolve, reject) => {
+      const req = indexedDB.open('dayli', 1);
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const db = req.result;
+        const tx = db.transaction(['settings'], 'readwrite');
+        tx.objectStore('settings').put(settings);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      };
+    });
+  });
+  await page.reload();
   await expect(page.locator('.card-title')).toHaveCount(2);
-  await expect(page.locator('.now-line')).toBeVisible();
-  await expect(page.getByText('Now')).toBeVisible();
+  await expect(page.locator('.now-line')).toHaveCount(0);
+  await expect(page.locator('html')).toHaveAttribute('data-font', 'nunito');
+  await expect(page.getByText('9:00 AM').first()).toBeVisible();
+  const locked = await page.evaluate(() => {
+    const settings = window.__dayli.getState().settings;
+    return { font: settings.font, format: settings.format, clock24: settings.clock24 };
+  });
+  expect(locked).toEqual({ font: 'nunito', format: 'list', clock24: false });
 });
 
 test('layout at 360px and at 1440px', async ({ page }) => {
@@ -289,7 +338,7 @@ test('easy medium and hard points, undo, day complete once, level up once', asyn
   await skipToToday(page);
   await addItem(page, { title: 'Easy task', difficulty: 'Easy' });
   await page.getByRole('button', { name: /Mark Easy task done, easy, 5 points/ }).click();
-  await expect(page.getByLabel(/Today's points 5/)).toBeVisible();
+  await expect(page.getByLabel(/Today's points 10/)).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(page.getByLabel(/Today's points 0/)).toBeVisible();
 
@@ -314,7 +363,7 @@ test('easy medium and hard points, undo, day complete once, level up once', asyn
   await page.getByRole('button', { name: /Mark Medium task done, medium, 10 points/ }).click();
   await expect(page.getByRole('dialog', { name: 'Day complete' })).toBeVisible();
   await expect(page.getByText('+10 bonus')).toBeVisible();
-  await expect(page.getByLabel(/Today's points 25/)).toBeVisible();
+  await expect(page.getByLabel(/Today's points 30/)).toBeVisible();
   await page.getByRole('button', { name: 'Nice' }).click();
 
   await addItem(page, { title: 'Later task', difficulty: 'Easy' });
@@ -348,7 +397,7 @@ test('easy medium and hard points, undo, day complete once, level up once', asyn
   expect(level.pts).toBeLessThan(100);
 });
 
-test('streak rest day, second miss, best streak, weekdays only, 4am boundary', async ({ page }) => {
+test('streak rest day, second miss, and best streak', async ({ page }) => {
   await useClock(page, '2026-09-21T10:00:00-04:00');
   await skipToToday(page);
   await addItem(page, { title: 'Monday work' });
@@ -370,32 +419,27 @@ test('streak rest day, second miss, best streak, weekdays only, 4am boundary', a
   await page.getByRole('button', { name: /Open progress/ }).click();
   await expect(page.getByText('Best streak: 2 days')).toBeVisible();
   await page.getByRole('button', { name: 'Close', exact: true }).click();
-
-  await page.getByRole('button', { name: 'Customize' }).click();
-  await page.getByRole('button', { name: 'Weekdays only' }).click();
-  await page.getByRole('button', { name: 'Back', exact: true }).click();
-  await setClock(page, '2026-09-25T11:00:00-04:00');
-  await addItem(page, { title: 'Friday work' });
-  await page.getByRole('button', { name: /Mark Friday work done/ }).click();
-  await setClock(page, '2026-09-28T10:00:00-04:00');
-  const weekend = await page.evaluate(() => window.__dayli.model.computeStreak(
-    window.__dayli.getState().completions.map((c) => c.completedOn),
-    window.__dayli.getState().plannerToday,
-    { weekdaysOnly: true },
-  ));
-  expect(weekend.restDays.filter((d) => d === '2026-09-26' || d === '2026-09-27')).toEqual([]);
-  expect(weekend.streak).toBeGreaterThanOrEqual(1);
 });
 
-test('4:00 AM still counts as the previous planner day', async ({ page }) => {
-  await useClock(page, '2026-09-22T03:30:00-04:00');
+test('the planner day changes at local midnight', async ({ page }) => {
+  await useClock(page, '2026-09-21T23:30:00-04:00');
   await skipToToday(page);
   await expect(page.getByRole('button', { name: 'Mon, Sep 21' })).toBeVisible();
+  await expect(page.locator('.goal')).toHaveCount(0);
   await addItem(page, { title: 'Late study' });
   await page.getByRole('button', { name: /Mark Late study done/ }).click();
-  const completedOn = await page.evaluate(() => window.__dayli.getState().completions[0].completedOn);
-  expect(completedOn).toBe('2026-09-21');
-  await setClock(page, '2026-09-22T04:00:00-04:00');
+  const done = await page.evaluate(() => {
+    const state = window.__dayli.getState();
+    return {
+      completedOn: state.completions[0].completedOn,
+      goal: state.bonuses.find((b) => b.kind === 'goal') || null,
+    };
+  });
+  expect(done.completedOn).toBe('2026-09-21');
+  expect(done.goal?.points).toBe(5);
+  await setClock(page, '2026-09-22T00:10:00-04:00');
+  await expect(page.getByRole('button', { name: 'Tue, Sep 22' })).toBeVisible();
+  await setClock(page, '2026-09-22T03:30:00-04:00');
   await expect(page.getByRole('button', { name: 'Tue, Sep 22' })).toBeVisible();
 });
 
@@ -433,7 +477,7 @@ test('no overdue shame, and celebrations follow subtle, off, and reduced motion'
   await offPage.getByRole('button', { name: /Mark Quiet task done/ }).click();
   await expect(offPage.locator('.particle')).toHaveCount(0);
   await expect(offPage.locator('.points-float')).toHaveCount(0);
-  await expect(offPage.getByLabel(/Today's points 20/)).toBeVisible();
+  await expect(offPage.getByLabel(/Today's points 25/)).toBeVisible();
   await off.close();
 
   const reduced = await browser.newContext({
@@ -467,7 +511,7 @@ test('open-app reminder banner, system notification, snooze and done', async ({ 
   await useClock(page, '2026-09-25T10:00:00-04:00');
   await skipToToday(page);
   await page.evaluate(() => navigator.serviceWorker?.ready);
-  await addItem(page, { title: 'Biology 101', category: 'Class', time: '10:11', remind: '10' });
+  await addItem(page, { title: 'Biology 101', time: '10:11', remind: '10', difficulty: 'Medium' });
   await setClock(page, '2026-09-25T10:01:30-04:00');
   await expect(page.locator('#banner')).toContainText('Biology 101');
   await expect.poll(() => page.evaluate(() => window.__notes.length)).toBeGreaterThan(0);
@@ -532,7 +576,7 @@ test('show task names off sends Coming up and never the title', async ({ context
 test('missed reminders show While you were away', async ({ page }) => {
   await useClock(page, '2026-09-25T10:00:00-04:00');
   await skipToToday(page);
-  await addItem(page, { title: 'Chemistry lab', category: 'Class', time: '10:30', remind: '0' });
+  await addItem(page, { title: 'Chemistry lab', time: '10:30', remind: '0' });
   await setClock(page, '2026-09-25T11:00:00-04:00', { check: false });
   await page.reload();
   await expect(page.getByRole('heading', { name: 'While you were away' })).toBeVisible();
@@ -587,7 +631,7 @@ test('reminder status lines', async ({ browser }) => {
   await openOnly.close();
 });
 
-test('themes and fonts apply and persist', async ({ page }) => {
+test('themes apply and persist', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('radio', { name: 'Mint theme' }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
@@ -596,13 +640,10 @@ test('themes and fonts apply and persist', async ({ page }) => {
   await page.getByRole('button', { name: 'This is my pet' }).click();
   await expect(page.getByRole('button', { name: 'Customize' })).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'mint');
+  await expect(page.locator('html')).toHaveAttribute('data-font', 'nunito');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'mint');
-  await page.getByRole('button', { name: 'Customize' }).click();
-  await page.getByRole('button', { name: 'Lexend', exact: true }).click();
-  await expect(page.locator('html')).toHaveAttribute('data-font', 'lexend');
-  await page.reload();
-  await expect(page.locator('html')).toHaveAttribute('data-font', 'lexend');
+  await expect(page.locator('html')).toHaveAttribute('data-font', 'nunito');
   for (const theme of ['Calm', 'Sunset', 'Ocean', 'Blossom', 'Night']) {
     await page.getByRole('button', { name: 'Customize' }).click();
     await page.getByRole('button', { name: `${theme} theme` }).click();
@@ -627,17 +668,25 @@ test('photo crop stores an image at most 1600px and categories cap at 8', async 
   await page.getByLabel('Photo dimming').selectOption('light');
   await expect(page.locator('html')).toHaveAttribute('data-scrim', 'light');
 
-  const name = page.getByLabel('Category name Class');
+  await expect(page.getByLabel('Category name My goals')).toBeVisible();
+  await expect(page.locator('.cat-row')).toHaveCount(1);
+  await expect(page.getByText('Daily goal')).toHaveCount(0);
+  await expect(page.getByText('Week starts on')).toHaveCount(0);
+  await expect(page.getByText('Day starts at')).toHaveCount(0);
+  await expect(page.getByText('Streak counts on')).toHaveCount(0);
+  const name = page.getByLabel('Category name My goals');
   await name.fill('Lecture');
   await name.press('Tab');
-  await expect(page.getByLabel(/Category name Lecture/)).toBeVisible();
-  const start = await page.locator('.cat-row').count();
-  expect(start).toBe(5);
-  for (let i = start; i < 8; i += 1) {
-    await page.getByRole('button', { name: 'Add category' }).click();
-  }
-  await expect(page.locator('.cat-row')).toHaveCount(8);
-  await expect(page.getByRole('button', { name: 'Add category' })).toHaveCount(0);
+  await expect(page.getByLabel('Category name Lecture')).toBeVisible();
+  await page.getByRole('button', { name: '+ Add category' }).click();
+  await page.getByLabel('New category name').fill('Study');
+  await page.getByRole('button', { name: 'Colour #1A8CFF' }).click();
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(page.getByLabel('Category name Study')).toBeVisible();
+  await expect(page.getByRole('button', { name: '+ Add category' })).toBeVisible();
+  await page.getByRole('button', { name: 'Delete Study' }).click();
+  await expect(page.getByLabel('Category name Study')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Delete Lecture' })).toHaveCount(0);
 });
 
 test('backup, restore, erase, persist, reload and offline', async ({ page, context }) => {
@@ -732,7 +781,7 @@ test('keyboard reach, focus, escape, and check button names', async ({ page }) =
   expect(focused.outline).not.toBe('none');
   await check.focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByLabel(/Today's points 10/)).toBeVisible();
+  await expect(page.getByLabel(/Today's points 15/)).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
   await page.getByRole('button', { name: 'Add a class or task' }).click();
   await expect(page.getByRole('dialog', { name: 'Add' })).toBeVisible();
@@ -766,10 +815,10 @@ test('screenshots', async ({ browser }) => {
   await page.getByRole('button', { name: 'Cat', exact: true }).click();
   await page.getByRole('button', { name: 'This is my pet' }).click();
 
-  await addItem(page, { title: 'Biology 101', category: 'Class', time: '09:00', days: ['Monday', 'Wednesday', 'Friday'] });
-  await addItem(page, { title: 'Chemistry lab', category: 'Class', time: '11:00', difficulty: 'Medium' });
+  await addItem(page, { title: 'Biology 101', time: '09:00', difficulty: 'Medium', days: ['Monday', 'Wednesday', 'Friday'] });
+  await addItem(page, { title: 'Chemistry lab', time: '11:00', difficulty: 'Medium' });
   await addItem(page, { title: 'Finish essay intro', difficulty: 'Hard' });
-  await addItem(page, { title: 'Gym', time: '17:00', category: 'Personal' });
+  await addItem(page, { title: 'Gym', time: '17:00' });
   await expect(page.getByRole('heading', { name: "Tyler's Day" })).toBeVisible();
   await page.waitForFunction(() => {
     const el = document.querySelector('#pet-hero');
@@ -789,12 +838,6 @@ test('screenshots', async ({ browser }) => {
   await page.screenshot({ path: `${ART}/pet-reaction.png` });
   await page.screenshot({ path: `${ART}/completion-moment.png` });
 
-  await page.getByRole('button', { name: 'Customize' }).click();
-  await page.getByRole('button', { name: 'Timeline', exact: true }).click();
-  await page.getByRole('button', { name: 'Back', exact: true }).click();
-  await expect(page.locator('.now-line')).toBeVisible();
-  await page.screenshot({ path: `${ART}/today-timeline.png` });
-
   await openCard(page, 'Biology 101');
   await expect(page.getByRole('heading', { name: 'Edit' })).toBeVisible();
   await page.screenshot({ path: `${ART}/add-edit-sheet.png` });
@@ -805,7 +848,8 @@ test('screenshots', async ({ browser }) => {
   await expect(page.getByRole('button', { name: 'Stretch', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Dance', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Hat', exact: true }).click();
-  await page.getByRole('button', { name: 'Pet colour Sunny yellow' }).click();
+  await page.locator('.pet-color-rows').screenshot({ path: `${ART}/pet-colour-rows-phone.png` });
+  await page.getByRole('button', { name: 'Main Sunny yellow' }).click();
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${ART}/pet-customizer.png` });
   await page.getByRole('button', { name: 'Back', exact: true }).click();
@@ -815,7 +859,6 @@ test('screenshots', async ({ browser }) => {
   await page.getByRole('button', { name: 'Save photo' }).click();
   await expect(page.getByRole('button', { name: 'Remove photo' })).toBeVisible();
   await page.screenshot({ path: `${ART}/customize-photo.png` });
-  await page.getByRole('button', { name: 'List', exact: true }).click();
   await page.getByRole('button', { name: 'Back', exact: true }).click();
 
   await page.getByRole('button', { name: /Mark Biology 101 done, medium, 10 points/ }).click();
@@ -837,8 +880,8 @@ test('screenshots', async ({ browser }) => {
   await useClock(wide, '2026-09-25T15:00:00-04:00');
   await skipToToday(wide);
   await wide.getByLabel('Title').count();
-  await addItem(wide, { title: 'Biology 101', category: 'Class', time: '09:00' });
-  await addItem(wide, { title: 'Chemistry lab', category: 'Class', time: '11:00' });
+  await addItem(wide, { title: 'Biology 101', time: '09:00' });
+  await addItem(wide, { title: 'Chemistry lab', time: '11:00' });
   await addItem(wide, { title: 'Finish essay intro', difficulty: 'Hard' });
   await addItem(wide, { title: 'Gym', time: '17:00' });
   await wide.waitForFunction(() => {
@@ -854,6 +897,40 @@ test('screenshots', async ({ browser }) => {
 test('text and background colours, contrast fix, and v1 settings', async ({ page }) => {
   await skipToToday(page);
   await page.getByRole('button', { name: 'Customize' }).click();
+  await expect(page.getByText('Font', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Format', { exact: true })).toHaveCount(0);
+  await page.screenshot({ path: `${ART}/settings-phone.png` });
+  await page.getByRole('button', { name: 'Custom background colour' }).click();
+  await expect(page.getByLabel('Colour wheel')).toBeVisible();
+  await expect(page.getByLabel('Brightness')).toBeVisible();
+  await page.getByLabel('Colour wheel').evaluate((el) => el.scrollIntoView({ block: 'center' }));
+  const wheel = page.getByLabel('Colour wheel');
+  const box = await wheel.boundingBox();
+  await page.mouse.click(box.x + box.width * 0.85, box.y + box.height * 0.3);
+  await expect(page.locator('.wheel-preview')).toBeVisible();
+  await page.screenshot({ path: `${ART}/colour-wheel-phone.png` });
+  const picked = await page.evaluate(() => {
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    return {
+      bg: bg.toUpperCase(),
+      saved: window.__dayli.getState().settings.bgColor,
+      hsv: window.__dayli.model.hexToHsv(bg),
+    };
+  });
+  expect(picked.saved.toUpperCase()).toBe(picked.bg);
+  expect(picked.hsv.s).toBeGreaterThan(40);
+  expect(picked.hsv.h).toBeGreaterThan(250);
+  expect(picked.hsv.h).toBeLessThan(360);
+  await page.getByLabel('Brightness').evaluate((el) => {
+    el.value = '100';
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  const bright = await page.evaluate(() => window.__dayli.model.hexToHsv(
+    getComputedStyle(document.documentElement).getPropertyValue('--bg').trim(),
+  ));
+  expect(bright.v).toBeGreaterThan(99);
+
   await page.getByRole('button', { name: 'Background #C8FFE6' }).click();
   await page.getByRole('button', { name: 'Text #4C1D95' }).click();
   await expect(page.locator('#contrast-note')).toHaveCount(0);
@@ -864,12 +941,6 @@ test('text and background colours, contrast fix, and v1 settings', async ({ page
       text: style.getPropertyValue('--text').trim().toUpperCase(),
     };
   })).toEqual({ bg: '#C8FFE6', text: '#4C1D95' });
-
-  await page.getByLabel('Custom background colour').evaluate((el) => {
-    el.value = '#123abc';
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  await expect.poll(async () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim().toUpperCase())).toBe('#123ABC');
 
   await page.getByRole('button', { name: 'Text #FFF3B0' }).click();
   await page.getByRole('button', { name: 'Background #FFF6D8' }).click();
@@ -888,6 +959,24 @@ test('text and background colours, contrast fix, and v1 settings', async ({ page
   expect(readable.bg).toBe('#FFF6D8');
   expect(readable.ratio).toBeGreaterThanOrEqual(4.5);
 
+  await page.getByRole('button', { name: 'Change pet' }).click();
+  await page.getByRole('button', { name: 'Custom Main colour' }).click();
+  const petWheel = page.getByLabel('Colour wheel');
+  await expect(petWheel).toBeVisible();
+  await petWheel.scrollIntoViewIfNeeded();
+  const petBox = await petWheel.boundingBox();
+  await page.mouse.move(petBox.x + petBox.width / 2, petBox.y + petBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(petBox.x + petBox.width / 2, petBox.y + 12, { steps: 6 });
+  await page.mouse.up();
+  const petColour = await page.evaluate(() => window.__dayli.getState().settings.pet.colors.primary);
+  expect(petColour).toMatch(/^#[0-9A-F]{6}$/);
+  const petHsv = await page.evaluate((hex) => window.__dayli.model.hexToHsv(hex), petColour);
+  expect(petHsv.s).toBeGreaterThan(70);
+  expect(petHsv.h).toBeGreaterThan(240);
+  expect(petHsv.h).toBeLessThan(300);
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+
   await page.reload();
   await page.getByRole('button', { name: 'Customize' }).click();
   const kept = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--bg').trim().toUpperCase());
@@ -900,7 +989,9 @@ test('text and background colours, contrast fix, and v1 settings', async ({ page
       title: 'Lab Day',
       theme: 'ocean',
       accent: '#1D63B8',
-      font: 'nunito',
+      font: 'caveat',
+      format: 'timeline',
+      clock24: true,
       schemaVersion: 1,
       setupComplete: true,
       setupStep: 3,
@@ -950,17 +1041,26 @@ test('text and background colours, contrast fix, and v1 settings', async ({ page
   expect(migrated.settings.theme).toBe('ocean');
   expect(migrated.settings.accent).toBe('#1D63B8');
   expect(migrated.settings.categories[0].color).toBe('#1D63B8');
+  expect(migrated.settings.font).toBe('nunito');
+  expect(migrated.settings.format).toBe('list');
+  expect(migrated.settings.clock24).toBe(false);
+  expect(migrated.settings.categories[0].name).toBe('Lecture');
+  expect(migrated.settings.installedOn).toBe(ymd);
+  expect(migrated.settings.dailyGoal).toBeUndefined();
+  expect(migrated.settings.dayStart).toBeUndefined();
   expect(migrated.bg).toBe('#D2EFFF');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'ocean');
+  await expect(page.locator('html')).toHaveAttribute('data-font', 'nunito');
+  await expect(page.getByText('9:00 AM')).toBeVisible();
 });
 
 test('bright colour screenshots', async ({ page }) => {
   await useClock(page, '2026-09-25T15:00:00-04:00');
   await skipToToday(page);
-  await addItem(page, { title: 'Biology 101', category: 'Class', time: '09:00' });
-  await addItem(page, { title: 'Chemistry lab', category: 'Class', time: '11:00', difficulty: 'Medium' });
+  await addItem(page, { title: 'Biology 101', time: '09:00' });
+  await addItem(page, { title: 'Chemistry lab', time: '11:00', difficulty: 'Medium' });
   await addItem(page, { title: 'Finish essay intro', difficulty: 'Hard' });
-  await addItem(page, { title: 'Gym', time: '17:00', category: 'Personal' });
+  await addItem(page, { title: 'Gym', time: '17:00' });
   await page.getByRole('button', { name: 'Customize' }).click();
   await page.getByRole('button', { name: 'Blossom theme' }).click();
   await page.getByRole('button', { name: 'Back', exact: true }).click();
@@ -988,4 +1088,44 @@ test('bright colour screenshots', async ({ page }) => {
     window.scrollTo(0, 0);
   });
   await page.screenshot({ path: `${ART}/contrast-fix.png` });
+});
+
+test('today and simplified settings screenshots', async ({ page }) => {
+  await useClock(page, '2026-09-25T15:00:00-04:00');
+  await skipToToday(page);
+  await addItem(page, { title: 'Biology 101', time: '09:00', difficulty: 'Medium' });
+  await addItem(page, { title: 'Finish essay intro' });
+  await expect(page.locator('.goal')).toHaveCount(0);
+  await expect(page.getByText(/of \d+ done/)).toHaveCount(0);
+  await page.waitForFunction(() => {
+    const el = document.querySelector('#pet-hero');
+    return el && (el.dataset.state === 'ready' || el.dataset.state === 'fallback');
+  });
+  await page.screenshot({ path: `${ART}/today-phone.png` });
+
+  await page.getByRole('button', { name: 'Customize' }).click();
+  await expect(page.getByRole('heading', { name: 'Categories' })).toBeVisible();
+  await page.getByRole('heading', { name: 'Categories' }).evaluate((el) => el.scrollIntoView({ block: 'start' }));
+  await page.screenshot({ path: `${ART}/settings-simple-phone.png` });
+
+  await page.getByRole('button', { name: '+ Add category' }).click();
+  await page.getByLabel('New category name').fill('Study');
+  await page.getByRole('button', { name: 'Colour #1A8CFF' }).click();
+  await expect(page.getByLabel('New category name')).toHaveValue('Study');
+  await page.getByLabel('New category name').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${ART}/add-category-phone.png` });
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  await expect(page.getByLabel('Category name Study')).toBeVisible();
+  const saved = await page.evaluate(() => window.__dayli.getState().settings.categories.map((c) => c.name));
+  expect(saved).toEqual(['My goals', 'Study']);
+
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await page.getByRole('button', { name: 'Your pet' }).click();
+  await expect(page.getByRole('heading', { name: 'Your pet' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Eyes colour' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Main colour' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Second colour' })).toBeVisible();
+  await page.locator('.pet-color-rows').screenshot({ path: `${ART}/pet-colour-rows-phone.png` });
+  await page.getByRole('button', { name: 'Second Natural' }).click();
+  await expect(page.getByRole('button', { name: 'Second Natural' })).toHaveAttribute('aria-pressed', 'true');
 });

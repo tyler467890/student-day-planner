@@ -4,16 +4,23 @@ import {
   addDays, plannerDate, levelForPoints, levelBounds, levelTitle, computeStreak,
   instancesOn, upcomingReminders, reminderText, headerContrast, cardContrast,
   THEMES, ACCENTS, TEXT_COLOURS, BG_COLOURS, contrastRatio, onAccent, POINTS, defaultSettings,
-  paintColors, fixTextColor,   migrateSettings, hexToRgb, relativeLuminance, normalizePet,
+  paintColors, fixTextColor, migrateSettings, hexToRgb, relativeLuminance, normalizePet,
   occursOn, repeatFromDays, formatDaySelection, formatTimeRange, minutesBetween,
+  hsvToHex, hexToHsv, wheelPointToHs, hsToWheelPoint, COLOUR_WHEEL_SIZE,
+  weekStartOf, zonedDateTime, goalMet, earliestStoredDate, defaultCategories, defaultDifficulty,
 } from '../js/model.js';
 import { pickCelebration, signatureLabel } from '../js/celebrations.js';
 
-test('planner date rolls at 4:00', () => {
-  const before = new Date(2026, 8, 22, 3, 30, 0);
-  const after = new Date(2026, 8, 22, 4, 0, 0);
-  assert.equal(plannerDate(before, '04:00'), '2026-09-21');
-  assert.equal(plannerDate(after, '04:00'), '2026-09-22');
+test('planner date changes at local midnight', () => {
+  const late = new Date(2026, 8, 21, 23, 30, 0);
+  const early = new Date(2026, 8, 22, 0, 10, 0);
+  const stillNight = new Date(2026, 8, 22, 3, 30, 0);
+  assert.equal(plannerDate(late), '2026-09-21');
+  assert.equal(plannerDate(early), '2026-09-22');
+  assert.equal(plannerDate(stillNight, '04:00'), '2026-09-22');
+  const at = zonedDateTime('2026-09-22', '02:00', '04:00');
+  assert.equal(at.getDate(), 22);
+  assert.equal(at.getHours(), 2);
 });
 
 test('level thresholds match the table', () => {
@@ -54,6 +61,58 @@ test('streak uses one rest day then continues', () => {
   const info = computeStreak(['2026-09-21', '2026-09-22', '2026-09-24'], '2026-09-24', {});
   assert.equal(info.streak, 3);
   assert.deepEqual(info.restDays, ['2026-09-23']);
+});
+
+test('rest weeks follow the install weekday', () => {
+  const dates = ['2026-09-19', '2026-09-22'];
+  const monday = computeStreak(dates, '2026-09-23', { weekAnchor: 1 });
+  assert.equal(monday.streak, 2);
+  const wednesday = computeStreak(dates, '2026-09-23', { weekAnchor: 3 });
+  assert.equal(wednesday.streak, 1);
+});
+
+test('week starts on the weekday of the first-run date', () => {
+  assert.equal(weekStartOf('2026-09-25', '2026-09-23'), '2026-09-23');
+  assert.equal(weekStartOf('2026-09-22', '2026-09-23'), '2026-09-16');
+  assert.equal(weekStartOf('2026-09-25', null), '2026-09-21');
+});
+
+test('daily goal is finishing every task scheduled that day', () => {
+  const a = { instanceId: 'a' };
+  const b = { instanceId: 'b' };
+  assert.equal(goalMet({}, [], []), false);
+  assert.equal(goalMet({}, [a], []), false);
+  assert.equal(goalMet({}, [a], [{ instanceId: 'a' }]), true);
+  assert.equal(goalMet({ dailyGoal: { mode: 'off', n: 5 } }, [a, b], [{ instanceId: 'a' }, { instanceId: 'b' }]), true);
+  assert.equal(goalMet({ dailyGoal: { mode: 'tasks', n: 1 } }, [a, b], [{ instanceId: 'a' }]), false);
+});
+
+test('new planners start with one category and an empty first-run date', () => {
+  const cats = defaultCategories();
+  assert.equal(cats.length, 1);
+  assert.equal(cats[0].name, 'My goals');
+  assert.equal(defaultSettings().installedOn, null);
+  assert.equal(defaultSettings().categories.length, 1);
+  assert.equal(defaultDifficulty('class'), 'medium');
+  assert.equal(defaultDifficulty('goals'), 'easy');
+  const fresh = migrateSettings({ categories: [], schemaVersion: 2 });
+  assert.equal(fresh.categories[0].name, 'My goals');
+  const kept = migrateSettings({
+    schemaVersion: 2,
+    categories: [{ id: 'class', name: 'Class', emoji: '📚', color: '#1A8CFF' }],
+  });
+  assert.equal(kept.categories.length, 1);
+  assert.equal(kept.categories[0].name, 'Class');
+});
+
+test('first stored planner date is the earliest task, completion, or bonus', () => {
+  const ymd = earliestStoredDate(
+    [{ date: '2026-09-10', createdAt: '2026-01-01T00:00:00.000Z' }],
+    [{ completedOn: '2026-09-08', date: '2026-09-02' }],
+    [{ date: '2026-09-04' }],
+  );
+  assert.equal(ymd, '2026-09-02');
+  assert.equal(earliestStoredDate([], [], []), null);
 });
 
 test('weekdays-only ignores Saturday and Sunday', () => {
@@ -240,7 +299,7 @@ test('a v1 save keeps its theme, accent, and categories', () => {
     sound: false,
     dayStart: '04:00',
     weekStart: 'mon',
-    clock24: false,
+    clock24: true,
     streakMode: 'everyday',
     dailyGoal: { mode: 'points', n: 30 },
     defaultLead: 15,
@@ -262,10 +321,15 @@ test('a v1 save keeps its theme, accent, and categories', () => {
   assert.equal(next.theme, 'ocean');
   assert.equal(next.accent, '#1D63B8');
   assert.equal(next.title, "Sam's Day");
-  assert.equal(next.font, 'lexend');
-  assert.equal(next.format, 'timeline');
+  assert.equal(next.font, 'nunito');
+  assert.equal(next.format, 'list');
+  assert.equal(next.clock24, false);
   assert.equal(next.showNames, false);
-  assert.equal(next.dailyGoal.n, 30);
+  assert.equal(next.dailyGoal, undefined);
+  assert.equal(next.dayStart, undefined);
+  assert.equal(next.weekStart, undefined);
+  assert.equal(next.streakMode, undefined);
+  assert.equal(next.installedOn, null);
   assert.equal(next.morningCheckin.time, '07:30');
   assert.equal(next.photoScrim, 'dark');
   assert.equal(next.photoBlur, 4);
@@ -273,7 +337,8 @@ test('a v1 save keeps its theme, accent, and categories', () => {
   assert.equal(next.categories[0].color, '#1D63B8');
   assert.equal(next.setupComplete, true);
   assert.equal(next.pet.animal, 'penguin');
-  assert.equal(next.pet.color, null);
+  assert.equal(next.pet.colors.primary, null);
+  assert.equal(next.pet.colors.eyes, null);
   assert.equal(next.pet.hat, false);
   const kept = migrateSettings({
     ...v1,
@@ -282,12 +347,17 @@ test('a v1 save keeps its theme, accent, and categories', () => {
   });
   assert.equal(kept.schemaVersion, 2);
   assert.equal(kept.pet.animal, 'tiger');
-  assert.equal(kept.pet.color, '#FFD23F');
+  assert.equal(kept.pet.colors.primary, '#FFD23F');
+  assert.equal(kept.pet.colors.eyes, null);
+  assert.equal(kept.pet.colors.secondary, null);
   assert.equal(kept.pet.eyes, 'sparkly');
   assert.equal(kept.pet.cheeks, false);
   assert.equal(kept.pet.hat, true);
   assert.equal(kept.pet.height, 1.2);
   assert.equal(kept.title, "Sam's Day");
+  assert.equal(kept.font, defaultSettings().font);
+  assert.equal(kept.format, 'list');
+  assert.equal(kept.clock24, false);
   const painted = paintColors(next);
   assert.equal(painted.bg, THEMES.ocean.bg);
   assert.equal(painted.text, THEMES.ocean.text);
@@ -304,7 +374,14 @@ test('retired pets migrate onto the cube lineup', () => {
   assert.equal(normalizePet({ animal: 'horse', hat: true, eyes: 'sparkly' }).animal, 'fox');
   assert.equal(normalizePet({ animal: 'horse', hat: true }).hat, true);
   assert.equal(normalizePet({ animal: 'shark', color: '#ffd23f' }).animal, 'penguin');
-  assert.equal(normalizePet({ animal: 'shark', color: '#ffd23f' }).color, '#FFD23F');
+  assert.equal(normalizePet({ animal: 'shark', color: '#ffd23f' }).colors.primary, '#FFD23F');
+  const slots = normalizePet({
+    animal: 'dog',
+    colors: { eyes: '#2244aa', primary: null, secondary: '#88ffcc' },
+  });
+  assert.equal(slots.colors.eyes, '#2244AA');
+  assert.equal(slots.colors.primary, null);
+  assert.equal(slots.colors.secondary, '#88FFCC');
   assert.equal(normalizePet({ animal: 'axolotl' }).animal, 'bunny');
   assert.equal(normalizePet({ animal: 'capybara' }).animal, 'koala');
   assert.equal(normalizePet({ animal: 'dragon' }).animal, 'lion');
@@ -378,6 +455,63 @@ test('a repeating goal reminds on each matching day', () => {
   assert.ok(days.includes('2026-09-25'));
   assert.equal(days.includes('2026-09-26'), false);
   assert.ok(list.every((item) => item.title === 'Work' || item.kind !== 'task'));
+});
+
+test('colour wheel hue, saturation, and brightness round-trip', () => {
+  assert.equal(hsvToHex({ h: 0, s: 100, v: 100 }), '#FF0000');
+  assert.equal(hsvToHex({ h: 120, s: 100, v: 100 }), '#00FF00');
+  assert.equal(hsvToHex({ h: 240, s: 100, v: 100 }), '#0000FF');
+  assert.equal(hsvToHex({ h: 180, s: 100, v: 100 }), '#00FFFF');
+  assert.equal(hsvToHex({ h: 0, s: 0, v: 100 }), '#FFFFFF');
+  assert.equal(hsvToHex({ h: 40, s: 80, v: 0 }), '#000000');
+  const sample = '#6D4AFF';
+  const back = hsvToHex(hexToHsv(sample));
+  const a = hexToRgb(sample);
+  const b = hexToRgb(back);
+  assert.ok(Math.abs(a.r - b.r) <= 1 && Math.abs(a.g - b.g) <= 1 && Math.abs(a.b - b.b) <= 1, back);
+  const size = COLOUR_WHEEL_SIZE;
+  const edge = wheelPointToHs(size, size / 2, size);
+  assert.ok(edge.h < 1 || edge.h > 359);
+  assert.equal(Math.round(edge.s), 100);
+  const center = wheelPointToHs(size / 2, size / 2, size);
+  assert.equal(Math.round(center.s), 0);
+  const outside = wheelPointToHs(size + 40, size / 2, size);
+  assert.equal(Math.round(outside.s), 100);
+  const spot = hsToWheelPoint(120, 100, size);
+  const backHs = wheelPointToHs(spot.x, spot.y, size);
+  assert.ok(Math.abs(backHs.h - 120) < 0.02, backHs.h);
+  assert.ok(Math.abs(backHs.s - 100) < 0.02, backHs.s);
+  assert.equal(hsvToHex({ ...backHs, v: 100 }), '#00FF00');
+});
+
+test('saved font, layout, and clock choices reset to the defaults', () => {
+  const next = migrateSettings({
+    schemaVersion: 2,
+    title: 'Lab Day',
+    theme: 'mint',
+    font: 'caveat',
+    format: 'timeline',
+    clock24: true,
+    textColor: '#064536',
+    weekStart: 'sun',
+    dayStart: '05:00',
+    streakMode: 'weekdays',
+    dailyGoal: { mode: 'points', n: 9 },
+    installedOn: '2026-09-02',
+  });
+  const base = defaultSettings();
+  assert.equal(next.font, base.font);
+  assert.equal(next.format, base.format);
+  assert.equal(next.clock24, base.clock24);
+  assert.equal(next.title, 'Lab Day');
+  assert.equal(next.theme, 'mint');
+  assert.equal(next.textColor, '#064536');
+  assert.equal(next.weekStart, undefined);
+  assert.equal(next.dayStart, undefined);
+  assert.equal(next.streakMode, undefined);
+  assert.equal(next.dailyGoal, undefined);
+  assert.equal(next.installedOn, '2026-09-02');
+  assert.equal(migrateSettings({ installedOn: 'nope' }).installedOn, null);
 });
 
 test('photo dimming still counts toward text contrast', () => {

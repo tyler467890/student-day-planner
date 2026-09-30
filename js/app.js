@@ -11,13 +11,16 @@ import { celebrationChoices, pickCelebration } from './celebrations.js';
 import { playCelebrationAudio, playChime } from './sounds.js';
 
 const {
-  POINTS, DAY_COMPLETE_BONUS, THEMES, ACCENTS, FONTS, WEEKDAY_LABELS,
+  POINTS, DAY_COMPLETE_BONUS, THEMES, ACCENTS, WEEKDAY_LABELS,
   TEXT_COLOURS, BG_COLOURS, defaultSettings, defaultDifficulty, addDays, plannerDate, formatDayLabel,
   formatTime, dayOfWeek, instancesOn, computeStreak, sumPoints, pointsOnDate,
   isDayComplete, levelForPoints, levelProgress, levelTitle, displayLevel,
   upcomingReminders, reminderText, onAccent, autoScrim, burstCount, clone,
   zonedDateTime, weekStartOf, parseHM, migrateSettings, paintColors, fixTextColor,
+  isPlannerYmd, earliestStoredDate,
   normalizeHex, relativeLuminance, PET_ANIMALS, PET_COLOURS,
+  COLOUR_WHEEL_SIZE, hsvToHex, hsvToRgb, hexToHsv, wheelPointToHs, hsToWheelPoint,
+  applyPresentationDefaults,
 } = model;
 
 const S = {
@@ -48,6 +51,11 @@ let petBoot = null;
 let petKey = '';
 let petPending = null;
 let petReturn = 'today';
+let openWheel = null;
+let wheelBitmap = null;
+let wheelBitmapDpr = 0;
+let categoryForm = null;
+let openCatColour = null;
 const highWater = { level: 1, celebrated: 1, shown: {} };
 
 const appEl = () => document.getElementById('app');
@@ -140,7 +148,16 @@ function celebrationMode() {
 }
 
 function plannerToday() {
-  return plannerDate(currentDate(), S.settings.dayStart || '04:00');
+  return plannerDate(currentDate());
+}
+
+function ensureInstalledOn() {
+  if (isPlannerYmd(S.settings.installedOn)) return;
+  S.settings.installedOn = earliestStoredDate(S.tasks, S.completions, S.bonuses) || plannerToday();
+}
+
+function weekAnchorDow() {
+  return isPlannerYmd(S.settings.installedOn) ? dayOfWeek(S.settings.installedOn) : 1;
 }
 
 function viewedYMD() {
@@ -184,7 +201,7 @@ function resolvedScrim() {
 }
 
 function applyChrome() {
-  const settings = S.settings;
+  const settings = applyPresentationDefaults(S.settings);
   const painted = paintColors(settings, photoArg());
   const root = document.documentElement;
   root.dataset.theme = settings.theme;
@@ -271,7 +288,7 @@ function announce(text) {
 
 function streakInfo(today = plannerToday()) {
   const dates = [...new Set(S.completions.map((c) => c.completedOn || c.date).filter(Boolean))];
-  return computeStreak(dates, today, { weekdaysOnly: S.settings.streakMode === 'weekdays' });
+  return computeStreak(dates, today, { weekdaysOnly: false, weekAnchor: weekAnchorDow() });
 }
 
 function recomputeStreakBonuses() {
@@ -307,8 +324,7 @@ function syncDayBonuses(ymd) {
       S.bonuses = S.bonuses.filter((b) => b.id !== `day:${ymd}`);
     }
   }
-  const earned = comps.reduce((sum, c) => sum + (c.points || 0), 0);
-  const met = model.goalMet(S.settings, instances, comps, earned);
+  const met = model.goalMet(S.settings, instances, comps);
   const goalId = `goal:${ymd}`;
   if (met && !S.bonuses.some((b) => b.id === goalId)) {
     S.bonuses.push({ id: goalId, kind: 'goal', date: ymd, points: model.GOAL_BONUS });
@@ -580,10 +596,11 @@ async function deleteInstance(inst, scope) {
 }
 
 function blankDraft(date) {
+  const category = S.settings.categories?.[0];
   return {
     title: '',
-    categoryId: 'task',
-    difficulty: 'easy',
+    categoryId: category?.id || 'goals',
+    difficulty: defaultDifficulty(category?.id),
     difficultyTouched: false,
     time: '',
     endTime: '',
@@ -943,10 +960,7 @@ function petOnScreen() {
 }
 
 function isLateNight() {
-  const now = currentDate();
-  const mins = now.getHours() * 60 + now.getMinutes();
-  const start = parseHM(S.settings.dayStart || '04:00');
-  return mins >= 21 * 60 || mins < start.h * 60 + start.m;
+  return currentDate().getHours() >= 21;
 }
 
 function petReactionKind() {
@@ -1090,6 +1104,71 @@ function renderAnimalGrid() {
     }, label)));
 }
 
+const PET_COLOR_SLOTS = [
+  ['eyes', 'Eyes'],
+  ['primary', 'Main'],
+  ['secondary', 'Second'],
+];
+
+/**
+ * One pet colour slot. Preset swatches sit beside this. The rainbow chip opens
+ * the same colour wheel used for theme colours, and calls onColor(hex, commit).
+ */
+function renderPetColorPicker(slot, label, currentHex, onColor) {
+  const id = `pet-${slot}`;
+  const shown = currentHex || '#7EC8FF';
+  const presets = PET_COLOURS.map((swatch) => swatch.hex).filter(Boolean);
+  const chip = colourChip({
+    id,
+    label: `Custom ${label} colour`,
+    shown,
+    selected: Boolean(currentHex && !presets.includes(currentHex)),
+  });
+  const wheel = openWheel === id
+    ? colourWheelPanel(shown, (hex, commit) => onColor(hex, commit))
+    : null;
+  return { chip, wheel };
+}
+
+function renderPetColorRows(pet) {
+  const colors = pet.colors || { eyes: null, primary: null, secondary: null };
+  const rows = h('div', { class: 'pet-color-rows' });
+  for (const [slot, label] of PET_COLOR_SLOTS) {
+    const value = colors[slot] || null;
+    const swatches = h('div', { class: 'pet-colours', role: 'group', 'aria-label': `${label} colour` });
+    for (const swatch of PET_COLOURS) {
+      const selected = swatch.hex ? value === swatch.hex : !value;
+      swatches.append(h('button', {
+        type: 'button',
+        'aria-label': `${label} ${swatch.name}`,
+        'aria-pressed': selected ? 'true' : 'false',
+        style: swatch.hex ? `background:${swatch.hex}` : 'background:linear-gradient(135deg,#fff,#d9d3ea)',
+        onclick: () => {
+          openWheel = null;
+          updatePet({ colors: { ...colors, [slot]: swatch.hex } });
+        },
+      }));
+    }
+    const picker = renderPetColorPicker(slot, label, value, (hex, commit) => {
+      const next = { ...(S.settings.pet?.colors || colors), [slot]: hex };
+      if (!commit) {
+        S.settings.pet = { ...(S.settings.pet || model.defaultPet()), colors: next };
+        applyPetConfig();
+        const dot = document.querySelector(`[data-pet-slot="${slot}"] .color-chip-dot`);
+        if (dot) dot.style.background = hex;
+        return;
+      }
+      updatePet({ colors: next });
+    });
+    swatches.append(picker.chip);
+    rows.append(h('div', { class: 'pet-color-row', dataset: { petSlot: slot } },
+      h('span', { class: 'pet-color-label', text: label }),
+      swatches));
+    if (picker.wheel) rows.append(picker.wheel);
+  }
+  return rows;
+}
+
 function renderPetControls() {
   const pet = S.settings.pet || model.defaultPet();
   const wrap = h('div', { class: 'pet-controls' });
@@ -1112,30 +1191,7 @@ function renderPetControls() {
         },
       }, choice.label);
     })));
-  wrap.append(h('p', { class: 'field-label', text: 'Colour' }));
-  const colours = h('div', { class: 'pet-colours', role: 'group', 'aria-label': 'Pet colour' });
-  for (const swatch of PET_COLOURS) {
-    const selected = swatch.hex ? pet.color === swatch.hex : !pet.color;
-    colours.append(h('button', {
-      type: 'button',
-      'aria-label': swatch.hex ? `Pet colour ${swatch.name}` : 'Natural pet colour',
-      'aria-pressed': selected ? 'true' : 'false',
-      style: swatch.hex ? `background:${swatch.hex}` : 'background:linear-gradient(135deg,#fff,#d9d3ea)',
-      onclick: () => updatePet({ color: swatch.hex }),
-    }));
-  }
-  const picker = h('input', {
-    type: 'color',
-    'aria-label': 'Custom pet colour',
-    value: (pet.color || '#7EC8FF').toLowerCase(),
-  });
-  picker.addEventListener('change', () => {
-    const hex = normalizeHex(picker.value);
-    if (hex) updatePet({ color: hex });
-  });
-  const customOn = Boolean(pet.color && !PET_COLOURS.some((swatch) => swatch.hex === pet.color));
-  colours.append(h('label', { class: `color-chip${customOn ? ' is-selected' : ''}` }, picker));
-  wrap.append(colours);
+  wrap.append(renderPetColorRows(pet));
   wrap.append(h('p', { class: 'field-label', text: 'Face' }));
   wrap.append(h('div', { class: 'chips' },
     ['round', 'happy', 'sparkly'].map((eyes) => h('button', {
@@ -1189,6 +1245,7 @@ function renderPet() {
 }
 
 function render() {
+  const scrollY = window.scrollY;
   applyChrome();
   const root = appEl();
   if (petHolder) petHolder.remove();
@@ -1199,6 +1256,10 @@ function render() {
   else if (S.screen === 'pet') root.append(renderPet());
   else root.append(renderToday());
   renderOverlayBits();
+  if (openWheel) {
+    window.scrollTo(0, scrollY);
+    document.getElementById('colour-wheel-panel')?.scrollIntoView({ block: 'nearest' });
+  }
   if (petStage) {
     petStage.setActive(petOnScreen());
     if (petOnScreen()) {
@@ -1421,8 +1482,6 @@ function renderToday() {
   const progress = levelProgress(total, level);
   const streak = streakInfo(today);
   const dayPoints = pointsOnDate(S.completions, S.bonuses, viewingToday ? today : viewed);
-  const goal = S.settings.dailyGoal;
-  const compsToday = S.completions.filter((c) => c.date === viewed);
 
   const shell = h('main', { class: 'shell today' });
   const header = h('header', { class: 'top' });
@@ -1462,24 +1521,6 @@ function renderToday() {
   const petSlot = h('div', { class: 'pet-slot' });
   mountPet(petSlot);
   shell.append(petSlot);
-
-  if (goal && goal.mode !== 'off') {
-    const n = Number(goal.n) || 0;
-    let label = '';
-    let ratio = 0;
-    if (goal.mode === 'tasks') {
-      const count = compsToday.length;
-      label = `${Math.min(count, n)} of ${n} done`;
-      ratio = n ? Math.min(1, count / n) : 0;
-    } else {
-      const earned = compsToday.reduce((sum, c) => sum + c.points, 0);
-      label = `${Math.min(earned, n)} of ${n} points`;
-      ratio = n ? Math.min(1, earned / n) : 0;
-    }
-    shell.append(h('div', { class: 'goal' },
-      h('div', { class: 'goal-label', text: label }),
-      h('div', { class: 'goal-track', 'aria-hidden': 'true' }, h('div', { class: 'goal-fill', style: `width:${ratio * 100}%` }))));
-  }
 
   if (viewingToday && S.settings.installSkipped && deviceKind() === 'ios' && !isStandalone()) {
     shell.append(h('p', { class: 'note', text: 'Reminders and saving work best from your Home Screen.' }));
@@ -1615,15 +1656,13 @@ function labelDifficulty(d) {
 
 function isEarlier(inst) {
   if (!inst.time) return false;
-  const when = zonedDateTime(inst.date, inst.time, S.settings.dayStart || '04:00');
+  const when = zonedDateTime(inst.date, inst.time);
   return when.getTime() < currentMs();
 }
 
 function isEvening() {
   const now = currentDate();
-  const mins = now.getHours() * 60 + now.getMinutes();
-  const start = parseHM(S.settings.dayStart || '04:00');
-  return mins >= 17 * 60 || mins < start.h * 60 + start.m;
+  return now.getHours() * 60 + now.getMinutes() >= 17 * 60;
 }
 
 function renderDone(done) {
@@ -1828,7 +1867,7 @@ function openProgress() {
   const info = streakInfo(today);
   const total = sumPoints(S.completions, S.bonuses);
   const level = displayLevel(total, S.settings.highestLevel);
-  const start = weekStartOf(today, S.settings.weekStart || 'mon');
+  const start = weekStartOf(today, S.settings.installedOn);
   const dates = new Set(S.completions.map((c) => c.completedOn || c.date));
   const days = [];
   for (let i = 0; i < 7; i += 1) {
@@ -2127,6 +2166,163 @@ function closeSheet() {
   document.body.classList.remove('sheet-open');
 }
 
+function syncThemeColour(kind, hex, presets) {
+  const row = document.querySelector(`[data-colour-row="${kind}"]`);
+  if (!row) return;
+  const custom = Boolean(hex && !presets.includes(hex));
+  row.querySelectorAll('.swatch').forEach((el) => {
+    const on = custom ? false : (hex ? el.dataset.hex === hex : el.dataset.theme === '1');
+    el.classList.toggle('is-selected', on);
+  });
+  row.querySelector('.color-chip')?.classList.toggle('is-selected', custom);
+  const dot = row.querySelector('.color-chip-dot');
+  if (dot && hex) dot.style.background = hex;
+}
+
+function syncContrast() {
+  const slot = document.getElementById('contrast-slot');
+  if (!slot) return;
+  const note = contrastNote();
+  slot.replaceChildren();
+  if (note) slot.append(note);
+}
+
+function colourChip({ id, label, shown, selected }) {
+  return h('button', {
+    type: 'button',
+    class: `color-chip${selected ? ' is-selected' : ''}${openWheel === id ? ' is-open' : ''}`,
+    'aria-label': label,
+    'aria-expanded': openWheel === id ? 'true' : 'false',
+    onclick: () => {
+      openWheel = openWheel === id ? null : id;
+      render();
+    },
+  }, h('span', { class: 'color-chip-dot', style: `background:${shown}` }));
+}
+
+function paintColourWheel(canvas) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (!wheelBitmap || wheelBitmapDpr !== dpr) {
+    const px = Math.round(COLOUR_WHEEL_SIZE * dpr);
+    const scratch = document.createElement('canvas');
+    scratch.width = px;
+    scratch.height = px;
+    const ctx = scratch.getContext('2d');
+    const image = ctx.createImageData(px, px);
+    const data = image.data;
+    const radius = px / 2;
+    for (let y = 0; y < px; y += 1) {
+      for (let x = 0; x < px; x += 1) {
+        const dx = x + 0.5 - radius;
+        const dy = y + 0.5 - radius;
+        const dist = Math.hypot(dx, dy);
+        const i = (y * px + x) * 4;
+        if (dist > radius) continue;
+        const { h, s } = wheelPointToHs(x + 0.5, y + 0.5, px);
+        const rgb = hsvToRgb({ h, s, v: 100 });
+        data[i] = Math.round(rgb.r);
+        data[i + 1] = Math.round(rgb.g);
+        data[i + 2] = Math.round(rgb.b);
+        const edge = radius - dist;
+        data[i + 3] = edge >= 1 ? 255 : Math.max(0, Math.round(edge * 255));
+      }
+    }
+    ctx.putImageData(image, 0, 0);
+    wheelBitmap = scratch;
+    wheelBitmapDpr = dpr;
+  }
+  const px = wheelBitmap.width;
+  canvas.width = px;
+  canvas.height = px;
+  canvas.getContext('2d').drawImage(wheelBitmap, 0, 0);
+}
+
+function colourWheelPanel(startHex, onPick) {
+  const hsv = hexToHsv(startHex || '#FF4D6D');
+  const panel = h('div', {
+    class: 'wheel-panel',
+    id: 'colour-wheel-panel',
+    role: 'group',
+    'aria-label': 'Custom colour',
+  });
+  const stage = h('div', { class: 'wheel-stage', role: 'group', 'aria-label': 'Colour wheel', tabindex: '0' });
+  const canvas = h('canvas', { class: 'colour-wheel', 'aria-hidden': 'true' });
+  const shade = h('div', { class: 'wheel-shade', 'aria-hidden': 'true' });
+  const thumb = h('div', { class: 'wheel-thumb', 'aria-hidden': 'true' });
+  stage.append(canvas, shade, thumb);
+  const preview = h('span', { class: 'wheel-preview', role: 'img', 'aria-label': 'Colour preview' });
+  const slider = h('input', {
+    type: 'range',
+    min: '0',
+    max: '100',
+    step: '1',
+    value: String(Math.round(hsv.v)),
+  });
+  panel.append(stage, h('div', { class: 'wheel-row' }, preview, h('label', { class: 'wheel-bright' }, 'Brightness', slider)));
+  paintColourWheel(canvas);
+
+  function paintUi() {
+    const next = hsvToHex(hsv);
+    const pt = hsToWheelPoint(hsv.h, hsv.s, COLOUR_WHEEL_SIZE);
+    thumb.style.left = `${pt.x}px`;
+    thumb.style.top = `${pt.y}px`;
+    thumb.style.background = next;
+    preview.style.background = next;
+    preview.setAttribute('aria-label', `Colour preview ${next}`);
+    shade.style.opacity = String(1 - Math.min(100, Math.max(0, hsv.v)) / 100);
+    slider.style.setProperty('--wheel-thumb', next);
+    return next;
+  }
+
+  function apply(commit) {
+    onPick(paintUi(), commit);
+  }
+
+  function take(event, commit) {
+    const rect = stage.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const x = ((event.clientX - rect.left) / rect.width) * COLOUR_WHEEL_SIZE;
+    const y = ((event.clientY - rect.top) / rect.height) * COLOUR_WHEEL_SIZE;
+    const hs = wheelPointToHs(x, y, COLOUR_WHEEL_SIZE);
+    hsv.h = hs.h;
+    hsv.s = hs.s;
+    apply(commit);
+  }
+
+  stage.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    stage.setPointerCapture(event.pointerId);
+    take(event, false);
+  }, { passive: false });
+  stage.addEventListener('pointermove', (event) => {
+    if (!stage.hasPointerCapture(event.pointerId)) return;
+    take(event, false);
+  });
+  stage.addEventListener('pointerup', (event) => take(event, true));
+  stage.addEventListener('pointercancel', (event) => take(event, true));
+  stage.addEventListener('keydown', (event) => {
+    const step = event.shiftKey ? 12 : 4;
+    if (event.key === 'ArrowLeft') hsv.h -= step;
+    else if (event.key === 'ArrowRight') hsv.h += step;
+    else if (event.key === 'ArrowUp') hsv.s = Math.min(100, hsv.s + step);
+    else if (event.key === 'ArrowDown') hsv.s = Math.max(0, hsv.s - step);
+    else return;
+    event.preventDefault();
+    apply(true);
+  });
+  slider.addEventListener('input', () => {
+    hsv.v = Number(slider.value);
+    apply(false);
+  });
+  slider.addEventListener('change', () => {
+    hsv.v = Number(slider.value);
+    apply(true);
+  });
+  slider.addEventListener('pointerdown', (event) => event.stopPropagation());
+  paintUi();
+  return panel;
+}
+
 function colourRow(kind) {
   const s = S.settings;
   const theme = THEMES[s.theme] || THEMES.calm;
@@ -2134,13 +2330,15 @@ function colourRow(kind) {
   const current = normalizeHex(kind === 'text' ? s.textColor : s.bgColor);
   const themeHex = normalizeHex(kind === 'text' ? theme.text : theme.bg);
   const label = kind === 'text' ? 'Text' : 'Background';
-  const row = h('div', { class: 'swatch-row' });
+  const row = h('div', { class: 'swatch-row', dataset: { colourRow: kind } });
   row.append(h('button', {
     type: 'button',
     class: `swatch dot${current ? '' : ' is-selected'}`,
     'aria-label': `${label} colour from theme`,
+    dataset: { theme: '1' },
     style: `background:${themeHex}`,
     onclick: async () => {
+      openWheel = null;
       if (kind === 'text') s.textColor = null;
       else s.bgColor = null;
       await persistAll();
@@ -2152,8 +2350,10 @@ function colourRow(kind) {
       type: 'button',
       class: `swatch dot${current === hex ? ' is-selected' : ''}`,
       'aria-label': `${label} ${hex}`,
+      dataset: { hex },
       style: `background:${hex}`,
       onclick: async () => {
+        openWheel = null;
         if (kind === 'text') s.textColor = hex;
         else s.bgColor = hex;
         await persistAll();
@@ -2161,22 +2361,27 @@ function colourRow(kind) {
       },
     }));
   }
-  const picker = h('input', {
-    type: 'color',
-    'aria-label': `Custom ${label.toLowerCase()} colour`,
-    value: (current || themeHex).toLowerCase(),
-  });
-  picker.addEventListener('change', async () => {
-    const hex = normalizeHex(picker.value);
-    if (!hex) return;
-    if (kind === 'text') s.textColor = hex;
-    else s.bgColor = hex;
-    await persistAll();
-    render();
-  });
-  const customSelected = Boolean(current && !colours.includes(current));
-  row.append(h('label', { class: `color-chip${customSelected ? ' is-selected' : ''}` }, picker));
-  return row;
+  row.append(colourChip({
+    id: kind,
+    label: `Custom ${label.toLowerCase()} colour`,
+    shown: current || themeHex,
+    selected: Boolean(current && !colours.includes(current)),
+  }));
+  const block = h('div', { class: 'colour-block' });
+  block.append(row);
+  if (openWheel === kind) {
+    block.append(colourWheelPanel(current || themeHex, (hex, commit) => {
+      if (kind === 'text') s.textColor = hex;
+      else s.bgColor = hex;
+      applyChrome();
+      syncThemeColour(kind, hex, colours);
+      if (commit) {
+        syncContrast();
+        persistAll();
+      }
+    }));
+  }
+  return block;
 }
 
 function contrastNote() {
@@ -2235,7 +2440,7 @@ function renderCustomize() {
     colourRow('text'),
     h('p', { class: 'field-label', text: 'Background colour' }),
     colourRow('bg'),
-    contrastNote(),
+    h('div', { id: 'contrast-slot' }, contrastNote()),
     h('p', { class: 'field-label', text: 'Accent colour' }),
     h('div', { class: 'swatch-row' }, ACCENTS.map((hex) => h('button', {
       type: 'button',
@@ -2244,18 +2449,6 @@ function renderCustomize() {
       style: `background:${hex}`,
       onclick: async () => { s.accent = hex; await persistAll(); render(); },
     }))),
-    h('p', { class: 'field-label', text: 'Font' }),
-    h('div', { class: 'chips' }, FONTS.map((font) => h('button', {
-      type: 'button',
-      class: `chip${s.font === font.id ? ' is-selected' : ''}`,
-      onclick: async () => { s.font = font.id; await persistAll(); render(); },
-    }, font.label))),
-    h('p', { class: 'field-label', text: 'Format' }),
-    h('div', { class: 'chips' }, ['list', 'timeline'].map((fmt) => h('button', {
-      type: 'button',
-      class: `chip${s.format === fmt ? ' is-selected' : ''}`,
-      onclick: async () => { s.format = fmt; await persistAll(); render(); },
-    }, fmt === 'list' ? 'List' : 'Timeline'))),
     h('p', { class: 'field-label', text: 'Celebrations' }),
     h('div', { class: 'chips' }, ['full', 'subtle', 'off'].map((c) => h('button', {
       type: 'button',
@@ -2310,60 +2503,120 @@ function renderCustomize() {
     h('div', { class: 'split' }, blur, blurVal)));
 
   page.append(renderCategories());
-  page.append(renderPlanSettings());
   page.append(renderReminderSettings());
   page.append(renderDataSettings());
   page.append(h('section', {},
     h('h2', { text: 'About' }),
     h('p', { text: `${PRODUCT_NAME} ${APP_VERSION}` }),
     h('p', { class: 'privacy', text: "Your planner lives on this device. We don't see your tasks. If you turn on reminders while the app is closed, only the reminder time and text are sent to our reminder service, and deleted after sending." }),
-    h('p', { class: 'fine', text: 'Nunito, Inter, Lexend and Caveat are used under the SIL Open Font License. Icons in the app are original.' }),
+    h('p', { class: 'fine', text: 'Nunito is used under the SIL Open Font License. Icons in the app are original.' }),
     !isStandalone() ? h('button', { type: 'button', class: 'btn secondary', onclick: () => promptInstall() }, 'Install app') : null,
     h('button', { type: 'button', class: 'btn ghost', onclick: () => { S.screen = 'help'; render(); } }, 'Help')));
   return page;
 }
 
 function renderCategories() {
-  const section = h('section', {});
+  const section = h('section', { class: 'categories' });
   section.append(h('h2', { text: 'Categories' }));
   for (const cat of S.settings.categories) {
     const name = h('input', { class: 'text-input', 'aria-label': `Category name ${cat.name}`, value: cat.name, maxlength: '24' });
-    name.addEventListener('change', () => { cat.name = name.value.trim() || cat.name; persistAll(); render(); });
-    const emoji = h('input', { class: 'text-input emoji-input', 'aria-label': `Emoji for ${cat.name}`, value: cat.emoji, maxlength: '4' });
-    emoji.addEventListener('change', () => { cat.emoji = emoji.value.trim() || cat.emoji; persistAll(); render(); });
-    const colors = h('div', { class: 'swatches tiny' }, ACCENTS.map((hex) => h('button', {
-      type: 'button',
-      class: `swatch accent${cat.color.toLowerCase() === hex.toLowerCase() ? ' is-selected' : ''}`,
-      'aria-label': `${cat.name} colour ${hex}`,
-      style: `background:${hex}`,
-      onclick: () => { cat.color = hex; persistAll(); render(); },
-    })));
-    const row = h('div', { class: 'cat-row' }, emoji, name);
+    name.addEventListener('change', () => {
+      cat.name = name.value.trim() || cat.name;
+      persistAll();
+      render();
+    });
+    const colour = cat.color || ACCENTS[0];
+    const row = h('div', { class: 'cat-row' },
+      name,
+      h('button', {
+        type: 'button',
+        class: 'cat-colour',
+        'aria-label': `Colour for ${cat.name}`,
+        'aria-expanded': openCatColour === cat.id ? 'true' : 'false',
+        style: `background:${colour}`,
+        onclick: () => {
+          openCatColour = openCatColour === cat.id ? null : cat.id;
+          render();
+        },
+      }));
     if (S.settings.categories.length > 1) {
       row.append(h('button', {
         type: 'button',
         class: 'text-btn danger',
-        'aria-label': `Remove ${cat.name}`,
+        'aria-label': `Delete ${cat.name}`,
         onclick: () => removeCategory(cat.id),
-      }, 'Remove'));
+      }, 'Delete'));
     }
-    section.append(row, colors);
+    section.append(row);
+    if (openCatColour === cat.id) section.append(categorySwatches(colour, (hex) => {
+      cat.color = hex;
+      persistAll();
+      render();
+    }));
   }
-  if (S.settings.categories.length < 8) {
-    section.append(h('button', { type: 'button', class: 'btn secondary', onclick: addCategory }, 'Add category'));
+  if (categoryForm) section.append(renderCategoryForm());
+  else {
+    section.append(h('button', {
+      type: 'button',
+      class: 'btn secondary',
+      onclick: () => {
+        categoryForm = { name: '', color: '' };
+        openCatColour = null;
+        render();
+        document.querySelector('[aria-label="New category name"]')?.focus();
+      },
+    }, '+ Add category'));
   }
   return section;
 }
 
-function addCategory() {
-  if (S.settings.categories.length >= 8) return;
-  const n = S.settings.categories.length + 1;
+function categorySwatches(selected, onPick) {
+  return h('div', { class: 'swatches tiny', role: 'group', 'aria-label': 'Category colour' }, ACCENTS.map((hex) => h('button', {
+    type: 'button',
+    class: `swatch accent${selected && selected.toLowerCase() === hex.toLowerCase() ? ' is-selected' : ''}`,
+    'aria-label': `Colour ${hex}`,
+    'aria-pressed': selected && selected.toLowerCase() === hex.toLowerCase() ? 'true' : 'false',
+    style: `background:${hex}`,
+    onclick: () => onPick(hex),
+  })));
+}
+
+function renderCategoryForm() {
+  const name = h('input', {
+    class: 'text-input',
+    'aria-label': 'New category name',
+    placeholder: 'Category name',
+    maxlength: '24',
+    value: categoryForm.name,
+  });
+  name.addEventListener('input', () => { categoryForm.name = name.value; });
+  const form = h('div', { class: 'cat-form' },
+    name,
+    h('p', { class: 'field-label', text: 'Colour (optional)' }),
+    categorySwatches(categoryForm.color, (hex) => {
+      categoryForm.color = categoryForm.color.toLowerCase() === hex.toLowerCase() ? '' : hex;
+      render();
+    }),
+    h('div', { class: 'row-btns' },
+      h('button', { type: 'button', class: 'btn primary', onclick: commitCategory }, 'Add'),
+      h('button', {
+        type: 'button',
+        class: 'btn ghost',
+        onclick: () => { categoryForm = null; render(); },
+      }, 'Cancel')));
+  return form;
+}
+
+function commitCategory() {
+  const name = (categoryForm?.name || '').trim() || 'New category';
+  const n = S.settings.categories.length;
   S.settings.categories.push({
     id: crypto.randomUUID(),
-    name: `Category ${n}`,
+    name,
     emoji: '⭐',
-    color: ACCENTS[n % ACCENTS.length],
+    color: categoryForm?.color || ACCENTS[n % ACCENTS.length],
   });
+  categoryForm = null;
   persistAll();
   render();
 }
@@ -2373,51 +2626,9 @@ function removeCategory(id) {
   const fallback = S.settings.categories.find((c) => c.id !== id);
   S.settings.categories = S.settings.categories.filter((c) => c.id !== id);
   for (const task of S.tasks) if (task.categoryId === id) task.categoryId = fallback.id;
+  if (openCatColour === id) openCatColour = null;
   persistAll();
   render();
-}
-
-function renderPlanSettings() {
-  const s = S.settings;
-  const goalMode = h('select', { 'aria-label': 'Daily goal' });
-  for (const [val, label] of [['off', 'Off'], ['tasks', 'Finish N tasks'], ['points', 'Earn N points']]) {
-    const opt = h('option', { value: val, text: label });
-    if (s.dailyGoal.mode === val) opt.selected = true;
-    goalMode.append(opt);
-  }
-  const goalN = h('input', { type: 'number', min: '1', max: '100', 'aria-label': 'Goal amount', value: String(s.dailyGoal.n || 5), class: 'text-input' });
-  goalMode.addEventListener('change', () => { s.dailyGoal.mode = goalMode.value; persistAll(); render(); });
-  goalN.addEventListener('change', () => { s.dailyGoal.n = Math.max(1, Number(goalN.value) || 1); persistAll(); });
-  const dayStart = h('input', { type: 'time', 'aria-label': 'Day starts at', value: s.dayStart || '04:00', class: 'text-input' });
-  dayStart.addEventListener('change', () => { s.dayStart = dayStart.value || '04:00'; persistAll(); render(); });
-  return h('section', {},
-    h('h2', { text: 'Plan' }),
-    h('label', { class: 'field-label', text: 'Daily goal' }),
-    goalMode,
-    s.dailyGoal.mode === 'off' ? null : goalN,
-    h('p', { class: 'field-label', text: 'Streak counts on' }),
-    h('div', { class: 'chips' }, [
-      ['everyday', 'Every day'],
-      ['weekdays', 'Weekdays only'],
-    ].map(([id, label]) => h('button', {
-      type: 'button',
-      class: `chip${s.streakMode === id ? ' is-selected' : ''}`,
-      onclick: () => { s.streakMode = id; persistAll(); render(); },
-    }, label))),
-    h('label', { class: 'field-label', text: 'Day starts at' }),
-    dayStart,
-    h('p', { class: 'field-label', text: 'Week starts on' }),
-    h('div', { class: 'chips' }, [['mon', 'Monday'], ['sun', 'Sunday']].map(([id, label]) => h('button', {
-      type: 'button',
-      class: `chip${s.weekStart === id ? ' is-selected' : ''}`,
-      onclick: () => { s.weekStart = id; persistAll(); },
-    }, label))),
-    h('p', { class: 'field-label', text: 'Clock' }),
-    h('div', { class: 'chips' }, [[false, '12 hour'], [true, '24 hour']].map(([val, label]) => h('button', {
-      type: 'button',
-      class: `chip${Boolean(s.clock24) === val ? ' is-selected' : ''}`,
-      onclick: () => { s.clock24 = val; persistAll(); render(); },
-    }, label))));
 }
 
 function renderReminderSettings() {
@@ -2484,7 +2695,7 @@ function renderDataSettings() {
     if (f) confirmRestore(f);
     file.value = '';
   });
-  const last = S.settings.lastBackup ? formatDayLabel(plannerDate(new Date(S.settings.lastBackup), S.settings.dayStart)) : 'Not yet';
+  const last = S.settings.lastBackup ? formatDayLabel(plannerDate(new Date(S.settings.lastBackup))) : 'Not yet';
   return h('section', {},
     h('h2', { text: 'Your data' }),
     h('p', { text: `Last backup: ${last}` }),
@@ -2559,6 +2770,7 @@ async function restoreFile(file) {
     S.completions = data.completions || [];
     S.bonuses = data.bonuses || [];
     S.settings = mergeSettings(data.settings || {});
+    ensureInstalledOn();
     S.settings.setupComplete = true;
     S.reminders = data.reminders || [];
     if (data.photo?.dataUrl) {
@@ -2614,6 +2826,7 @@ async function eraseAll() {
   S.reminders = [];
   S.background = null;
   S.settings = defaultSettings();
+  S.settings.installedOn = plannerToday();
   S.screen = 'today';
   viewDate = null;
   refreshPhotoUrl();
@@ -2656,7 +2869,7 @@ function renderHelp() {
       h('h2', { text: 'Levels' }),
       h('p', { text: 'Points add up. Level 2 is 40 points, level 5 is 280, level 10 is 1,180. Levels never go down.' }),
       h('h2', { text: 'Streaks' }),
-      h('p', { text: 'Finish at least one task and the day counts. The day rolls over at 4:00 AM, unless you change it. You get one rest day each week. A second missed day that week starts the streak over, quietly. Your best streak stays.' }),
+      h('p', { text: 'Finish at least one task and the day counts. The day ends at midnight. You get one rest day each week. A second missed day that week starts the streak over, quietly. Your best streak stays.' }),
       h('h2', { text: 'Repeating' }),
       h('p', { text: 'Pick Every day, Weekdays, Weekends, or your own days. Checking one off finishes that day only. Describe my week turns a sentence into repeating goals, and nothing is saved until you tap Add these.' }),
       h('h2', { text: 'Backup' }),
@@ -3188,6 +3401,7 @@ async function boot() {
   S.completions = loaded.completions;
   S.bonuses = loaded.bonuses;
   S.settings = mergeSettings(loaded.settings);
+  ensureInstalledOn();
   S.reminders = loaded.reminders;
   S.background = loaded.background;
   S.screen = 'today';

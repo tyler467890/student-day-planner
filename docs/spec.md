@@ -207,7 +207,7 @@ Also seen: a Reddit post titled "New shop selling a wedding planner web app" on 
 ---
 ## Part 2: The spec
 ### 1. Product summary and target user
-A calm, very simple day planner for students. Open it, see today, tap to add a class or task, and get a nudge before it starts. Checking things off feels good: points, a level bar, a streak, and a little celebration, bigger for harder tasks. When the day is done, you get a "day complete" moment. Users can make it their own with a title, colours, fonts and their own photo as the background. **Target user:** high school and college students (and anyone) who want a planner that takes 10 seconds to use and makes finishing things satisfying. It runs as a no-account app on phone, tablet or laptop, bought once on Etsy.
+A calm, very simple day planner for students. Open it, see today, tap to add a class or task, and get a nudge before it starts. Checking things off feels good: points, a level bar, a streak, and a little celebration, bigger for harder tasks. When the day is done, you get a "day complete" moment. Users can make it their own with a title, colours, and their own photo as the background. **Target user:** high school and college students (and anyone) who want a planner that takes 10 seconds to use and makes finishing things satisfying. It runs as a no-account app on phone, tablet or laptop, bought once on Etsy.
 ### 2. Screens and flows
 **Principle:** one main screen, one pop-up sheet, one settings screen, plus a 3-step first run. No menus inside menus.
 #### 2.0 First-run setup (3 steps, shown once; each skippable except step 1)
@@ -245,7 +245,6 @@ After setup → Today screen with a friendly empty state.
 #### 2.1 Today (main screen)
 - **Purpose:** see and finish today's plan.
 - **Top area (over the background photo, with scrim):** title (e.g. "Tyler's Day"), date ("Fri, Sep 25"), a **level ring** (level number inside, ring = progress to next level), **streak chip** (🔥 5), **today's points** (+45). Tap the level ring to open a small Progress sheet (total points, level, best streak, this week's days completed).
-- **Daily goal bar** (optional, on by default): "3 of 5 done" as a slim progress bar.
 - **Missed reminders card** (only if any): "While you were away" (see 4.4).
 - **Task list** (List format, default): cards sorted by time. Untimed tasks go under a "Anytime" divider. Each card shows a round check button, title, time (if any), category dot/emoji, and a small difficulty tag (Easy / Medium / Hard). Done tasks move to a collapsed "Done (3)" section at the bottom.
 - **Timeline format** (optional toggle in Customize): a vertical hour rail from the earliest to latest task (default 7:00–22:00), cards placed at their times, a "now" line, and untimed tasks in a strip on top.
@@ -258,7 +257,7 @@ After setup → Today screen with a friendly empty state.
 #### 2.2 Add / Edit sheet (a bottom sheet, not a new page)
 - **Fields, in order (only the first is required):**
 	1. **What?** Title text (autofocus). Placeholder cycles: "Biology 101", "Finish essay intro", "Gym".
-	2. **Type:** category chips (Class, Study, Task, Personal, Goal, plus user categories).
+	2. **Type:** chips for the user's categories. A new planner starts with My goals.
 	3. **How hard?** 3 big chips: Easy · Medium · Hard (default **Medium** for Class, **Easy** otherwise). Show points under each (+5 / +10 / +20).
 	4. **When?** Time (optional) and duration (optional; default 50 min for Class, none otherwise).
 	5. **Repeat:** Never · Every day · Weekdays · Pick days (M T W T F S S). Classes default to "Pick days".
@@ -268,8 +267,8 @@ After setup → Today screen with a friendly empty state.
 - **Quick-add shortcut:** typing a title and pressing Enter saves with the defaults (fast path).
 #### 2.3 Customize (settings screen)
 Grouped, short list. Every change previews live.
-- **Look:** Title · Theme (6) · Text colour and background colour (20 swatches each, one scrolling row, plus a colour picker) · Accent colour (8 tested swatches) · Background photo (add/change/remove, crop, scrim Auto/Dark/Light, blur 0–12) · Font (4) · Format (List / Timeline) · Celebrations (Full / Subtle / Off) · Sound (on/off, **default off**).
-- **Plan:** Categories (rename, colour, emoji, add up to 8 total) · Daily goal (Off / number of tasks / points target) · Streak counts on (Every day / Weekdays only) · Day starts at (default 4:00 AM) · Week starts on (Mon/Sun) · 12h/24h.
+- **Look:** Title · Theme (6) · Text colour and background colour (20 swatches each, one scrolling row, plus a colour wheel) · Accent colour (8 tested swatches) · Background photo (add/change/remove, crop, scrim Auto/Dark/Light, blur 0–12) · Celebrations (Full / Subtle / Off) · Sound (on/off, **default off**).
+- **Categories:** New planners start with one category, "My goals". **+ Add category** asks for a name and an optional colour. Existing categories can be renamed or deleted. People who already have categories keep them. There is no separate Plan group: the daily goal, streak days, day boundary, and week start are automatic.
 - **Reminders:** status line ("On", "Off", or "Needs Home Screen install") · Default lead time · Show task names in notifications (on/off) · Morning check-in (time) · Test reminder button.
 - **Your data:** Back up now (download file) · Restore from backup · Last backup date · Erase everything (double confirm).
 - **About:** version, "Install app" (if not installed), Help (opens the in-app quick guide), privacy note.
@@ -294,7 +293,7 @@ flowchart TD
   L -- "No" --> I
   K --> N{"Level threshold passed?"}
   N -- "Yes" --> O["Level up badge"]
-  I -- "Palette icon" --> P["Customize: theme, photo, font, format, categories"]
+  I -- "Palette icon" --> P["Customize: theme, photo, colours, categories"]
   P --> I
 ```
 - **Adding 3 college classes (example):** "+" → "Biology 101" → Class → Medium → 9:00 → Repeat M/W/F → Remind 10 min → Save. Repeat for the other two. On class days all three appear automatically.
@@ -329,7 +328,7 @@ flowchart TD
 <td>(user chooses)</td>
 </tr>
 </table>
-Bonuses: **Day complete +10** (once per day, only when there were at least 2 tasks). **Daily goal reached +5** (if a goal is set). **Streak milestones** (3, 7, 14, 30, 60, 100 days): +15, +25, +40, +75, +120, +200.
+Bonuses: **Day complete +10** (once per day, only when there were at least 2 tasks). **Daily goal reached +5** when every task scheduled that day is done (the goal is that full list; a day with no tasks does not count). **Streak milestones** (3, 7, 14, 30, 60, 100 days): +15, +25, +40, +75, +120, +200.
 #### 3.2 Levels (cumulative points)
 <table header-row="true">
 <tr>
@@ -379,9 +378,10 @@ Level titles (small text under the ring): 1–4 **Starter**, 5–9 **Steady**, 1
 *Pacing check:* a typical day (3 Medium classes + 1 Hard + 1 Easy + day-complete bonus) = 65 points. That's Level 2 on day 1, Level 5 around day 5, Level 10 around day 18, then a new level every \~4–5 days.
 #### 3.3 Streaks
 - **A day "counts"** when **at least 1 task** is completed that day. Not all tasks: finishing something is enough.
-- **Day boundary:** the day ends at **4:00 AM local time** (configurable), so late-night studying still counts for "today".
-- **Weekdays-only mode:** if chosen, Saturdays and Sundays neither count nor break the streak.
-- **Grace (rest day):** the user gets **1 automatic rest day per week** (Mon–Sun). A missed day uses it and the streak continues (shown as a 🌙 on that day in the Progress sheet). A second miss in the same week resets the streak.
+- **Day boundary:** the day ends at **local midnight**.
+- **Every day counts.** There is no weekdays-only setting.
+- **Week start:** the week starts on the weekday of the date stored the first time the app is opened. That date is saved once. If the planner already has tasks, completions, or bonuses, the earliest of those dates is used. Otherwise the date is the day it is first opened.
+- **Grace (rest day):** the user gets **1 automatic rest day per week**, using that same week start. A missed day uses it and the streak continues (shown as a 🌙 on that day in the Progress sheet). A second miss in the same week resets the streak.
 - **Reset is quiet:** no pop-up. The chip just shows 🔥 0. **Best streak is kept forever** and shown in Progress.
 #### 3.4 Completion moment (every task)
 1. The check circle fills with the accent colour and a checkmark draws in (≈200 ms).
@@ -485,7 +485,7 @@ A badge pops over the ring: **"Level 5 · Steady"** with a ring refill animation
 <tr>
 <td>**Text colour**</td>
 <td>20 swatches, plus a colour picker</td>
-<td>One horizontal row. Empty means the theme text. If text and background (or a photo plus its dimming) fall under 4.5:1, Customize shows “These colours are hard to read.” and **Fix it** stores the nearest readable shade.</td>
+<td>One horizontal row, then a colour wheel: tap or drag to pick, with brightness and a preview swatch. Empty means the theme text. If text and background (or a photo plus its dimming) fall under 4.5:1, Customize shows “These colours are hard to read.” and **Fix it** stores the nearest readable shade.</td>
 </tr>
 <tr>
 <td>**Background colour**</td>
@@ -504,23 +504,23 @@ A badge pops over the ring: **"Level 5 · Steady"** with a ring refill animation
 </tr>
 <tr>
 <td>**Font**</td>
-<td>4: Nunito (default), Inter, Lexend, Caveat (titles only)</td>
-<td>See 6.2.</td>
+<td>Nunito</td>
+<td>Not a setting. A saved font choice loads as Nunito. See 6.2.</td>
 </tr>
 <tr>
 <td>**Categories / goal types**</td>
-<td>Defaults: Class 📚, Study ✏️, Task ✅, Personal 🌱, Goal 🎯</td>
-<td>Rename, emoji, colour (from the 8 swatches), add up to 8 total.</td>
+<td>New planners: My goals 🎯</td>
+<td>Name and an optional colour. Add as many as you like, and rename or delete them. A saved list of categories is kept.</td>
 </tr>
 <tr>
 <td>**Daily goal**</td>
-<td>Off / "Finish N tasks" / "Earn N points"</td>
-<td>Shown as the slim bar on Today.</td>
+<td>Finish every task scheduled that day</td>
+<td>Not a setting, and not shown as a bar on Today. Used for the +5 goal bonus.</td>
 </tr>
 <tr>
 <td>**Format**</td>
-<td>List (default) / Timeline</td>
-<td>Timeline hours auto-fit to tasks.</td>
+<td>List</td>
+<td>Not a setting. The day is always a list. A saved timeline choice loads as list.</td>
 </tr>
 <tr>
 <td>**Celebrations**</td>
@@ -534,13 +534,13 @@ A badge pops over the ring: **"Level 5 · Steady"** with a ring refill animation
 </tr>
 <tr>
 <td>**Streak days**</td>
-<td>Every day / Weekdays only</td>
-<td></td>
+<td>Every day</td>
+<td>Not a setting. A saved weekdays-only choice is ignored.</td>
 </tr>
 <tr>
 <td>**Time format, week start, day start**</td>
-<td>12h/24h · Mon/Sun · default 4:00 AM</td>
-<td></td>
+<td>12-hour clock · week starts on the first-run weekday · midnight</td>
+<td>The clock is always 12-hour. A saved 24-hour choice loads as 12-hour. Week start and day start are not settings.</td>
 </tr>
 </table>
 ### 6. Visual style guide
@@ -619,7 +619,7 @@ WCAG 2.2 AA requires **4.5:1** for normal text and **3:1** for large text (≥18
 </tr>
 </table>
 **Shared colours:** Done/success #15803D (5.0:1 on white; use #5DFFB0 in Night). **Difficulty tags** (white text on the tag): Easy #15803D (5.0:1) · Medium #B45309 (5.0:1) · Hard #B91C1C (6.5:1). Always pair colour with the word (Easy/Medium/Hard), never colour alone.
-**Accent swatches:** #6D4AFF, #00C2A8, #FF4D1A, #1A8CFF, #FF2D87, #38BDF8, #7C3AED, #00B4D8. Pair each with white or #12131A, whichever clears 4.5:1. **Text and background rows** are the 20 swatches in `TEXT_COLOURS` and `BG_COLOURS`, then a native colour input. A v1 settings row (schemaVersion 1, no text or background field) loads as schemaVersion 2 with those fields empty, so the saved theme id and accent stay.
+**Accent swatches:** #6D4AFF, #00C2A8, #FF4D1A, #1A8CFF, #FF2D87, #38BDF8, #7C3AED, #00B4D8. Pair each with white or #12131A, whichever clears 4.5:1. **Text and background rows** are the 20 swatches in `TEXT_COLOURS` and `BG_COLOURS`, then a colour wheel. The pet uses the same wheel for Eyes, Main, and Second. Natural on a row clears that slot. A single saved pet tint becomes the Main colour. A v1 settings row (schemaVersion 1, no text or background field) loads as schemaVersion 2 with those fields empty, so the saved theme id and accent stay. Saved font, layout format, and 24-hour clock values load as Nunito, list, and 12-hour.
 #### 6.2 Typography (all free, open-licence fonts from Google Fonts)
 <table header-row="true">
 <tr>
@@ -732,7 +732,7 @@ Short, warm, peer-to-peer. No exclamation-mark spam, no guilt, no jargon.
 	- `Override {taskId, date, skipped?|moved-to?|edited-fields}` (for "just this day" changes to repeating items)
 	- `Completion {taskId, date, points, completedAt}`
 	- `Stats {totalPoints, level, streak, bestStreak, restDayUsedWeekOf, lastCountedDate}` (can be recomputed from Completions)
-	- `Settings {title, theme, accent, font, format, celebrations, sound, dayStart, weekStart, clock24, streakMode, dailyGoal, reminderDefaults, showNamesInPush, morningCheckin}`
+	- `Settings {title, theme, accent, font, format, celebrations, sound, clock24, installedOn, reminderDefaults, showNamesInPush, morningCheckin, categories}`
 	- `Background {blob, scrim: auto|dark|light, blur}`
 - **Backup/restore:** "Back up now" downloads `student-planner-backup-YYYY-MM-DD.json`, with a toggle to include the photo as base64. "Restore" asks for confirmation, validates the file and replaces the data. Nudge (Today, dismissible) if there's been no backup for 14 days and at least 10 tasks exist.
 - **Push server data** (only if the user turns on closed-app reminders): subscription endpoint, reminder fire times and text. Delete after sending, and delete everything on opt-out. Say this in plain words in the privacy note.
@@ -813,14 +813,13 @@ Short, warm, peer-to-peer. No exclamation-mark spam, no guilt, no jargon.
 - [ ] Three classes set to repeat Mon/Wed/Fri appear on those days only.
 - [ ] Editing a repeating item asks "Just today / All", and both options behave correctly.
 - [ ] Move to tomorrow, Delete and Undo (5 s) work.
-- [ ] List and Timeline formats show the same tasks. Timeline shows a "now" line.
+- [ ] The day is a list. Saved font, layout, and 24-hour clock choices load as Nunito, list, and 12-hour.
 - [ ] Works at 360 px wide, and on a laptop at 1440 px (content centred, ≤560 px).
 **Rewards**
 - [ ] Completing Easy / Medium / Hard adds 5 / 10 / 20 points. Undo removes exactly those points.
 - [ ] Level thresholds match the table in 3.2. The level-up badge shows once when a threshold is crossed.
 - [ ] The day-complete card shows once per day, only when today had at least 2 tasks and all are done, and adds +10.
-- [ ] Streak increments when at least 1 task is done before 4:00 AM rollover. 1 missed day per week uses the rest day. A 2nd miss resets to 0 quietly. Best streak is kept.
-- [ ] Weekdays-only mode ignores Saturday and Sunday.
+- [ ] Streak increments when at least 1 task is done before local midnight. 1 missed day per week uses the rest day. A 2nd miss resets to 0 quietly. Best streak is kept. The week starts on the weekday of the stored first-run date.
 - [ ] No screen shows a points deduction, red overdue styling or guilt copy.
 - [ ] With OS reduced motion on, no particles or movement play; the fade alternative shows instead.
 - [ ] Celebrations Subtle/Off settings work.
@@ -832,10 +831,10 @@ Short, warm, peer-to-peer. No exclamation-mark spam, no guilt, no jargon.
 - [ ] Changing a task's time or deleting it updates or removes its scheduled push.
 - [ ] Customize → Reminders shows the correct status line in each state (on / off / blocked / needs install / open-only).
 **Customization**
-- [ ] All 6 themes and 4 fonts apply instantly and persist after restart.
+- [ ] All 6 themes apply instantly and persist after restart. The typeface stays Nunito.
 - [ ] Photo upload → crop → save works for a 12 MP phone photo. The stored image is ≤1600 px on the long edge.
 - [ ] With a pure white photo and a pure black photo, all text on the header and cards still passes 4.5:1 (check with a contrast tool).
-- [ ] Categories can be renamed, re-coloured and added (max 8).
+- [ ] New planners start with one category. Categories can be renamed, given a colour, added, and deleted. A saved category list is kept.
 **Data**
 - [ ] All data survives closing and reopening the app and a device restart.
 - [ ] `navigator.storage.persist()` is requested and its result stored.
