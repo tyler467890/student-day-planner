@@ -1104,6 +1104,71 @@ function renderAnimalGrid() {
     }, label)));
 }
 
+const PET_COLOR_SLOTS = [
+  ['eyes', 'Eyes'],
+  ['primary', 'Main'],
+  ['secondary', 'Second'],
+];
+
+/**
+ * One pet colour slot. Preset swatches sit beside this. The rainbow chip opens
+ * the same colour wheel used for theme colours, and calls onColor(hex, commit).
+ */
+function renderPetColorPicker(slot, label, currentHex, onColor) {
+  const id = `pet-${slot}`;
+  const shown = currentHex || '#7EC8FF';
+  const presets = PET_COLOURS.map((swatch) => swatch.hex).filter(Boolean);
+  const chip = colourChip({
+    id,
+    label: `Custom ${label} colour`,
+    shown,
+    selected: Boolean(currentHex && !presets.includes(currentHex)),
+  });
+  const wheel = openWheel === id
+    ? colourWheelPanel(shown, (hex, commit) => onColor(hex, commit))
+    : null;
+  return { chip, wheel };
+}
+
+function renderPetColorRows(pet) {
+  const colors = pet.colors || { eyes: null, primary: null, secondary: null };
+  const rows = h('div', { class: 'pet-color-rows' });
+  for (const [slot, label] of PET_COLOR_SLOTS) {
+    const value = colors[slot] || null;
+    const swatches = h('div', { class: 'pet-colours', role: 'group', 'aria-label': `${label} colour` });
+    for (const swatch of PET_COLOURS) {
+      const selected = swatch.hex ? value === swatch.hex : !value;
+      swatches.append(h('button', {
+        type: 'button',
+        'aria-label': `${label} ${swatch.name}`,
+        'aria-pressed': selected ? 'true' : 'false',
+        style: swatch.hex ? `background:${swatch.hex}` : 'background:linear-gradient(135deg,#fff,#d9d3ea)',
+        onclick: () => {
+          openWheel = null;
+          updatePet({ colors: { ...colors, [slot]: swatch.hex } });
+        },
+      }));
+    }
+    const picker = renderPetColorPicker(slot, label, value, (hex, commit) => {
+      const next = { ...(S.settings.pet?.colors || colors), [slot]: hex };
+      if (!commit) {
+        S.settings.pet = { ...(S.settings.pet || model.defaultPet()), colors: next };
+        applyPetConfig();
+        const dot = document.querySelector(`[data-pet-slot="${slot}"] .color-chip-dot`);
+        if (dot) dot.style.background = hex;
+        return;
+      }
+      updatePet({ colors: next });
+    });
+    swatches.append(picker.chip);
+    rows.append(h('div', { class: 'pet-color-row', dataset: { petSlot: slot } },
+      h('span', { class: 'pet-color-label', text: label }),
+      swatches));
+    if (picker.wheel) rows.append(picker.wheel);
+  }
+  return rows;
+}
+
 function renderPetControls() {
   const pet = S.settings.pet || model.defaultPet();
   const wrap = h('div', { class: 'pet-controls' });
@@ -1126,39 +1191,7 @@ function renderPetControls() {
         },
       }, choice.label);
     })));
-  wrap.append(h('p', { class: 'field-label', text: 'Colour' }));
-  const petPresets = PET_COLOURS.map((swatch) => swatch.hex).filter(Boolean);
-  const petHex = normalizeHex(pet.color);
-  const colours = h('div', { class: 'pet-colours', role: 'group', 'aria-label': 'Pet colour' });
-  for (const swatch of PET_COLOURS) {
-    const selected = swatch.hex ? pet.color === swatch.hex : !pet.color;
-    colours.append(h('button', {
-      type: 'button',
-      'aria-label': swatch.hex ? `Pet colour ${swatch.name}` : 'Natural pet colour',
-      'aria-pressed': selected ? 'true' : 'false',
-      dataset: swatch.hex ? { hex: swatch.hex } : { natural: '1' },
-      style: swatch.hex ? `background:${swatch.hex}` : 'background:linear-gradient(135deg,#fff,#d9d3ea)',
-      onclick: () => {
-        openWheel = null;
-        updatePet({ color: swatch.hex });
-      },
-    }));
-  }
-  colours.append(colourChip({
-    id: 'pet',
-    label: 'Custom pet colour',
-    shown: petHex || '#7EC8FF',
-    selected: Boolean(petHex && !petPresets.includes(petHex)),
-  }));
-  wrap.append(colours);
-  if (openWheel === 'pet') {
-    wrap.append(colourWheelPanel(petHex || '#7EC8FF', (hex, commit) => {
-      S.settings.pet = { ...(S.settings.pet || model.defaultPet()), color: hex };
-      applyPetConfig();
-      syncPetColour(hex);
-      if (commit) persistAll();
-    }));
-  }
+  wrap.append(renderPetColorRows(pet));
   wrap.append(h('p', { class: 'field-label', text: 'Face' }));
   wrap.append(h('div', { class: 'chips' },
     ['round', 'happy', 'sparkly'].map((eyes) => h('button', {
@@ -2131,23 +2164,6 @@ function closeSheet() {
   document.getElementById('edit-sheet')?.remove();
   sheetOpen = false;
   document.body.classList.remove('sheet-open');
-}
-
-function syncPetColour(hex) {
-  const group = document.querySelector('.pet-colours');
-  if (!group) return;
-  const presets = PET_COLOURS.map((swatch) => swatch.hex).filter(Boolean);
-  const custom = Boolean(hex && !presets.includes(hex));
-  group.querySelectorAll('button').forEach((btn) => {
-    if (btn.classList.contains('color-chip')) {
-      btn.classList.toggle('is-selected', custom);
-      return;
-    }
-    const on = hex ? btn.dataset.hex === hex : btn.dataset.natural === '1';
-    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-  });
-  const dot = group.querySelector('.color-chip-dot');
-  if (dot) dot.style.background = hex || '#7EC8FF';
 }
 
 function syncThemeColour(kind, hex, presets) {

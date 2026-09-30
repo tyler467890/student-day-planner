@@ -811,27 +811,31 @@ body.sheet-open .fab { visibility: hidden; }
 .pet-colours button[aria-pressed="true"] {
   border-color: var(--accent);
 }
+.pet-color-rows { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 12px; }
+.pet-color-row { display: flex; align-items: center; gap: 8px; }
+.pet-color-label { width: 3.4rem; flex: 0 0 auto; font-size: 14px; font-weight: 700; }
 .pet-colours {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
-  margin: 8px 0 12px;
+  margin: 0;
 }
 .pet-colours button {
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   border-radius: 999px;
   border: 2px solid transparent;
   padding: 0;
 }
 .pet-colours button.color-chip {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   padding: 3px;
   border: 0;
   background: conic-gradient(#ff4d6d, #ffd60a, #7dffb3, #4cc9f0, #6d4aff, #ff2d87, #ff4d6d);
 }
+.pet-color-rows .wheel-panel { margin-top: 4px; }
 .pet-sliders { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .pet-sliders label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); }
 .pet-sliders input { width: 100%; }

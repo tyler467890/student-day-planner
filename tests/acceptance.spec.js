@@ -848,7 +848,9 @@ test('screenshots', async ({ browser }) => {
   await expect(page.getByRole('button', { name: 'Stretch', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Dance', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Hat', exact: true }).click();
-  await page.getByRole('button', { name: 'Pet colour Sunny yellow' }).click();
+  await page.locator('.pet-color-rows').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `${ART}/pet-colour-rows-phone.png` });
+  await page.getByRole('button', { name: 'Main Sunny yellow' }).click();
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${ART}/pet-customizer.png` });
   await page.getByRole('button', { name: 'Back', exact: true }).click();
@@ -959,7 +961,7 @@ test('text and background colours, contrast fix, and v1 settings', async ({ page
   expect(readable.ratio).toBeGreaterThanOrEqual(4.5);
 
   await page.getByRole('button', { name: 'Change pet' }).click();
-  await page.getByRole('button', { name: 'Custom pet colour' }).click();
+  await page.getByRole('button', { name: 'Custom Main colour' }).click();
   const petWheel = page.getByLabel('Colour wheel');
   await expect(petWheel).toBeVisible();
   await petWheel.scrollIntoViewIfNeeded();
@@ -968,7 +970,7 @@ test('text and background colours, contrast fix, and v1 settings', async ({ page
   await page.mouse.down();
   await page.mouse.move(petBox.x + petBox.width / 2, petBox.y + 12, { steps: 6 });
   await page.mouse.up();
-  const petColour = await page.evaluate(() => window.__dayli.getState().settings.pet.color);
+  const petColour = await page.evaluate(() => window.__dayli.getState().settings.pet.colors.primary);
   expect(petColour).toMatch(/^#[0-9A-F]{6}$/);
   const petHsv = await page.evaluate((hex) => window.__dayli.model.hexToHsv(hex), petColour);
   expect(petHsv.s).toBeGreaterThan(70);

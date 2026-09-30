@@ -619,7 +619,7 @@ WCAG 2.2 AA requires **4.5:1** for normal text and **3:1** for large text (≥18
 </tr>
 </table>
 **Shared colours:** Done/success #15803D (5.0:1 on white; use #5DFFB0 in Night). **Difficulty tags** (white text on the tag): Easy #15803D (5.0:1) · Medium #B45309 (5.0:1) · Hard #B91C1C (6.5:1). Always pair colour with the word (Easy/Medium/Hard), never colour alone.
-**Accent swatches:** #6D4AFF, #00C2A8, #FF4D1A, #1A8CFF, #FF2D87, #38BDF8, #7C3AED, #00B4D8. Pair each with white or #12131A, whichever clears 4.5:1. **Text and background rows** are the 20 swatches in `TEXT_COLOURS` and `BG_COLOURS`, then a colour wheel (same wheel for a custom pet colour). A v1 settings row (schemaVersion 1, no text or background field) loads as schemaVersion 2 with those fields empty, so the saved theme id and accent stay. Saved font, layout format, and 24-hour clock values load as Nunito, list, and 12-hour.
+**Accent swatches:** #6D4AFF, #00C2A8, #FF4D1A, #1A8CFF, #FF2D87, #38BDF8, #7C3AED, #00B4D8. Pair each with white or #12131A, whichever clears 4.5:1. **Text and background rows** are the 20 swatches in `TEXT_COLOURS` and `BG_COLOURS`, then a colour wheel. The pet uses the same wheel for Eyes, Main, and Second. Natural on a row clears that slot. A single saved pet tint becomes the Main colour. A v1 settings row (schemaVersion 1, no text or background field) loads as schemaVersion 2 with those fields empty, so the saved theme id and accent stay. Saved font, layout format, and 24-hour clock values load as Nunito, list, and 12-hour.
 #### 6.2 Typography (all free, open-licence fonts from Google Fonts)
 <table header-row="true">
 <tr>
