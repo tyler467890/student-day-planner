@@ -848,8 +848,7 @@ test('screenshots', async ({ browser }) => {
   await expect(page.getByRole('button', { name: 'Stretch', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Dance', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Hat', exact: true }).click();
-  await page.locator('.pet-color-rows').scrollIntoViewIfNeeded();
-  await page.screenshot({ path: `${ART}/pet-colour-rows-phone.png` });
+  await page.locator('.pet-color-rows').screenshot({ path: `${ART}/pet-colour-rows-phone.png` });
   await page.getByRole('button', { name: 'Main Sunny yellow' }).click();
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${ART}/pet-customizer.png` });
@@ -1119,4 +1118,14 @@ test('today and simplified settings screenshots', async ({ page }) => {
   await expect(page.getByLabel('Category name Study')).toBeVisible();
   const saved = await page.evaluate(() => window.__dayli.getState().settings.categories.map((c) => c.name));
   expect(saved).toEqual(['My goals', 'Study']);
+
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await page.getByRole('button', { name: 'Your pet' }).click();
+  await expect(page.getByRole('heading', { name: 'Your pet' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Eyes colour' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Main colour' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Second colour' })).toBeVisible();
+  await page.locator('.pet-color-rows').screenshot({ path: `${ART}/pet-colour-rows-phone.png` });
+  await page.getByRole('button', { name: 'Second Natural' }).click();
+  await expect(page.getByRole('button', { name: 'Second Natural' })).toHaveAttribute('aria-pressed', 'true');
 });
