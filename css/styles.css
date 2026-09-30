@@ -717,6 +717,44 @@ body.sheet-open .fab { visibility: hidden; }
 .pet-sliders label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); }
 .pet-sliders input { width: 100%; }
 
+.week-links { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; }
+.week-text {
+  width: 100%;
+  min-height: 8.5rem;
+  border-radius: 12px;
+  border: 0;
+  background: color-mix(in srgb, var(--bg) 55%, var(--surface));
+  padding: 12px;
+  resize: vertical;
+  line-height: 24px;
+}
+.btn.block { width: 100%; margin-top: 12px; }
+.proposal, .unread, .overlap-note {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--bg) 45%, var(--surface));
+}
+.proposal h3 { margin: 0 0 4px; font-size: 17px; line-height: 24px; }
+.proposal p, .unread p, .overlap-note p { margin: 0; }
+.overlap-note {
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+}
+.overlap-note p + p { margin-top: 8px; }
+.unread { background: color-mix(in srgb, var(--muted) 14%, var(--surface)); }
+.repeat-list { display: flex; flex-direction: column; }
+.day-chips { flex-wrap: nowrap; }
+.day-chips .chip {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#repeat-block[inert] { opacity: 0.55; }
+.field-label .fine { font-weight: 600; }
+
 @media (min-width: 900px) {
   .pet-hero {
     width: min(100%, 26rem);

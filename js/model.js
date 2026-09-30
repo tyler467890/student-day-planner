@@ -387,9 +387,11 @@ export function occursOn(task, ymd) {
   if (!task) return false;
   if (!task.repeat || task.repeat === 'none') return task.date === ymd;
   if (task.date && ymd < task.date) return false;
+  if (task.until && /^\d{4}-\d{2}-\d{2}$/.test(task.until) && ymd > task.until) return false;
   const dow = dayOfWeek(ymd);
   if (task.repeat === 'daily') return true;
   if (task.repeat === 'weekdays') return dow !== 0 && dow !== 6;
+  if (task.repeat === 'weekends') return dow === 0 || dow === 6;
   if (task.repeat === 'days') return Array.isArray(task.days) && task.days.includes(dow);
   return false;
 }
@@ -411,6 +413,7 @@ function toInstance(task, ymd, edits, movedFrom) {
     note: merged.note || '',
     repeat: task.repeat || 'none',
     days: task.days ? [...task.days] : [],
+    until: task.until || null,
     repeating: Boolean(task.repeat && task.repeat !== 'none'),
     moved: Boolean(movedFrom),
   };
@@ -798,6 +801,81 @@ export function migrateSettings(saved) {
   merged.bgColor = normalizeHex(saved.bgColor);
   if (!THEMES[merged.theme]) merged.theme = base.theme;
   return merged;
+}
+
+/** Weekday numbers for a repeat preset. Custom repeats use `days` as stored. */
+export function daysForRepeat(repeat, days) {
+  if (repeat === 'daily') return [1, 2, 3, 4, 5, 6, 0];
+  if (repeat === 'weekdays') return [1, 2, 3, 4, 5];
+  if (repeat === 'weekends') return [6, 0];
+  if (repeat === 'days') return [...(days || [])].map(Number).filter((day) => day >= 0 && day <= 6);
+  return [];
+}
+
+/** Preset that matches a set of weekdays. Anything else stays a custom list. */
+export function repeatFromDays(days) {
+  const set = new Set((days || []).map(Number));
+  if (!set.size) return 'none';
+  if (set.size === 7) return 'daily';
+  if (set.size === 5 && [1, 2, 3, 4, 5].every((day) => set.has(day))) return 'weekdays';
+  if (set.size === 2 && set.has(0) && set.has(6)) return 'weekends';
+  return 'days';
+}
+
+export function addMinutesToTime(hm, minutes) {
+  if (!hm || minutes == null || !Number.isFinite(Number(minutes))) return null;
+  const total = hmToMinutes(hm) + Number(minutes);
+  const day = 24 * 60;
+  const wrapped = ((total % day) + day) % day;
+  return `${pad(Math.floor(wrapped / 60))}:${pad(wrapped % 60)}`;
+}
+
+/** Minutes from start to end. An earlier end is the next morning, up to 18 hours. */
+export function minutesBetween(start, end) {
+  if (!start || !end) return null;
+  const a = hmToMinutes(start);
+  const b = hmToMinutes(end);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  let diff = b - a;
+  if (diff <= 0) diff += 24 * 60;
+  if (diff <= 0 || diff > 18 * 60) return null;
+  return diff;
+}
+
+export function formatTimeRange(start, durationMin, clock24) {
+  if (!start) return '';
+  const left = formatTime(start, clock24);
+  const mins = Number(durationMin);
+  if (!Number.isFinite(mins) || mins <= 0) return left;
+  const end = addMinutesToTime(start, mins);
+  if (!end || end === start) return left;
+  return `${left} – ${formatTime(end, clock24)}`;
+}
+
+const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
+/** Short day line: Mon–Fri, Tue & Thu, Every day. */
+export function formatDaySelection(days) {
+  const set = new Set((days || []).map(Number));
+  if (set.size === 7) return 'Every day';
+  const seq = DAY_ORDER.filter((day) => set.has(day));
+  if (!seq.length) return '';
+  const groups = [];
+  let i = 0;
+  while (i < seq.length) {
+    let j = i;
+    while (j + 1 < seq.length && DAY_ORDER.indexOf(seq[j + 1]) === DAY_ORDER.indexOf(seq[j]) + 1) j += 1;
+    const count = j - i + 1;
+    if (count >= 3) groups.push(`${DAY_SHORT[seq[i]]}–${DAY_SHORT[seq[j]]}`);
+    else if (count === 2) groups.push(`${DAY_SHORT[seq[i]]} & ${DAY_SHORT[seq[j]]}`);
+    else groups.push(DAY_SHORT[seq[i]]);
+    i = j + 1;
+  }
+  if (groups.length === 2 && groups.every((group) => !group.includes('–') && !group.includes('&'))) {
+    return `${groups[0]} & ${groups[1]}`;
+  }
+  return groups.join(', ');
 }
 
 export function burstCount(difficulty) {

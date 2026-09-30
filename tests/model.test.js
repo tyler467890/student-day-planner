@@ -5,6 +5,7 @@ import {
   instancesOn, upcomingReminders, reminderText, headerContrast, cardContrast,
   THEMES, ACCENTS, TEXT_COLOURS, BG_COLOURS, contrastRatio, onAccent, POINTS, defaultSettings,
   paintColors, fixTextColor,   migrateSettings, hexToRgb, relativeLuminance, normalizePet,
+  occursOn, repeatFromDays, formatDaySelection, formatTimeRange, minutesBetween,
 } from '../js/model.js';
 import { pickCelebration, signatureLabel } from '../js/celebrations.js';
 
@@ -310,6 +311,73 @@ test('retired pets migrate onto the cube lineup', () => {
   assert.equal(normalizePet({ animal: 'tiger' }).animal, 'tiger');
   assert.equal(normalizePet({ animal: 'chick' }).animal, 'chick');
   assert.equal(normalizePet({ animal: 'nope' }).animal, 'penguin');
+});
+
+test('one-off goals stay on their own day', () => {
+  const task = {
+    id: 'once', title: 'Essay', categoryId: 'task', difficulty: 'easy',
+    date: '2026-09-22', repeat: 'none', time: '16:00',
+  };
+  assert.equal(instancesOn('2026-09-22', [task], []).length, 1);
+  assert.equal(instancesOn('2026-09-23', [task], []).length, 0);
+  assert.equal(occursOn({ ...task, repeat: undefined }, '2026-09-22'), true);
+  assert.equal(occursOn({ ...task, repeat: undefined }, '2026-09-23'), false);
+});
+
+test('weekends, weekdays, and an end date', () => {
+  const weekends = {
+    id: 'sat', title: 'Soccer', repeat: 'weekends', date: '2026-09-21', time: '10:00',
+  };
+  assert.equal(instancesOn('2026-09-26', [weekends], []).length, 1);
+  assert.equal(instancesOn('2026-09-27', [weekends], []).length, 1);
+  assert.equal(instancesOn('2026-09-25', [weekends], []).length, 0);
+
+  const work = {
+    id: 'work', title: 'Work', repeat: 'weekdays', date: '2026-09-21', time: '08:00',
+    durationMin: 540, until: '2026-09-23', remindLeadMin: 10,
+  };
+  assert.equal(instancesOn('2026-09-21', [work], []).length, 1);
+  assert.equal(instancesOn('2026-09-23', [work], []).length, 1);
+  assert.equal(instancesOn('2026-09-24', [work], []).length, 0);
+  assert.equal(instancesOn('2026-09-26', [work], []).length, 0);
+});
+
+test('finishing one occurrence leaves the next one open', () => {
+  const task = {
+    id: 'gym', title: 'Gym', repeat: 'weekdays', date: '2026-09-21', time: '08:00',
+    durationMin: 120, difficulty: 'easy',
+  };
+  const monday = instancesOn('2026-09-21', [task], [])[0];
+  const tuesday = instancesOn('2026-09-22', [task], [])[0];
+  assert.notEqual(monday.instanceId, tuesday.instanceId);
+  const completions = [{ instanceId: monday.instanceId, date: monday.date, points: 5 }];
+  assert.equal(completions.some((item) => item.instanceId === tuesday.instanceId), false);
+  assert.equal(formatTimeRange('08:00', 120, false), '8:00 AM – 10:00 AM');
+  assert.equal(formatDaySelection([1, 2, 3, 4, 5]), 'Mon–Fri');
+  assert.equal(formatDaySelection([2, 4]), 'Tue & Thu');
+  assert.equal(formatDaySelection([3, 5]), 'Wed & Fri');
+  assert.equal(repeatFromDays([1, 2, 3, 4, 5]), 'weekdays');
+  assert.equal(repeatFromDays([6, 0]), 'weekends');
+  assert.equal(repeatFromDays([1, 3, 5]), 'days');
+  assert.equal(minutesBetween('08:00', '17:00'), 540);
+});
+
+test('a repeating goal reminds on each matching day', () => {
+  const settings = defaultSettings();
+  const task = {
+    id: 'work', title: 'Work', repeat: 'weekdays', date: '2026-09-21',
+    time: '08:00', durationMin: 540, remindLeadMin: 10, categoryId: 'task', difficulty: 'easy',
+  };
+  const now = new Date(2026, 8, 21, 6, 0, 0);
+  const list = upcomingReminders({
+    tasks: [task], overrides: [], settings, now, showNames: true,
+  });
+  const days = list.filter((item) => item.kind === 'task').map((item) => item.date);
+  assert.ok(days.includes('2026-09-21'));
+  assert.ok(days.includes('2026-09-22'));
+  assert.ok(days.includes('2026-09-25'));
+  assert.equal(days.includes('2026-09-26'), false);
+  assert.ok(list.every((item) => item.title === 'Work' || item.kind !== 'task'));
 });
 
 test('photo dimming still counts toward text contrast', () => {

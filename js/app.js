@@ -3,6 +3,7 @@
  */
 
 import { PRODUCT_NAME, APP_VERSION } from './config.js';
+import { parseWeekDescription, findOverlaps } from './week-parser.js';
 import * as model from './model.js';
 import * as db from './db.js';
 import * as push from './push.js';
@@ -585,10 +586,12 @@ function blankDraft(date) {
     difficulty: 'easy',
     difficultyTouched: false,
     time: '',
+    endTime: '',
     duration: '',
     durationTouched: false,
     repeat: 'none',
     days: [dayOfWeek(date)],
+    until: '',
     remind: String(S.settings.defaultLead ?? 10),
     note: '',
     scope: 'day',
@@ -602,10 +605,12 @@ function draftFromInstance(inst) {
     difficulty: inst.difficulty,
     difficultyTouched: true,
     time: inst.time || '',
+    endTime: inst.time && inst.durationMin ? model.addMinutesToTime(inst.time, inst.durationMin) || '' : '',
     duration: inst.durationMin ?? '',
     durationTouched: true,
     repeat: inst.repeat || 'none',
-    days: inst.days?.length ? [...inst.days] : [dayOfWeek(inst.date)],
+    days: inst.days?.length ? [...inst.days] : model.daysForRepeat(inst.repeat, []),
+    until: inst.until || '',
     remind: inst.remindLeadMin == null ? 'off' : String(inst.remindLeadMin),
     note: inst.note || '',
     scope: 'day',
@@ -616,8 +621,13 @@ function buildTask(draft, date) {
   const title = draft.title.trim();
   const time = draft.time || null;
   let duration = draft.duration === '' || draft.duration == null ? null : Number(draft.duration);
+  if (time && draft.endTime) {
+    const diff = model.minutesBetween(time, draft.endTime);
+    if (diff) duration = diff;
+  }
   if (draft.categoryId === 'class' && time && duration == null && !draft.durationTouched) duration = 50;
   const remindLeadMin = time && draft.remind !== 'off' ? Number(draft.remind) : null;
+  const repeating = draft.repeat && draft.repeat !== 'none';
   return {
     title,
     categoryId: draft.categoryId,
@@ -626,8 +636,9 @@ function buildTask(draft, date) {
     durationMin: duration,
     remindLeadMin,
     note: draft.note.trim(),
-    repeat: draft.repeat,
+    repeat: repeating ? draft.repeat : 'none',
     days: draft.repeat === 'days' ? [...draft.days] : [],
+    until: repeating && draft.until ? draft.until : null,
     date,
   };
 }
@@ -669,8 +680,10 @@ async function saveDraft(draft, existing) {
         note: fields.note,
         repeat: fields.repeat,
         days: fields.days,
+        until: fields.until,
         updatedAt: currentDate().toISOString(),
       });
+      if (fields.repeat === 'none') task.date = existing.date;
       const ov = S.overrides.find((o) => o.taskId === task.id && o.date === existing.originDate);
       if (ov?.edits) ov.edits = null;
     } else {
@@ -1477,6 +1490,15 @@ function renderToday() {
 
   if (shouldNudgeBackup() && viewingToday) shell.append(renderBackupNudge());
 
+  const repeatingCount = S.tasks.filter((task) => task.repeat && task.repeat !== 'none').length;
+  shell.append(h('div', { class: 'week-links' },
+    h('button', { type: 'button', class: 'text-btn', onclick: openWeekSheet }, 'Describe my week'),
+    h('button', {
+      type: 'button',
+      class: 'text-btn',
+      onclick: openRepeatingSheet,
+    }, repeatingCount ? `Repeating (${repeatingCount})` : 'Repeating')));
+
   const list = h('div', { class: 'day-list', id: 'day-list' });
   if (!instances.length) {
     const evening = viewingToday && isEvening();
@@ -1566,7 +1588,7 @@ function renderCard(inst) {
   },
   h('span', { class: 'card-title', text: inst.title }),
   h('span', { class: 'card-meta' },
-    inst.time ? h('span', { text: formatTime(inst.time, S.settings.clock24) }) : null,
+    inst.time ? h('span', { text: model.formatTimeRange(inst.time, inst.durationMin, S.settings.clock24) }) : null,
     h('span', { text: `${cat?.emoji || ''} ${cat?.name || ''}`.trim() }),
     inst.note ? h('span', { text: inst.note }) : null,
     earlier ? h('span', { class: 'earlier', text: 'earlier' }) : null));
@@ -1621,7 +1643,7 @@ function renderDone(done) {
         h('span', { class: 'dot', style: `background:${cat?.color || '#6D4AFF'}` }),
         h('div', { class: 'card-main static' },
           h('span', { class: 'card-title', text: inst.title }),
-          h('span', { class: 'card-meta', text: inst.time ? formatTime(inst.time, S.settings.clock24) : 'Anytime' })),
+          h('span', { class: 'card-meta', text: inst.time ? model.formatTimeRange(inst.time, inst.durationMin, S.settings.clock24) : 'Anytime' })),
         h('span', { class: `tag tag-${inst.difficulty}`, text: labelDifficulty(inst.difficulty) }));
     })));
   }
@@ -1839,11 +1861,12 @@ function closeProgress() {
   overlayEl().querySelector('.sheet-wrap')?.remove();
 }
 
-function openSheet(inst) {
+function openSheet(inst, options = {}) {
   sheetOpen = true;
   document.body.classList.add('sheet-open');
   const date = inst?.date || viewedYMD();
   const draft = inst ? draftFromInstance(inst) : blankDraft(date);
+  if (options.scope === 'all' || options.scope === 'day') draft.scope = options.scope;
   const wrap = h('div', { class: 'sheet-wrap', id: 'edit-sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': inst ? 'Edit' : 'Add' });
   const backdrop = h('button', { type: 'button', class: 'sheet-backdrop', 'aria-label': 'Cancel', onclick: closeSheet });
   const sheet = h('div', { class: 'sheet' });
@@ -1873,9 +1896,20 @@ function openSheet(inst) {
 
   const catRow = h('div', { class: 'chips', role: 'radiogroup', 'aria-label': 'Type' });
   const diffRow = h('div', { class: 'chips', role: 'radiogroup', 'aria-label': 'How hard?' });
+  const repeatBlock = h('div', { id: 'repeat-block' });
   const repeatRow = h('div', { class: 'chips', role: 'radiogroup', 'aria-label': 'Repeat' });
-  const dayRow = h('div', { class: 'chips days', role: 'group', 'aria-label': 'Days' });
+  const dayRow = h('div', { class: 'chips days day-chips', role: 'group', 'aria-label': 'Days' });
   const time = h('input', { type: 'time', id: 'field-time', class: 'text-input', 'aria-label': 'Time', value: draft.time });
+  const endTime = h('input', {
+    type: 'time', id: 'field-end', class: 'text-input', 'aria-label': 'End time', value: draft.endTime || '',
+  });
+  const untilInput = h('input', {
+    type: 'date', id: 'field-until', class: 'text-input', 'aria-label': 'Repeat until', value: draft.until || '',
+  });
+  const repeatNote = h('p', { class: 'fine', text: 'Finishing it today only finishes today.' });
+  const untilRow = h('div', { id: 'until-row' },
+    h('label', { class: 'field-label', for: 'field-until' }, 'Until ', h('span', { class: 'fine', text: 'optional' })),
+    untilInput);
   const duration = h('input', {
     type: 'number', id: 'field-duration', class: 'text-input', min: '0', max: '600',
     'aria-label': 'Duration in minutes', placeholder: draft.categoryId === 'class' ? '50' : 'Optional',
@@ -1904,6 +1938,7 @@ function openSheet(inst) {
           if (!draft.difficultyTouched) draft.difficulty = defaultDifficulty(cat.id);
           if (cat.id === 'class' && draft.repeat === 'none') draft.repeat = 'days';
           if (cat.id === 'class' && draft.time && !draft.durationTouched && draft.duration === '') draft.duration = 50;
+          syncEndFromDuration();
           paintCats();
           paintDiff();
           paintRepeat();
@@ -1923,28 +1958,59 @@ function openSheet(inst) {
       onclick: () => { draft.difficulty = d; draft.difficultyTouched = true; paintDiff(); },
     }, h('span', { text: labelDifficulty(d) }), h('span', { class: 'chip-sub', text: `+${POINTS[d]}` }))));
   }
+  function selectedDays() {
+    if (draft.repeat === 'none') return [];
+    if (draft.repeat === 'days') return draft.days;
+    return model.daysForRepeat(draft.repeat, draft.days);
+  }
   function paintRepeat() {
-    const options = [['none', 'Never'], ['daily', 'Every day'], ['weekdays', 'Weekdays'], ['days', 'Pick days']];
+    const options = [
+      ['none', 'Just once'],
+      ['daily', 'Every day'],
+      ['weekdays', 'Weekdays'],
+      ['weekends', 'Weekends'],
+      ['days', 'Pick days'],
+    ];
+    const chosen = selectedDays();
     repeatRow.replaceChildren(...options.map(([id, label]) => h('button', {
       type: 'button',
       class: `chip${draft.repeat === id ? ' is-selected' : ''}`,
       role: 'radio',
       'aria-checked': draft.repeat === id ? 'true' : 'false',
-      onclick: () => { draft.repeat = id; paintRepeat(); },
+      onclick: () => {
+        draft.repeat = id;
+        if (id === 'daily' || id === 'weekdays' || id === 'weekends') draft.days = model.daysForRepeat(id, []);
+        if (id === 'days' && !draft.days.length) draft.days = [dayOfWeek(date)];
+        paintRepeat();
+      },
     }, label)));
-    dayRow.hidden = draft.repeat !== 'days';
+    dayRow.hidden = draft.repeat === 'none';
+    untilRow.hidden = draft.repeat === 'none';
+    repeatNote.hidden = draft.repeat === 'none';
     dayRow.replaceChildren(...WEEKDAY_LABELS.map((day) => h('button', {
       type: 'button',
-      class: `chip${draft.days.includes(day.dow) ? ' is-selected' : ''}`,
-      'aria-pressed': draft.days.includes(day.dow) ? 'true' : 'false',
+      class: `chip${chosen.includes(day.dow) ? ' is-selected' : ''}`,
+      'aria-pressed': chosen.includes(day.dow) ? 'true' : 'false',
       'aria-label': day.name,
       onclick: () => {
-        if (draft.days.includes(day.dow)) draft.days = draft.days.filter((d) => d !== day.dow);
-        else draft.days = [...draft.days, day.dow];
-        if (!draft.days.length) draft.days = [day.dow];
+        let days = selectedDays();
+        if (days.includes(day.dow)) days = days.filter((d) => d !== day.dow);
+        else days = [...days, day.dow];
+        if (!days.length) days = [day.dow];
+        draft.days = days;
+        draft.repeat = model.repeatFromDays(days);
         paintRepeat();
       },
     }, day.short)));
+    const lock = Boolean(inst?.repeating && draft.scope !== 'all');
+    repeatBlock.toggleAttribute('inert', lock);
+  }
+  function syncEndFromDuration() {
+    if (!draft.time || draft.duration === '' || draft.duration == null) return;
+    const next = model.addMinutesToTime(draft.time, Number(draft.duration));
+    if (!next) return;
+    draft.endTime = next;
+    endTime.value = next;
   }
   function syncRemindVisibility() {
     const has = Boolean(time.value);
@@ -1957,15 +2023,40 @@ function openSheet(inst) {
       draft.duration = 50;
       duration.value = '50';
     }
+    if (draft.endTime) {
+      const diff = model.minutesBetween(draft.time, draft.endTime);
+      if (diff) {
+        draft.duration = diff;
+        duration.value = String(diff);
+      }
+    } else syncEndFromDuration();
     syncRemindVisibility();
   });
+  endTime.addEventListener('input', () => {
+    draft.endTime = endTime.value;
+    draft.durationTouched = true;
+    if (draft.time && draft.endTime) {
+      const diff = model.minutesBetween(draft.time, draft.endTime);
+      draft.duration = diff || '';
+      duration.value = draft.duration === '' ? '' : String(draft.duration);
+    } else if (!draft.endTime) {
+      draft.duration = '';
+      duration.value = '';
+    }
+  });
+  untilInput.addEventListener('input', () => { draft.until = untilInput.value; });
   duration.addEventListener('input', () => {
     draft.durationTouched = true;
     draft.duration = duration.value === '' ? '' : Number(duration.value);
+    if (draft.duration === '') {
+      draft.endTime = '';
+      endTime.value = '';
+    } else syncEndFromDuration();
   });
 
   paintCats();
   paintDiff();
+  if (draft.time && draft.duration !== '' && draft.duration != null) syncEndFromDuration();
   paintRepeat();
   remindWrap.append(h('label', { class: 'field-label', for: 'field-remind', text: 'Remind me' }), remind);
   syncRemindVisibility();
@@ -1973,10 +2064,22 @@ function openSheet(inst) {
   const scopeRow = inst?.repeating
     ? h('fieldset', { class: 'scope' },
       h('legend', { text: 'Apply changes' }),
-      h('label', {}, h('input', { type: 'radio', name: 'scope', value: 'day', checked: 'true', onchange: () => { draft.scope = 'day'; } }), ' This day only'),
-      h('label', {}, h('input', { type: 'radio', name: 'scope', value: 'all', onchange: () => { draft.scope = 'all'; } }), ' All repeats'))
+      h('label', {}, h('input', {
+        type: 'radio', name: 'scope', value: 'day', checked: draft.scope !== 'all' ? 'true' : null,
+        onchange: () => { draft.scope = 'day'; paintRepeat(); },
+      }), ' This day only'),
+      h('label', {}, h('input', {
+        type: 'radio', name: 'scope', value: 'all', checked: draft.scope === 'all' ? 'true' : null,
+        onchange: () => { draft.scope = 'all'; paintRepeat(); },
+      }), ' All repeats'))
     : null;
 
+  repeatBlock.append(
+    h('p', { class: 'field-label', text: 'Repeat' }),
+    repeatRow,
+    dayRow,
+    untilRow,
+    repeatNote);
   sheet.append(
     h('h2', { text: inst ? 'Edit' : 'Add' }),
     h('label', { class: 'field-label', for: 'field-title', text: 'What?' }),
@@ -1988,10 +2091,10 @@ function openSheet(inst) {
     diffRow,
     h('div', { class: 'split' },
       h('div', {}, h('label', { class: 'field-label', for: 'field-time', text: 'When?' }), time),
-      h('div', {}, h('label', { class: 'field-label', for: 'field-duration', text: 'Duration' }), duration)),
-    h('p', { class: 'field-label', text: 'Repeat' }),
-    repeatRow,
-    dayRow,
+      h('div', {}, h('label', { class: 'field-label', for: 'field-end' }, 'Ends ', h('span', { class: 'fine', text: 'optional' })), endTime)),
+    h('label', { class: 'field-label', for: 'field-duration', text: 'Minutes' }),
+    duration,
+    repeatBlock,
     remindWrap,
     h('label', { class: 'field-label', for: 'field-note', text: 'Note' }),
     note,
@@ -2554,6 +2657,8 @@ function renderHelp() {
       h('p', { text: 'Points add up. Level 2 is 40 points, level 5 is 280, level 10 is 1,180. Levels never go down.' }),
       h('h2', { text: 'Streaks' }),
       h('p', { text: 'Finish at least one task and the day counts. The day rolls over at 4:00 AM, unless you change it. You get one rest day each week. A second missed day that week starts the streak over, quietly. Your best streak stays.' }),
+      h('h2', { text: 'Repeating' }),
+      h('p', { text: 'Pick Every day, Weekdays, Weekends, or your own days. Checking one off finishes that day only. Describe my week turns a sentence into repeating goals, and nothing is saved until you tap Add these.' }),
       h('h2', { text: 'Backup' }),
       h('p', { text: 'Customize, then Back up now, saves a file on your device. Restore brings it back. A Home Screen install is the safest place to keep your planner on iPhone.' })));
 }
@@ -2748,11 +2853,286 @@ function openCropper(file) {
   img.src = url;
 }
 
+function categoryForTitle(title) {
+  const cats = S.settings.categories;
+  const has = (id) => cats.some((cat) => cat.id === id);
+  const text = String(title || '').toLowerCase();
+  let id = 'task';
+  if (/\b(class|school|lecture|seminar|lab)\b/.test(text)) id = 'class';
+  else if (/\b(study|homework|essay|reading)\b/.test(text)) id = 'study';
+  else if (/\b(gym|workout|run|practice|sport|soccer)\b/.test(text)) id = 'personal';
+  if (!has(id)) id = cats[0]?.id || 'task';
+  return id;
+}
+
+function closeFloating() {
+  document.getElementById('repeat-sheet')?.remove();
+  document.getElementById('week-sheet')?.remove();
+  if (!document.getElementById('edit-sheet')) {
+    sheetOpen = false;
+    document.body.classList.remove('sheet-open');
+  }
+}
+
+function seriesInstance(task) {
+  const today = plannerToday();
+  for (let i = 0; i < 21; i += 1) {
+    const ymd = addDays(today, i);
+    const found = instancesOn(ymd, [task], S.overrides).find((inst) => inst.taskId === task.id);
+    if (found) return found;
+  }
+  return {
+    instanceId: `${task.id}:${task.date}`,
+    taskId: task.id,
+    originDate: task.date,
+    date: task.date || today,
+    title: task.title,
+    categoryId: task.categoryId,
+    difficulty: task.difficulty || 'easy',
+    time: task.time || null,
+    durationMin: task.durationMin ?? null,
+    remindLeadMin: task.remindLeadMin ?? null,
+    note: task.note || '',
+    repeat: task.repeat || 'none',
+    days: task.days ? [...task.days] : [],
+    until: task.until || null,
+    repeating: true,
+    moved: false,
+  };
+}
+
+function openRepeatingSheet() {
+  closeSheet();
+  closeFloating();
+  document.body.classList.add('sheet-open');
+  const tasks = S.tasks.filter((task) => task.repeat && task.repeat !== 'none');
+  const sheet = h('div', { class: 'sheet' });
+  sheet.append(h('h2', { text: 'Repeating' }));
+  if (!tasks.length) {
+    sheet.append(
+      h('p', { text: 'Nothing repeats yet.' }),
+      h('button', { type: 'button', class: 'btn primary', onclick: () => openWeekSheet() }, 'Describe my week'));
+  } else {
+    const list = h('div', { class: 'repeat-list' });
+    for (const task of tasks) {
+      const days = model.formatDaySelection(model.daysForRepeat(task.repeat, task.days));
+      const when = task.time ? model.formatTimeRange(task.time, task.durationMin, S.settings.clock24) : 'Anytime';
+      const until = task.until ? `until ${formatDayLabel(task.until)}` : '';
+      list.append(h('article', { class: 'proposal' },
+        h('h3', { text: task.title }),
+        h('p', { class: 'card-meta', text: [days, when, until].filter(Boolean).join(' · ') }),
+        h('div', { class: 'row-btns' },
+          h('button', { type: 'button', class: 'btn secondary', onclick: () => {
+            const inst = seriesInstance(task);
+            closeFloating();
+            openSheet(inst, { scope: 'all' });
+          } }, 'Edit'),
+          h('button', { type: 'button', class: 'text-btn danger', onclick: () => {
+            closeFloating();
+            deleteInstance(seriesInstance(task), 'all');
+          } }, 'Delete all'))));
+    }
+    sheet.append(list);
+  }
+  sheet.append(h('button', { type: 'button', class: 'btn ghost', onclick: closeFloating }, 'Close'));
+  overlayEl().append(h('div', {
+    class: 'sheet-wrap', id: 'repeat-sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Repeating',
+  },
+  h('button', { type: 'button', class: 'sheet-backdrop', 'aria-label': 'Close repeating', onclick: closeFloating }),
+  sheet));
+}
+
+function openWeekSheet() {
+  closeSheet();
+  closeFloating();
+  document.body.classList.add('sheet-open');
+  const box = h('textarea', {
+    id: 'week-text',
+    class: 'week-text',
+    rows: '6',
+    placeholder: 'I have school Monday to Friday from 8:30am to 3pm, and soccer on Saturdays at 10am.',
+  });
+  const result = h('div', { id: 'week-result' });
+  let proposals = [];
+  let unread = [];
+  let editing = -1;
+
+  function timeLabel(goal) {
+    if (!goal.startTime) return 'Anytime';
+    return model.formatTimeRange(goal.startTime, goal.durationMin, S.settings.clock24);
+  }
+
+  function paint() {
+    const notes = findOverlaps(proposals.filter((goal) => goal.title.trim() && goal.days.length));
+    const kids = [];
+    if (notes.length) {
+      kids.push(h('div', { class: 'overlap-note', id: 'overlap-note' }, notes.map((note) => h('p', { text: note.message }))));
+    }
+    proposals.forEach((goal, index) => kids.push(renderProposal(goal, index)));
+    for (const item of unread) {
+      kids.push(h('div', { class: 'unread' },
+        h('p', { class: 'field-label', text: "Couldn't read this part" }),
+        h('p', { text: item.text }),
+        h('p', { class: 'fine', text: 'You can add it with the + button.' })));
+    }
+    if (!proposals.length && !unread.length) kids.push(h('p', { text: 'Nothing to add yet.' }));
+    if (proposals.length) {
+      kids.push(h('button', {
+        type: 'button',
+        class: 'btn primary block',
+        id: 'add-these',
+        onclick: () => addProposed(),
+      }, 'Add these'));
+    }
+    result.replaceChildren(...kids);
+  }
+
+  function renderProposal(goal, index) {
+    if (editing !== index) {
+      const days = model.formatDaySelection(goal.days);
+      return h('article', { class: 'proposal', dataset: { goal: goal.title } },
+        h('h3', { text: goal.title || 'Untitled' }),
+        h('p', { class: 'card-meta', text: `${days ? `${days} · ` : ''}${timeLabel(goal)}` }),
+        h('div', { class: 'row-btns' },
+          h('button', { type: 'button', class: 'text-btn', onclick: () => { editing = index; paint(); } }, 'Edit'),
+          h('button', { type: 'button', class: 'text-btn danger', onclick: () => {
+            proposals.splice(index, 1);
+            editing = -1;
+            paint();
+          } }, 'Remove')));
+    }
+    const title = h('input', { class: 'text-input', 'aria-label': `Title for goal ${index + 1}`, value: goal.title });
+    title.addEventListener('input', () => { goal.title = title.value; });
+    const start = h('input', { type: 'time', class: 'text-input', 'aria-label': 'Time', value: goal.startTime || '' });
+    const end = h('input', { type: 'time', class: 'text-input', 'aria-label': 'End time', value: goal.endTime || '' });
+    const syncTimes = () => {
+      goal.startTime = start.value || null;
+      goal.endTime = end.value || null;
+      goal.durationMin = goal.startTime && goal.endTime ? model.minutesBetween(goal.startTime, goal.endTime) : null;
+    };
+    start.addEventListener('input', syncTimes);
+    end.addEventListener('input', syncTimes);
+    const chips = h('div', { class: 'chips days day-chips', role: 'group', 'aria-label': 'Days' });
+    const paintChips = () => {
+      chips.replaceChildren(...WEEKDAY_LABELS.map((day) => h('button', {
+        type: 'button',
+        class: `chip${goal.days.includes(day.dow) ? ' is-selected' : ''}`,
+        'aria-pressed': goal.days.includes(day.dow) ? 'true' : 'false',
+        'aria-label': day.name,
+        onclick: () => {
+          if (goal.days.includes(day.dow)) goal.days = goal.days.filter((d) => d !== day.dow);
+          else goal.days = [...goal.days, day.dow];
+          if (!goal.days.length) goal.days = [day.dow];
+          paintChips();
+        },
+      }, day.short)));
+    };
+    paintChips();
+    return h('article', { class: 'proposal is-editing' },
+      title,
+      chips,
+      h('div', { class: 'split' },
+        h('div', {}, h('label', { class: 'field-label', text: 'Starts' }), start),
+        h('div', {}, h('label', { class: 'field-label', text: 'Ends' }), end)),
+      h('div', { class: 'row-btns' },
+        h('button', { type: 'button', class: 'btn secondary', onclick: () => { editing = -1; paint(); } }, 'Done'),
+        h('button', { type: 'button', class: 'text-btn danger', onclick: () => {
+          proposals.splice(index, 1);
+          editing = -1;
+          paint();
+        } }, 'Remove')));
+  }
+
+  async function showPreview() {
+    const text = box.value.trim();
+    if (!text) {
+      proposals = [];
+      unread = [];
+      result.replaceChildren(h('p', { class: 'fine', text: 'Type your week first.' }));
+      return;
+    }
+    let parsed;
+    try {
+      parsed = await parseWeekDescription(text);
+    } catch {
+      parsed = { goals: [], unread: [{ text }] };
+    }
+    proposals = parsed.goals.map((goal) => ({ ...goal, days: [...goal.days] }));
+    unread = parsed.unread;
+    editing = -1;
+    paint();
+  }
+
+  async function addProposed() {
+    const blank = proposals.findIndex((goal) => !goal.title.trim() || !goal.days.length);
+    if (blank >= 0) {
+      editing = blank;
+      paint();
+      result.querySelector('input')?.focus();
+      return;
+    }
+    if (!proposals.length) return;
+    const date = viewedYMD();
+    const now = currentDate().toISOString();
+    for (const goal of proposals) {
+      const repeat = model.repeatFromDays(goal.days);
+      const categoryId = categoryForTitle(goal.title);
+      const time = goal.startTime || null;
+      S.tasks.push({
+        id: crypto.randomUUID(),
+        title: goal.title.trim(),
+        categoryId,
+        difficulty: defaultDifficulty(categoryId),
+        date,
+        repeat,
+        days: repeat === 'days' ? [...goal.days] : [],
+        time,
+        durationMin: time ? goal.durationMin ?? null : null,
+        until: null,
+        remindLeadMin: time ? (S.settings.defaultLead ?? 10) : null,
+        note: '',
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+    const count = proposals.length;
+    closeFloating();
+    await persistAll();
+    refreshReminderRecords();
+    await persistAll();
+    render();
+    announce(`Added ${count} repeating ${count === 1 ? 'goal' : 'goals'}`);
+    syncPush();
+  }
+
+  const sheet = h('div', { class: 'sheet' },
+    h('h2', { text: 'Describe your week' }),
+    h('p', { class: 'lede', text: "Type your week in your own words. I'll show the goals before anything is saved." }),
+    h('label', { class: 'field-label', for: 'week-text', text: 'Your week' }),
+    box,
+    h('button', { type: 'button', class: 'btn primary block', id: 'show-week', onclick: () => showPreview() }, 'Show my goals'),
+    result,
+    h('button', { type: 'button', class: 'btn ghost', onclick: closeFloating }, 'Close'));
+  overlayEl().append(h('div', {
+    class: 'sheet-wrap', id: 'week-sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Describe your week',
+  },
+  h('button', { type: 'button', class: 'sheet-backdrop', 'aria-label': 'Close describe your week', onclick: closeFloating }),
+  sheet));
+  box.focus();
+}
+
 function closeTop() {
   if (document.getElementById('cropper')) { document.getElementById('cropper').remove(); return; }
   if (document.getElementById('edit-sheet')) { closeSheet(); return; }
   const sheet = overlayEl().querySelector('.sheet-wrap');
-  if (sheet) { sheet.remove(); return; }
+  if (sheet) {
+    sheet.remove();
+    if (!document.getElementById('edit-sheet')) {
+      sheetOpen = false;
+      document.body.classList.remove('sheet-open');
+    }
+    return;
+  }
   if (dayCard) { dayCard = null; renderOverlayBits(); return; }
   if (levelPop) { levelPop = null; renderOverlayBits(); }
 }

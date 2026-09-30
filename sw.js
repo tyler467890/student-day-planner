@@ -1,6 +1,6 @@
 /* Dayli service worker: offline shell, push, and notification actions. */
 
-const CACHE = 'dayli-v5';
+const CACHE = 'dayli-v6';
 
 const ASSETS = [
   './',
@@ -12,6 +12,7 @@ const ASSETS = [
   './js/db.js',
   './js/push.js',
   './js/app.js',
+  './js/week-parser.js',
   './js/pet-stage.js',
   './js/cube-pet.js',
   './js/celebrations.js',
