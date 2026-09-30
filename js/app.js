@@ -1077,6 +1077,66 @@ function renderAnimalGrid() {
     }, label)));
 }
 
+const PET_COLOR_SLOTS = [
+  ['eyes', 'Eyes'],
+  ['primary', 'Main'],
+  ['secondary', 'Second'],
+];
+
+/**
+ * Picker hook for one pet colour slot.
+ * Swap the native input for the touch colour wheel (colourWheelPanel / openWheel)
+ * when that settings UI lands. Call `onColor(hex)` with a #RRGGBB string.
+ */
+function renderPetColorPicker(slot, label, currentHex, onColor) {
+  const picker = h('input', {
+    type: 'color',
+    'aria-label': `Custom ${label} colour`,
+    value: (currentHex || '#7EC8FF').toLowerCase(),
+  });
+  const emit = (commit) => {
+    const hex = normalizeHex(picker.value);
+    if (hex) onColor(hex, commit);
+  };
+  picker.addEventListener('input', () => emit(false));
+  picker.addEventListener('change', () => emit(true));
+  return picker;
+}
+
+function renderPetColorRows(pet) {
+  const colors = pet.colors || { eyes: null, primary: null, secondary: null };
+  const rows = h('div', { class: 'pet-color-rows' });
+  for (const [slot, label] of PET_COLOR_SLOTS) {
+    const value = colors[slot] || null;
+    const swatches = h('div', { class: 'pet-colours', role: 'group', 'aria-label': `${label} colour` });
+    for (const swatch of PET_COLOURS) {
+      const selected = swatch.hex ? value === swatch.hex : !value;
+      swatches.append(h('button', {
+        type: 'button',
+        'aria-label': `${label} ${swatch.name}`,
+        'aria-pressed': selected ? 'true' : 'false',
+        style: swatch.hex ? `background:${swatch.hex}` : 'background:linear-gradient(135deg,#fff,#d9d3ea)',
+        onclick: () => updatePet({ colors: { ...colors, [slot]: swatch.hex } }),
+      }));
+    }
+    const customOn = Boolean(value && !PET_COLOURS.some((swatch) => swatch.hex === value));
+    const picker = renderPetColorPicker(slot, label, value, (hex, commit) => {
+      const next = { ...colors, [slot]: hex };
+      if (!commit) {
+        S.settings.pet = { ...(S.settings.pet || model.defaultPet()), colors: next };
+        applyPetConfig();
+        return;
+      }
+      updatePet({ colors: next });
+    });
+    swatches.append(h('label', { class: `color-chip${customOn ? ' is-selected' : ''}` }, picker));
+    rows.append(h('div', { class: 'pet-color-row' },
+      h('span', { class: 'pet-color-label', text: label }),
+      swatches));
+  }
+  return rows;
+}
+
 function renderPetControls() {
   const pet = S.settings.pet || model.defaultPet();
   const wrap = h('div', { class: 'pet-controls' });
@@ -1099,30 +1159,7 @@ function renderPetControls() {
         },
       }, choice.label);
     })));
-  wrap.append(h('p', { class: 'field-label', text: 'Colour' }));
-  const colours = h('div', { class: 'pet-colours', role: 'group', 'aria-label': 'Pet colour' });
-  for (const swatch of PET_COLOURS) {
-    const selected = swatch.hex ? pet.color === swatch.hex : !pet.color;
-    colours.append(h('button', {
-      type: 'button',
-      'aria-label': swatch.hex ? `Pet colour ${swatch.name}` : 'Natural pet colour',
-      'aria-pressed': selected ? 'true' : 'false',
-      style: swatch.hex ? `background:${swatch.hex}` : 'background:linear-gradient(135deg,#fff,#d9d3ea)',
-      onclick: () => updatePet({ color: swatch.hex }),
-    }));
-  }
-  const picker = h('input', {
-    type: 'color',
-    'aria-label': 'Custom pet colour',
-    value: (pet.color || '#7EC8FF').toLowerCase(),
-  });
-  picker.addEventListener('change', () => {
-    const hex = normalizeHex(picker.value);
-    if (hex) updatePet({ color: hex });
-  });
-  const customOn = Boolean(pet.color && !PET_COLOURS.some((swatch) => swatch.hex === pet.color));
-  colours.append(h('label', { class: `color-chip${customOn ? ' is-selected' : ''}` }, picker));
-  wrap.append(colours);
+  wrap.append(renderPetColorRows(pet));
   wrap.append(h('p', { class: 'field-label', text: 'Face' }));
   wrap.append(h('div', { class: 'chips' },
     ['round', 'happy', 'sparkly'].map((eyes) => h('button', {

@@ -805,7 +805,7 @@ test('screenshots', async ({ browser }) => {
   await expect(page.getByRole('button', { name: 'Stretch', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Dance', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Hat', exact: true }).click();
-  await page.getByRole('button', { name: 'Pet colour Sunny yellow' }).click();
+  await page.getByRole('button', { name: 'Main Sunny yellow' }).click();
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${ART}/pet-customizer.png` });
   await page.getByRole('button', { name: 'Back', exact: true }).click();

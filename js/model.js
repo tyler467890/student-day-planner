@@ -108,10 +108,28 @@ export const PET_COLOURS = [
   { name: 'Cocoa', hex: '#A8704A' },
 ];
 
+export function defaultPetColors() {
+  return { eyes: null, primary: null, secondary: null };
+}
+
+/** Old saves stored one tint on `color`. That tint becomes the main colour. */
+export function normalizePetColors(saved) {
+  const base = defaultPetColors();
+  if (!saved || typeof saved !== 'object') return base;
+  if (saved.colors && typeof saved.colors === 'object') {
+    return {
+      eyes: normalizeHex(saved.colors.eyes),
+      primary: normalizeHex(saved.colors.primary),
+      secondary: normalizeHex(saved.colors.secondary),
+    };
+  }
+  return { ...base, primary: normalizeHex(saved.color) };
+}
+
 export function defaultPet() {
   return {
     animal: 'penguin',
-    color: null,
+    colors: defaultPetColors(),
     eyes: 'round',
     cheeks: true,
     hat: false,
@@ -131,7 +149,7 @@ export function normalizePet(saved) {
   const body = Number(saved.body);
   return {
     animal,
-    color: normalizeHex(saved.color),
+    colors: normalizePetColors(saved),
     eyes,
     cheeks: saved.cheeks !== false,
     hat: Boolean(saved.hat),
