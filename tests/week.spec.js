@@ -34,7 +34,7 @@ test('describe your week previews goals, then adds each day on its own', async (
   await page.locator('#week-text').fill(TYLER);
   await page.getByRole('button', { name: 'Show my goals' }).click();
   const sheet = page.locator('#week-sheet');
-  await expect(sheet.getByRole('heading', { name: 'Work' })).toBeVisible();
+  await expect(sheet.getByRole('heading', { name: 'Work', exact: true })).toBeVisible();
   await expect(sheet.getByRole('heading', { name: 'School online' })).toBeVisible();
   await expect(sheet.getByRole('heading', { name: 'Gym/Workout' })).toBeVisible();
   await expect(sheet.getByText('Mon–Fri')).toBeVisible();
@@ -45,17 +45,17 @@ test('describe your week previews goals, then adds each day on its own', async (
   expect(await page.evaluate(() => window.__dayli.getState().tasks.length)).toBe(0);
 
   await sheet.getByRole('button', { name: 'Add these' }).click();
-  await expect(page.locator('.card-title', { hasText: 'Work' })).toBeVisible();
+  await expect(page.locator('.card-title', { hasText: /^Work$/ })).toBeVisible();
   await expect(page.locator('.card-title', { hasText: 'School online' })).toHaveCount(0);
   await expect(page.locator('.card-title', { hasText: 'Gym/Workout' })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Next day' }).click();
-  await expect(page.locator('.card-title', { hasText: 'Work' })).toBeVisible();
+  await expect(page.locator('.card-title', { hasText: /^Work$/ })).toBeVisible();
   await expect(page.locator('.card-title', { hasText: 'School online' })).toBeVisible();
   await expect(page.locator('.card-title', { hasText: 'Gym/Workout' })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Next day' }).click();
-  await expect(page.locator('.card-title', { hasText: 'Work' })).toBeVisible();
+  await expect(page.locator('.card-title', { hasText: /^Work$/ })).toBeVisible();
   await expect(page.locator('.card-title', { hasText: 'Gym/Workout' })).toBeVisible();
   await expect(page.locator('.card-title', { hasText: 'School online' })).toHaveCount(0);
 
@@ -99,7 +99,7 @@ test('weekends, an end date, and an unreadable line', async ({ page }) => {
   await page.getByRole('button', { name: 'Add a class or task' }).click();
   await page.getByLabel('What?').fill('Camp');
   await page.getByLabel('Time').fill('09:00');
-  await page.getByLabel('End time').fill('12:00');
+  await page.getByLabel('Ends').fill('12:00');
   await page.getByRole('radio', { name: 'Weekdays' }).click();
   await page.getByLabel('Repeat until').fill('2026-09-23');
   await page.getByRole('button', { name: 'Save', exact: true }).click();

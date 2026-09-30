@@ -1901,7 +1901,7 @@ function openSheet(inst, options = {}) {
   const dayRow = h('div', { class: 'chips days day-chips', role: 'group', 'aria-label': 'Days' });
   const time = h('input', { type: 'time', id: 'field-time', class: 'text-input', 'aria-label': 'Time', value: draft.time });
   const endTime = h('input', {
-    type: 'time', id: 'field-end', class: 'text-input', 'aria-label': 'End time', value: draft.endTime || '',
+    type: 'time', id: 'field-end', class: 'text-input', 'aria-label': 'Ends', value: draft.endTime || '',
   });
   const untilInput = h('input', {
     type: 'date', id: 'field-until', class: 'text-input', 'aria-label': 'Repeat until', value: draft.until || '',
@@ -3004,7 +3004,7 @@ function openWeekSheet() {
     const title = h('input', { class: 'text-input', 'aria-label': `Title for goal ${index + 1}`, value: goal.title });
     title.addEventListener('input', () => { goal.title = title.value; });
     const start = h('input', { type: 'time', class: 'text-input', 'aria-label': 'Time', value: goal.startTime || '' });
-    const end = h('input', { type: 'time', class: 'text-input', 'aria-label': 'End time', value: goal.endTime || '' });
+    const end = h('input', { type: 'time', class: 'text-input', 'aria-label': 'Ends', value: goal.endTime || '' });
     const syncTimes = () => {
       goal.startTime = start.value || null;
       goal.endTime = end.value || null;
