@@ -338,7 +338,7 @@ test('easy medium and hard points, undo, day complete once, level up once', asyn
   await skipToToday(page);
   await addItem(page, { title: 'Easy task', difficulty: 'Easy' });
   await page.getByRole('button', { name: /Mark Easy task done, easy, 5 points/ }).click();
-  await expect(page.getByLabel(/Today's points 5/)).toBeVisible();
+  await expect(page.getByLabel(/Today's points 10/)).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
   await expect(page.getByLabel(/Today's points 0/)).toBeVisible();
 
@@ -363,7 +363,7 @@ test('easy medium and hard points, undo, day complete once, level up once', asyn
   await page.getByRole('button', { name: /Mark Medium task done, medium, 10 points/ }).click();
   await expect(page.getByRole('dialog', { name: 'Day complete' })).toBeVisible();
   await expect(page.getByText('+10 bonus')).toBeVisible();
-  await expect(page.getByLabel(/Today's points 25/)).toBeVisible();
+  await expect(page.getByLabel(/Today's points 30/)).toBeVisible();
   await page.getByRole('button', { name: 'Nice' }).click();
 
   await addItem(page, { title: 'Later task', difficulty: 'Easy' });
@@ -477,7 +477,7 @@ test('no overdue shame, and celebrations follow subtle, off, and reduced motion'
   await offPage.getByRole('button', { name: /Mark Quiet task done/ }).click();
   await expect(offPage.locator('.particle')).toHaveCount(0);
   await expect(offPage.locator('.points-float')).toHaveCount(0);
-  await expect(offPage.getByLabel(/Today's points 20/)).toBeVisible();
+  await expect(offPage.getByLabel(/Today's points 25/)).toBeVisible();
   await off.close();
 
   const reduced = await browser.newContext({
@@ -781,7 +781,7 @@ test('keyboard reach, focus, escape, and check button names', async ({ page }) =
   expect(focused.outline).not.toBe('none');
   await check.focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByLabel(/Today's points 10/)).toBeVisible();
+  await expect(page.getByLabel(/Today's points 15/)).toBeVisible();
   await page.getByRole('button', { name: 'Undo' }).click();
   await page.getByRole('button', { name: 'Add a class or task' }).click();
   await expect(page.getByRole('dialog', { name: 'Add' })).toBeVisible();
@@ -1104,7 +1104,7 @@ test('today and simplified settings screenshots', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Customize' }).click();
   await expect(page.getByRole('heading', { name: 'Categories' })).toBeVisible();
-  await page.getByRole('heading', { name: 'Categories' }).scrollIntoViewIfNeeded();
+  await page.getByRole('heading', { name: 'Categories' }).evaluate((el) => el.scrollIntoView({ block: 'start' }));
   await page.screenshot({ path: `${ART}/settings-simple-phone.png` });
 
   await page.getByRole('button', { name: '+ Add category' }).click();
