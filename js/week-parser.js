@@ -3,8 +3,11 @@
  *
  * The app should call only `parseWeekDescription`. A future model backend can
  * replace the rules by passing `options.parse` with the same result shape:
- *   { goals: [{ title, days, startTime, endTime, durationMin, source }],
+ *   { goals: [{ title, days, startTime, endTime, durationMin, source, needsDays }],
  *     unread: [{ text }] }
+ * needsDays means the activity was understood but no weekdays were stated.
+ * Those goals keep an empty day list. Callers should ask which days.
+ * A missing day list is never filled in with every day.
  * Days are JS weekday numbers: 0 Sunday … 6 Saturday.
  * Nothing in this module saves data or talks to a network.
  */
@@ -54,6 +57,7 @@ const FILLER = new Set(`
   starts starting ends ending until till through thru between oclock sharp
   roughly except not gonna morning afternoon evening night hour hours hr hrs
   minute minutes min mins am pm noon midnight
+  morning mornings afternoon afternoons evening evenings night nights
   january february march april may june july august september october november december
 `.split(/\s+/).filter(Boolean));
 
@@ -77,11 +81,28 @@ export function parseWeekWithRules(text) {
   if (!prepared) return { goals: [], unread: [] };
   const goals = [];
   const unread = [];
-  for (const clause of splitClauses(prepared)) {
-    const parsed = parseClause(clause);
-    if (!parsed) continue;
-    if (parsed.goal) goals.push(parsed.goal);
-    else if (parsed.unread) unread.push(parsed.unread);
+  for (const sentence of splitSentences(prepared)) {
+    const parsed = [];
+    for (const clause of splitConnectors(sentence)) {
+      const item = parseClause(clause);
+      if (!item) continue;
+      parsed.push(item);
+    }
+    const sentenceGoals = parsed.filter((item) => item.goal).map((item) => item.goal);
+    const donors = sentenceGoals.filter((goal) => goal.days.length);
+    const signatures = [...new Set(donors.map((goal) => goal.days.join(',')))];
+    if (signatures.length === 1) {
+      for (const goal of sentenceGoals) {
+        if (!goal.days.length) {
+          goal.days = [...donors[0].days];
+          goal.needsDays = false;
+        }
+      }
+    }
+    for (const item of parsed) {
+      if (item.goal) goals.push(item.goal);
+      else if (item.unread) unread.push(item.unread);
+    }
   }
   return { goals, unread };
 }
@@ -151,7 +172,7 @@ function splitSentences(text) {
 }
 
 function splitConnectors(sentence) {
-  const re = /\bthen\b|,|\band\b|&/gi;
+  const re = /\bthen\b|,|\band\b|\bor\b|&/gi;
   const pieces = [];
   let start = 0;
   let match;
@@ -177,10 +198,37 @@ function shouldSplit(sentence, index, word) {
   const nextPast = firstContent(after, true);
   if (word === 'then') return true;
   if (word === ',' && next === 'then') return false;
-  if ((word === 'and' || word === '&') && DURATION_WORDS.has(prev) && /^\d/.test(next)) return false;
+  if ((word === 'and' || word === '&' || word === 'or') && DURATION_WORDS.has(prev) && /^\d/.test(next)) return false;
   if (isDayish(prev) && (isDayish(next) || isDayish(nextPast))) return false;
   if (isTimeish(prev) && (isTimeish(next) || isTimeish(nextPast))) return false;
+  if (word === 'and' || word === '&' || word === 'or' || word === ',') {
+    if (word === ',' && (next === 'and' || next === 'or' || next === '&')) return false;
+    if (beginsNewClause(after)) return true;
+    const leftDays = mentionDays(before);
+    const rightDays = mentionDays(after);
+    if (leftDays && rightDays) return true;
+    return false;
+  }
   return true;
+}
+
+const NEW_CLAUSE = new Set(['i', 'im', 'id', 'ill', 'ive', 'we', 'remember', 'please', 'also', 'then']);
+
+function beginsNewClause(text) {
+  for (const token of contentTokens(text)) {
+    if (token === 'and' || token === 'or' || token === '&' || token === ',') continue;
+    if (SKIP_AROUND.has(token) && !NEW_CLAUSE.has(token)) continue;
+    return NEW_CLAUSE.has(token);
+  }
+  return false;
+}
+
+function mentionDays(text) {
+  return extractDays(tokenize(loosen(String(text || '').toLowerCase()))).days.length > 0;
+}
+
+function isVague(text) {
+  return /\b(remember|sometimes|whenever|someday|sometime)\b/i.test(text);
 }
 
 function firstContent(str, skipConnectors = false) {
@@ -239,11 +287,13 @@ function parseClause(original) {
 
   const duration = consumeDuration(lower);
   const times = consumeTimes(duration.text);
-  const dayInfo = extractDays(tokenize(times.text));
-  const title = titleFrom(tokenize(times.text), dayInfo.covered);
-  if (!dayInfo.days.length || !title) return { unread: { text: source } };
+  const part = consumePartOfDay(times.text, times.start == null);
+  const dayInfo = extractDays(tokenize(part.text));
+  const title = titleFrom(tokenize(part.text), dayInfo.covered);
+  if (!title) return { unread: { text: source } };
 
   let start = times.start;
+  if (start == null && part.start != null) start = part.start;
   let end = times.end;
   let durationMin = times.usedRange ? null : duration.minutes;
   if (start != null && end == null && durationMin) end = (start + durationMin) % 1440;
@@ -253,10 +303,17 @@ function parseClause(original) {
     durationMin = diff > 0 && diff <= 18 * 60 ? diff : durationMin;
   }
 
+  const days = dayInfo.days;
+  const needsDays = !days.length;
+  if (needsDays && !dayInfo.ambiguous && isVague(lower) && start == null) {
+    return { unread: { text: source } };
+  }
+
   return {
     goal: {
       title,
-      days: dayInfo.days,
+      days,
+      needsDays,
       startTime: start == null ? null : toHM(start),
       endTime: end == null ? null : toHM(end),
       durationMin: durationMin || null,
@@ -267,7 +324,7 @@ function parseClause(original) {
 
 function loosen(text) {
   return text
-    .replace(/\b([a-z]{2,12})-([a-z]{2,12})\b/g, '$1 to $2')
+    .replace(/\b([a-z]{2,12})\s*-\s*([a-z]{2,12})\b/g, '$1 to $2')
     .replace(/\b(\d{1,2}(?::\d{2})?(?:am|pm)?)\s*-\s*(\d{1,2}(?::\d{2})?(?:am|pm)?)\b/g, '$1 to $2');
 }
 
@@ -336,7 +393,8 @@ function consumeTimes(text) {
     const next = found[index + 1];
     const before = prev && rangeBridge(text.slice(prev.end, item.tokenStart));
     const after = next && rangeBridge(text.slice(item.end, next.tokenStart));
-    return Boolean(before || after);
+    const atPrefix = /\b(?:at|from)\s*$/i.test(text.slice(Math.max(0, item.tokenStart - 8), item.tokenStart));
+    return Boolean(before || after || atPrefix);
   });
 
   let start = null;
@@ -357,12 +415,46 @@ function consumeTimes(text) {
       i += 1;
       continue;
     }
-    if (start == null && !item.clock.bare) {
-      start = item.clock.mins;
+    if (start == null) {
+      start = item.clock.explicit ? item.clock.mins : inferSingle(item.clock, text);
       used.push(item);
     }
   }
   return { text: blankSpans(text, used), start, end, usedRange };
+}
+
+function inferSingle(clock, text) {
+  const evening = /\b(?:evenings?|nights?|tonight|afternoons?)\b/i.test(text);
+  const morning = /\b(?:mornings?)\b/i.test(text);
+  if (morning) {
+    if (clock.hour === 12) return 12 * 60 + clock.min;
+    return (clock.hour % 12) * 60 + clock.min;
+  }
+  if (evening) {
+    if (clock.hour === 12 || clock.hour === 0) return 12 * 60 + clock.min;
+    if (clock.hour < 12) return clock.hour * 60 + clock.min + 12 * 60;
+    return clock.mins;
+  }
+  if (clock.hour >= 7 && clock.hour <= 11) return clock.hour * 60 + clock.min;
+  if (clock.hour === 12) return 12 * 60 + clock.min;
+  if (clock.hour >= 1 && clock.hour <= 6) return clock.hour * 60 + clock.min + 12 * 60;
+  return clock.mins;
+}
+
+function consumePartOfDay(text, applyDefault) {
+  const defaults = { morning: 8 * 60, afternoon: 15 * 60, evening: 18 * 60, night: 20 * 60 };
+  const re = /\b(mornings?|afternoons?|evenings?|nights?)\b/gi;
+  const spans = [];
+  let start = null;
+  let match;
+  while ((match = re.exec(text))) {
+    spans.push({ start: match.index, end: match.index + match[0].length });
+    if (applyDefault && start == null) {
+      const key = match[1].toLowerCase().replace(/s$/, '');
+      start = defaults[key] ?? null;
+    }
+  }
+  return { text: blankSpans(text, spans), start };
 }
 
 function rangeBridge(text) {
@@ -402,6 +494,11 @@ function resolvePair(a, b) {
   if (!a.explicit && b.explicit) return { start: chooseStart(b.mins, a), end: b.mins };
   let start = a.mins;
   let end = b.mins;
+  const afternoon = a.hour >= 1 && a.hour <= 6 && b.hour >= 1 && b.hour <= 6;
+  if (afternoon) {
+    start += 12 * 60;
+    end += 12 * 60;
+  }
   if (end <= start && b.hour <= 12 && a.hour <= 12) end = (b.hour % 12) * 60 + b.min + 12 * 60;
   return { start, end };
 }
@@ -427,14 +524,19 @@ function extractDays(tokens) {
   for (let i = 0; i < tokens.length;) {
     const group = matchGroupAt(tokens, i);
     if (group) {
-      mentions.push({ at: i, len: group.skip, days: group.days });
+      mentions.push({ at: i, len: group.skip, days: group.days, ambiguous: Boolean(group.ambiguous) });
       i += group.skip;
     } else i += 1;
   }
   const covered = new Set();
   let days = [];
+  let ambiguous = false;
   mentions.forEach((mention, index) => {
     for (let j = 0; j < mention.len; j += 1) covered.add(mention.at + j);
+    if (mention.ambiguous) {
+      ambiguous = true;
+      return;
+    }
     if (index > 0) {
       const from = mentions[index - 1].at + mentions[index - 1].len;
       for (let idx = from; idx < mention.at; idx += 1) {
@@ -455,12 +557,17 @@ function extractDays(tokens) {
       days = days.slice(0, -1).concat(expandRange(from, mention.days[0]), mention.days.slice(1));
     } else days.push(...mention.days);
   });
-  return { days: sortDays(days), covered };
+  return { days: sortDays(days), covered, ambiguous };
 }
 
 function matchGroupAt(tokens, index) {
   const a = clean(tokens[index]);
   const b = clean(tokens[index + 1] || '');
+  const c = clean(tokens[index + 2] || '');
+  if ((a === 'every' || a === 'each') && (b === 'other' || b === 'second' || b === 'alternate')
+    && ['day', 'days', 'week', 'weeks'].includes(c)) {
+    return { days: [], skip: 3, ambiguous: true };
+  }
   if ((a === 'every' || a === 'each') && (b === 'day' || b === 'days')) return { days: ALL_DAYS, skip: 2 };
   if (a === 'all' && b === 'week') return { days: ALL_DAYS, skip: 2 };
   if (a === 'week' && (b === 'day' || b === 'days')) return { days: WEEKDAYS, skip: 2 };
@@ -482,7 +589,6 @@ function matchDayWord(raw) {
   const probe = word.endsWith('s') && word.length > 4 ? word.slice(0, -1) : word;
   let best = null;
   let bestDist = 99;
-  let second = 99;
   for (const day of DAY_NAMES) {
     const dist = Math.min(
       damerau(word, day.name),
@@ -490,12 +596,19 @@ function matchDayWord(raw) {
       damerau(word, `${day.name}s`),
     );
     if (dist < bestDist) {
-      second = bestDist;
       bestDist = dist;
       best = day;
-    } else if (dist < second) second = dist;
+    }
   }
-  if (!best || bestDist === 0 || bestDist >= second) return null;
+  if (!best || bestDist === 0) return null;
+  const tied = DAY_NAMES.filter((day) => Math.min(
+    damerau(word, day.name),
+    damerau(probe, day.name),
+    damerau(word, `${day.name}s`),
+  ) === bestDist);
+  const ranked = tied.slice().sort((a, b) => sharedPrefix(probe, b.name) - sharedPrefix(probe, a.name));
+  if (tied.length > 1 && sharedPrefix(probe, ranked[0].name) === sharedPrefix(probe, ranked[1].name)) return null;
+  best = ranked[0];
   const firstOk = probe[0] === best.name[0];
   const secondOk = probe.length > 1 && probe[1] === best.name[1];
   if (bestDist === 1 && firstOk) return best.dow;
@@ -503,11 +616,29 @@ function matchDayWord(raw) {
   return null;
 }
 
+function sharedPrefix(a, b) {
+  let n = 0;
+  const length = Math.min(a.length, b.length);
+  while (n < length && a[n] === b[n]) n += 1;
+  return n;
+}
+
 function connectorKind(tokens) {
-  const words = tokens.map((token) => clean(token)).filter((word) => word && !['on', 'the', 'a', 'an'].includes(word));
-  if (!words.length) return 'list';
+  const words = [];
+  let hyphen = false;
+  for (const token of tokens) {
+    const raw = String(token).trim();
+    if (raw === '-' || raw === '–' || raw === '—') {
+      hyphen = true;
+      continue;
+    }
+    const word = clean(token);
+    if (!word || ['on', 'the', 'a', 'an'].includes(word)) continue;
+    words.push(word);
+  }
+  if (!words.length) return hyphen ? 'range' : 'list';
   if (words.every((word) => RANGE_WORDS.has(word))) return 'range';
-  if (words.every((word) => LIST_WORDS.has(word))) return 'list';
+  if (!hyphen && words.every((word) => LIST_WORDS.has(word))) return 'list';
   return 'other';
 }
 
@@ -527,16 +658,32 @@ function expandRange(from, to) {
 }
 
 function titleFrom(tokens, covered) {
-  const words = [];
+  const parts = [[]];
   tokens.forEach((token, index) => {
     if (covered.has(index)) return;
-    const word = clean(token);
-    if (!word || word === ',' || FILLER.has(word)) return;
+    const word = activityWord(clean(token));
+    if (!word || word === ',') return;
+    if (word === 'and' || word === 'or' || word === '&') {
+      if (parts[parts.length - 1].length) parts.push([]);
+      return;
+    }
+    if (FILLER.has(word)) return;
     if (matchDayWord(word) != null) return;
     if (/^\d{1,2}(?::\d{2})?(?:am|pm)?$/.test(word)) return;
-    words.push(word);
+    parts[parts.length - 1].push(word);
   });
-  return niceTitle(words);
+  const titles = [...new Set(parts.map((words) => niceTitle(words)).filter(Boolean))];
+  if (!titles.length) return '';
+  const lowered = new Set(titles.map((title) => title.toLowerCase()));
+  if (lowered.has('gym') && [...lowered].some((title) => title !== 'gym' && ['workout', 'exercise', 'training'].includes(title))) {
+    return 'Gym/Workout';
+  }
+  return titles.join(' / ');
+}
+
+function activityWord(word) {
+  if (word === 'worked' || word === 'working' || word === 'works') return 'work';
+  return word;
 }
 
 function niceTitle(words) {
@@ -585,7 +732,8 @@ function normalizeWeekParse(raw) {
   for (const goal of raw?.goals || []) {
     const title = String(goal?.title || '').replace(/\s+/g, ' ').trim();
     const days = sortDays((goal?.days || []).map(Number).filter((day) => day >= 0 && day <= 6));
-    if (!title || !days.length) {
+    const needsDays = !days.length && Boolean(goal?.needsDays);
+    if (!title || (!days.length && !needsDays)) {
       const source = goal?.source ? String(goal.source).trim() : '';
       if (source) unread.push({ text: source });
       continue;
@@ -603,6 +751,7 @@ function normalizeWeekParse(raw) {
     goals.push({
       title,
       days,
+      needsDays,
       startTime,
       endTime,
       durationMin,

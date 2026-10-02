@@ -80,6 +80,23 @@ test('describe your week previews goals, then adds each day on its own', async (
   await page.getByRole('button', { name: 'Close', exact: true }).click();
 });
 
+test('work or school monday to friday does not select the weekend', async ({ page }) => {
+  await useClock(page, '2026-09-21T07:00:00-04:00');
+  await skipToToday(page);
+  await page.getByRole('button', { name: 'Describe my week' }).click();
+  await page.locator('#week-text').fill('I work or have school Monday to Friday');
+  await page.getByRole('button', { name: 'Show my goals' }).click();
+  const sheet = page.locator('#week-sheet');
+  await expect(sheet.getByRole('heading', { name: 'Work / School' })).toBeVisible();
+  await expect(sheet.getByText('Mon–Fri')).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'Monday' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(sheet.getByRole('button', { name: 'Friday' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(sheet.getByRole('button', { name: 'Saturday' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(sheet.getByRole('button', { name: 'Sunday' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(sheet.getByText('Which days?')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__dayli.getState().tasks.length)).toBe(0);
+});
+
 test('weekends, an end date, and an unreadable line', async ({ page }) => {
   await useClock(page, '2026-09-21T07:00:00-04:00');
   await skipToToday(page);

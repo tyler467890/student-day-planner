@@ -158,6 +158,131 @@ test('a replacement parser can stand in for the rules', async () => {
   assert.deepEqual(result.unread, [{ text: 'nope' }]);
 });
 
+function assertWeekdaysOnly(days) {
+  assert.ok(!days.includes(0), `Sunday slipped in: ${days}`);
+  assert.ok(!days.includes(6), `Saturday slipped in: ${days}`);
+  assert.deepEqual(days, [1, 2, 3, 4, 5]);
+}
+
+test('Monday to Friday never includes Saturday or Sunday', () => {
+  const phrases = [
+    'i work or have school monday to friday',
+    'i worked or had school monday to friday',
+    'i work monday to friday 8 to 5',
+    'work and school mon-fri',
+    'i work monday through friday',
+    'i work weekdays',
+    'i work mon - fri',
+    'i work from monday till friday',
+    'i work monday until friday',
+    'I work or have school Monday to Friday from 8 to 5',
+    'work or school mon to fri',
+    'i work munday to fridy',
+    'school from monday thru friday',
+  ];
+  for (const phrase of phrases) {
+    const result = parseWeekWithRules(phrase);
+    assert.ok(result.goals.length >= 1, phrase);
+    for (const goal of result.goals) assertWeekdaysOnly(goal.days);
+  }
+
+  const shared = parseWeekWithRules('i work or have school monday to friday');
+  assert.equal(shared.goals.length, 1);
+  assert.equal(shared.goals[0].title, 'Work / School');
+  assert.equal(shared.goals[0].needsDays, false);
+  assert.equal(shared.unread.length, 0);
+
+  const together = parseWeekWithRules('work and school mon-fri');
+  assert.equal(together.goals.length, 1);
+  assert.equal(together.goals[0].title, 'Work / School');
+
+  const timed = parseWeekWithRules('i work monday to friday 8 to 5');
+  assert.equal(timed.goals[0].title, 'Work');
+  assert.equal(timed.goals[0].startTime, '08:00');
+  assert.equal(timed.goals[0].endTime, '17:00');
+
+  const bothTimed = parseWeekWithRules('i work or have school monday to friday 8 to 5');
+  assert.equal(bothTimed.goals[0].title, 'Work / School');
+  assert.equal(bothTimed.goals[0].startTime, '08:00');
+  assert.equal(bothTimed.goals[0].endTime, '17:00');
+});
+
+test('missing days are asked, not silently every day', () => {
+  const study = parseWeekWithRules('i study');
+  assert.equal(study.goals.length, 1);
+  assert.equal(study.goals[0].title, 'Study');
+  assert.deepEqual(study.goals[0].days, []);
+  assert.equal(study.goals[0].needsDays, true);
+
+  const other = parseWeekWithRules('every other day gym');
+  assert.equal(other.goals.length, 1);
+  assert.equal(other.goals[0].title, 'Gym');
+  assert.deepEqual(other.goals[0].days, []);
+  assert.equal(other.goals[0].needsDays, true);
+  assert.notDeepEqual(other.goals[0].days, [1, 2, 3, 4, 5, 6, 0]);
+
+  const second = parseWeekWithRules('gym every second day');
+  assert.deepEqual(second.goals[0].days, []);
+  assert.equal(second.goals[0].needsDays, true);
+
+  const bare = parseWeekWithRules('monday through friday');
+  assert.equal(bare.goals.length, 0);
+  assert.equal(bare.unread.length, 1);
+  assert.equal(parseWeekWithRules('weekdays').goals.length, 0);
+  assert.equal(parseWeekWithRules('mon - fri').goals.length, 0);
+  assert.equal(parseWeekWithRules('from monday till friday').goals.length, 0);
+
+  const inherited = parseWeekWithRules('i work monday to friday and i also have piano');
+  assert.equal(inherited.goals.length, 2);
+  assert.equal(inherited.goals[0].title, 'Work');
+  assert.equal(inherited.goals[1].title, 'Piano');
+  assertWeekdaysOnly(inherited.goals[0].days);
+  assertWeekdaysOnly(inherited.goals[1].days);
+  assert.equal(inherited.goals[1].needsDays, false);
+});
+
+test('ranges, exceptions, parts of day, and guessed clock times', () => {
+  const except = parseWeekWithRules('i work weekdays except wednesday');
+  assert.equal(except.goals[0].title, 'Work');
+  assert.deepEqual(except.goals[0].days, [1, 2, 4, 5]);
+
+  const exceptRange = parseWeekWithRules('piano monday to friday except wednesday at 4pm');
+  assert.deepEqual(exceptRange.goals[0].days, [1, 2, 4, 5]);
+  assert.equal(exceptRange.goals[0].startTime, '16:00');
+
+  const weekend = parseWeekWithRules('weekends soccer at 10');
+  assert.deepEqual(weekend.goals[0].days, [6, 0]);
+  assert.equal(weekend.goals[0].startTime, '10:00');
+
+  const morning = parseWeekWithRules('mornings I study');
+  assert.equal(morning.goals[0].title, 'Study');
+  assert.equal(morning.goals[0].startTime, '08:00');
+  assert.equal(morning.goals[0].needsDays, true);
+  assert.deepEqual(morning.goals[0].days, []);
+
+  const evening = parseWeekWithRules('evenings I read for 30 minutes');
+  assert.equal(evening.goals[0].title, 'Read');
+  assert.equal(evening.goals[0].startTime, '18:00');
+  assert.equal(evening.goals[0].endTime, '18:30');
+  assert.equal(evening.goals[0].needsDays, true);
+
+  const morningClock = parseWeekWithRules('in the morning at 9 i stretch');
+  assert.equal(morningClock.goals[0].startTime, '09:00');
+
+  const atFive = parseWeekWithRules('every friday soccer at 5');
+  assert.deepEqual(atFive.goals[0].days, [5]);
+  assert.equal(atFive.goals[0].startTime, '17:00');
+
+  const each = parseWeekWithRules('each monday piano at 4');
+  assert.deepEqual(each.goals[0].days, [1]);
+  assert.equal(each.goals[0].startTime, '16:00');
+
+  const thru = parseWeekWithRules('choir monday thru thursday 3 to 4');
+  assert.deepEqual(thru.goals[0].days, [1, 2, 3, 4]);
+  assert.equal(thru.goals[0].startTime, '15:00');
+  assert.equal(thru.goals[0].endTime, '16:00');
+});
+
 test('invalid custom goals are not silently kept', async () => {
   const result = await parseWeekDescription('x', {
     parse: () => ({

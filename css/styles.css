@@ -860,6 +860,8 @@ body.sheet-open .fab { visibility: hidden; }
 }
 .proposal h3 { margin: 0 0 4px; font-size: 17px; line-height: 24px; }
 .proposal p, .unread p, .overlap-note p { margin: 0; }
+.proposal .which-days { margin-top: 8px; }
+.proposal .day-chips { margin-top: 8px; }
 .overlap-note {
   background: color-mix(in srgb, var(--accent) 14%, var(--surface));
 }

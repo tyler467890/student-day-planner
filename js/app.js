@@ -3200,19 +3200,42 @@ function openWeekSheet() {
     result.replaceChildren(...kids);
   }
 
+  function dayChips(goal) {
+    return h('div', { class: 'chips days day-chips', role: 'group', 'aria-label': `Days for ${goal.title || 'goal'}` },
+      ...WEEKDAY_LABELS.map((day) => h('button', {
+        type: 'button',
+        class: `chip${goal.days.includes(day.dow) ? ' is-selected' : ''}`,
+        'aria-pressed': goal.days.includes(day.dow) ? 'true' : 'false',
+        'aria-label': day.name,
+        onclick: () => {
+          if (goal.days.includes(day.dow)) goal.days = goal.days.filter((d) => d !== day.dow);
+          else goal.days = [...goal.days, day.dow];
+          goal.needsDays = goal.days.length === 0;
+          paint();
+        },
+      }, day.short)));
+  }
+
   function renderProposal(goal, index) {
     if (editing !== index) {
       const days = model.formatDaySelection(goal.days);
-      return h('article', { class: 'proposal', dataset: { goal: goal.title } },
-        h('h3', { text: goal.title || 'Untitled' }),
-        h('p', { class: 'card-meta', text: `${days ? `${days} · ` : ''}${timeLabel(goal)}` }),
-        h('div', { class: 'row-btns' },
-          h('button', { type: 'button', class: 'text-btn', onclick: () => { editing = index; paint(); } }, 'Edit'),
-          h('button', { type: 'button', class: 'text-btn danger', onclick: () => {
-            proposals.splice(index, 1);
-            editing = -1;
-            paint();
-          } }, 'Remove')));
+      return h('article', {
+        class: `proposal${goal.days.length ? '' : ' needs-days'}`,
+        dataset: { goal: goal.title },
+      },
+      h('h3', { text: goal.title || 'Untitled' }),
+      h('p', { class: 'card-meta', text: timeLabel(goal) }),
+      goal.days.length
+        ? h('p', { class: 'fine', text: days })
+        : h('p', { class: 'field-label which-days', text: 'Which days?' }),
+      dayChips(goal),
+      h('div', { class: 'row-btns' },
+        h('button', { type: 'button', class: 'text-btn', onclick: () => { editing = index; paint(); } }, 'Edit'),
+        h('button', { type: 'button', class: 'text-btn danger', onclick: () => {
+          proposals.splice(index, 1);
+          editing = -1;
+          paint();
+        } }, 'Remove')));
     }
     const title = h('input', { class: 'text-input', 'aria-label': `Title for goal ${index + 1}`, value: goal.title });
     title.addEventListener('input', () => { goal.title = title.value; });
@@ -3270,18 +3293,28 @@ function openWeekSheet() {
     } catch {
       parsed = { goals: [], unread: [{ text }] };
     }
-    proposals = parsed.goals.map((goal) => ({ ...goal, days: [...goal.days] }));
+    proposals = parsed.goals.map((goal) => ({
+      ...goal,
+      days: [...(goal.days || [])],
+      needsDays: Boolean(goal.needsDays) && !(goal.days || []).length,
+    }));
     unread = parsed.unread;
     editing = -1;
     paint();
   }
 
   async function addProposed() {
-    const blank = proposals.findIndex((goal) => !goal.title.trim() || !goal.days.length);
-    if (blank >= 0) {
-      editing = blank;
+    const blankTitle = proposals.findIndex((goal) => !goal.title.trim());
+    if (blankTitle >= 0) {
+      editing = blankTitle;
       paint();
       result.querySelector('input')?.focus();
+      return;
+    }
+    const blankDays = proposals.findIndex((goal) => !goal.days.length);
+    if (blankDays >= 0) {
+      paint();
+      result.querySelector('.needs-days')?.scrollIntoView({ block: 'nearest' });
       return;
     }
     if (!proposals.length) return;
