@@ -97,39 +97,146 @@ const PET_MIGRATION = {
   dragon: 'lion',
 };
 
-export const PET_COLOURS = [
-  { name: 'Natural', hex: null },
-  { name: 'Sunny yellow', hex: '#FFD23F' },
-  { name: 'Peach', hex: '#FFB086' },
-  { name: 'Coral pink', hex: '#FF8AD4' },
-  { name: 'Lavender', hex: '#C4B5FD' },
-  { name: 'Sky blue', hex: '#7EC8FF' },
-  { name: 'Mint', hex: '#7DDFC3' },
-  { name: 'Cocoa', hex: '#A8704A' },
+const NATURAL = { id: 'natural', label: 'Natural', fur: null };
+
+/** Realistic coats. `fur` recolours only the coat; null keeps Kenney's art. */
+const COATS = {
+  dog: [
+    NATURAL,
+    { id: 'golden', label: 'Golden', fur: '#C68642' },
+    { id: 'chocolate', label: 'Chocolate', fur: '#6B3A2A' },
+    { id: 'black', label: 'Black', fur: '#2C2C2E' },
+    { id: 'white', label: 'White', fur: '#F4F0E6' },
+    { id: 'cream', label: 'Cream', fur: '#F3E0B5' },
+    { id: 'grey', label: 'Grey', fur: '#8E9096' },
+    { id: 'merle', label: 'Merle', fur: '#7A6A78' },
+  ],
+  cat: [
+    NATURAL,
+    { id: 'orange', label: 'Orange tabby', fur: '#E07A2F' },
+    { id: 'grey', label: 'Grey', fur: '#8E93A3' },
+    { id: 'black', label: 'Black', fur: '#2A2A2E' },
+    { id: 'white', label: 'White', fur: '#F7F4EF' },
+    { id: 'calico', label: 'Calico', fur: '#E39A6A' },
+  ],
+  bunny: [
+    NATURAL,
+    { id: 'brown', label: 'Brown', fur: '#A56B45' },
+    { id: 'grey', label: 'Grey', fur: '#A8A29A' },
+    { id: 'white', label: 'White', fur: '#F6F3EE' },
+    { id: 'black', label: 'Black', fur: '#2C2C2E' },
+  ],
+  penguin: [
+    NATURAL,
+    { id: 'adelie', label: 'Adelie', fur: '#1E2430' },
+    { id: 'little-blue', label: 'Little blue', fur: '#5C6E86' },
+  ],
+  monkey: [
+    NATURAL,
+    { id: 'brown', label: 'Brown', fur: '#8A5A3A' },
+    { id: 'golden', label: 'Golden', fur: '#C4924A' },
+    { id: 'black', label: 'Black', fur: '#3A322C' },
+  ],
+  tiger: [
+    NATURAL,
+    { id: 'orange', label: 'Orange', fur: '#E07A28' },
+    { id: 'white', label: 'White tiger', fur: '#F6F3EE' },
+  ],
+  pig: [
+    NATURAL,
+    { id: 'pink', label: 'Pink', fur: '#F2A3B5' },
+    { id: 'black', label: 'Black', fur: '#3A3438' },
+    { id: 'spotted', label: 'Spotted', fur: '#C4A8A0' },
+  ],
+  lion: [
+    NATURAL,
+    { id: 'tawny', label: 'Tawny', fur: '#C4A15A' },
+    { id: 'white', label: 'White lion', fur: '#F4F1EA' },
+  ],
+  panda: [
+    NATURAL,
+    { id: 'brown', label: 'Brown', fur: '#6B4A32' },
+  ],
+  fox: [
+    NATURAL,
+    { id: 'red', label: 'Red', fur: '#E07A32' },
+    { id: 'silver', label: 'Silver', fur: '#6E7278' },
+    { id: 'arctic', label: 'Arctic', fur: '#F4F1EA' },
+  ],
+  koala: [
+    NATURAL,
+    { id: 'grey', label: 'Grey', fur: '#9AA0AA' },
+    { id: 'brown', label: 'Brown', fur: '#8A7568' },
+  ],
+  chick: [
+    NATURAL,
+    { id: 'yellow', label: 'Yellow', fur: '#F2C84B' },
+    { id: 'buff', label: 'Buff', fur: '#E6C07A' },
+    { id: 'black', label: 'Black', fur: '#2E2E32' },
+  ],
+};
+
+/** Same fur-only recolour for every animal. Face, paws, and beak stay put. */
+const FUN_COATS = [
+  { id: 'blue', label: 'Blue', fur: '#3B82F6' },
+  { id: 'pink', label: 'Pink', fur: '#F472B6' },
+  { id: 'purple', label: 'Purple', fur: '#A78BFA' },
 ];
 
-export function defaultPetColors() {
-  return { eyes: null, primary: null, secondary: null };
+const EYE = {
+  natural: { id: 'natural', label: 'Natural', hex: null },
+  brown: { id: 'brown', label: 'Brown', hex: '#6B3E26' },
+  amber: { id: 'amber', label: 'Amber', hex: '#D4922A' },
+  green: { id: 'green', label: 'Green', hex: '#3E8F4A' },
+  blue: { id: 'blue', label: 'Blue', hex: '#3D6FBF' },
+  copper: { id: 'copper', label: 'Copper', hex: '#B5693A' },
+};
+
+const EYE_CHOICES = {
+  dog: ['natural', 'brown', 'amber', 'blue'],
+  cat: ['natural', 'green', 'amber', 'copper', 'blue'],
+  bunny: ['natural', 'brown', 'amber', 'blue'],
+  penguin: ['natural', 'brown', 'amber'],
+  monkey: ['natural', 'brown', 'amber'],
+  tiger: ['natural', 'amber', 'brown', 'green'],
+  pig: ['natural', 'brown', 'amber', 'blue'],
+  lion: ['natural', 'amber', 'brown', 'green'],
+  panda: ['natural', 'brown', 'amber'],
+  fox: ['natural', 'amber', 'brown'],
+  koala: ['natural', 'brown', 'amber'],
+  chick: ['natural', 'brown', 'amber'],
+};
+
+export function coatsFor(animal) {
+  return COATS[animal] || COATS.penguin;
 }
 
-/** Old saves stored one tint on `color`. That tint becomes the main colour. */
-export function normalizePetColors(saved) {
-  const base = defaultPetColors();
-  if (!saved || typeof saved !== 'object') return base;
-  if (saved.colors && typeof saved.colors === 'object') {
-    return {
-      eyes: normalizeHex(saved.colors.eyes),
-      primary: normalizeHex(saved.colors.primary),
-      secondary: normalizeHex(saved.colors.secondary),
-    };
-  }
-  return { ...base, primary: normalizeHex(saved.color) };
+export function funCoats() {
+  return FUN_COATS;
+}
+
+export function eyeColoursFor(animal) {
+  const ids = EYE_CHOICES[animal] || EYE_CHOICES.penguin;
+  return ids.map((id) => EYE[id]);
+}
+
+export function resolveCoat(animal, id) {
+  const coats = coatsFor(animal);
+  return coats.find((coat) => coat.id === id)
+    || FUN_COATS.find((coat) => coat.id === id)
+    || coats[0];
+}
+
+export function resolveEye(animal, id) {
+  const eyes = eyeColoursFor(animal);
+  return eyes.find((eye) => eye.id === id) || eyes[0];
 }
 
 export function defaultPet() {
   return {
     animal: 'penguin',
-    colors: defaultPetColors(),
+    coat: 'natural',
+    eyeColor: 'natural',
     eyes: 'round',
     cheeks: true,
     hat: false,
@@ -149,7 +256,8 @@ export function normalizePet(saved) {
   const body = Number(saved.body);
   return {
     animal,
-    colors: normalizePetColors(saved),
+    coat: resolveCoat(animal, saved.coat).id,
+    eyeColor: resolveEye(animal, saved.eyeColor).id,
     eyes,
     cheeks: saved.cheeks !== false,
     hat: Boolean(saved.hat),
@@ -192,7 +300,7 @@ export function defaultSettings() {
     photoBlur: 0,
     categories: defaultCategories(),
     pet: defaultPet(),
-    schemaVersion: 2,
+    schemaVersion: 3,
   };
 }
 
@@ -894,7 +1002,12 @@ export function migrateSettings(saved) {
   delete merged.weekStart;
   delete merged.streakMode;
   delete merged.dailyGoal;
-  if (version < 2) merged.schemaVersion = 2;
+  // v2 copied an old whole-model tint into Main and painted the wrong parts.
+  // v3 puts every saved pet back on Natural so the real animal colours return.
+  if (version < 3) {
+    merged.pet = { ...merged.pet, coat: 'natural', eyeColor: 'natural' };
+    merged.schemaVersion = 3;
+  }
   merged.textColor = normalizeHex(saved.textColor);
   merged.bgColor = normalizeHex(saved.bgColor);
   if (!THEMES[merged.theme]) merged.theme = base.theme;

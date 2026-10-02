@@ -11,8 +11,9 @@ import {
   SRGBColorSpace, NoToneMapping, PCFSoftShadowMap,
 } from 'three';
 import { GLTFLoader } from '../vendor/examples/jsm/loaders/GLTFLoader.js';
-import { prepareCube, poseClip, limitLightness, applyFlourish, restoreBinds } from './cube-pet.js';
+import { prepareCube, poseClip, applyFlourish, restoreBinds } from './cube-pet.js';
 import { paintPetColors } from './pet-palette.js';
+import { resolveCoat, resolveEye } from './model.js';
 
 const DURATION = {
   wave: 1.55,
@@ -132,7 +133,8 @@ export function createPetStage(canvas) {
 
   const state = {
     animal: 'penguin',
-    colors: { eyes: null, primary: null, secondary: null },
+    coat: 'natural',
+    eyeColor: 'natural',
     eyes: 'round',
     cheeks: true,
     hat: false,
@@ -171,7 +173,9 @@ export function createPetStage(canvas) {
   }
 
   function applyColors(pet) {
-    paintPetColors(pet, state.colors);
+    const coat = resolveCoat(state.animal, state.coat);
+    const eye = resolveEye(state.animal, state.eyeColor);
+    paintPetColors(pet, { fur: coat.fur, eyes: eye.hex });
   }
 
   function restingMode() {
@@ -264,12 +268,8 @@ export function createPetStage(canvas) {
   let serial = 0;
   function setPet(config) {
     const next = config || {};
-    const incoming = next.colors || {};
-    state.colors = {
-      eyes: incoming.eyes ? limitLightness(incoming.eyes) : null,
-      primary: incoming.primary ? limitLightness(incoming.primary) : null,
-      secondary: incoming.secondary ? limitLightness(incoming.secondary) : null,
-    };
+    state.coat = next.coat || 'natural';
+    state.eyeColor = next.eyeColor || 'natural';
     state.eyes = next.eyes || 'round';
     state.cheeks = next.cheeks !== false;
     state.hat = Boolean(next.hat);

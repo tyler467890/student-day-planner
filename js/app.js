@@ -18,7 +18,7 @@ const {
   upcomingReminders, reminderText, onAccent, autoScrim, burstCount, clone,
   zonedDateTime, weekStartOf, parseHM, migrateSettings, paintColors, fixTextColor,
   isPlannerYmd, earliestStoredDate,
-  normalizeHex, relativeLuminance, PET_ANIMALS, PET_COLOURS,
+  normalizeHex, relativeLuminance, PET_ANIMALS,
   COLOUR_WHEEL_SIZE, hsvToHex, hsvToRgb, hexToHsv, wheelPointToHs, hsToWheelPoint,
   applyPresentationDefaults,
 } = model;
@@ -1088,7 +1088,8 @@ function openPetScreen(from) {
 }
 
 function updatePet(patch, { redraw = true } = {}) {
-  S.settings.pet = { ...(S.settings.pet || model.defaultPet()), ...patch };
+  const merged = { ...(S.settings.pet || model.defaultPet()), ...patch };
+  S.settings.pet = model.normalizePet(merged);
   persistAll();
   if (redraw) render();
   else applyPetConfig();
@@ -1104,68 +1105,41 @@ function renderAnimalGrid() {
     }, label)));
 }
 
-const PET_COLOR_SLOTS = [
-  ['eyes', 'Eyes'],
-  ['primary', 'Main'],
-  ['secondary', 'Second'],
-];
-
-/**
- * One pet colour slot. Preset swatches sit beside this. The rainbow chip opens
- * the same colour wheel used for theme colours, and calls onColor(hex, commit).
- */
-function renderPetColorPicker(slot, label, currentHex, onColor) {
-  const id = `pet-${slot}`;
-  const shown = currentHex || '#7EC8FF';
-  const presets = PET_COLOURS.map((swatch) => swatch.hex).filter(Boolean);
-  const chip = colourChip({
-    id,
-    label: `Custom ${label} colour`,
-    shown,
-    selected: Boolean(currentHex && !presets.includes(currentHex)),
-  });
-  const wheel = openWheel === id
-    ? colourWheelPanel(shown, (hex, commit) => onColor(hex, commit))
-    : null;
-  return { chip, wheel };
+function renderVariantChips(label, options, current, kind, onPick) {
+  const swatches = h('div', { class: 'chips', role: 'group', 'aria-label': label });
+  for (const option of options) {
+    const selected = current === option.id;
+    const tint = option.fur || option.hex;
+    swatches.append(h('button', {
+      type: 'button',
+      class: `chip pet-variant${selected ? ' is-selected' : ''}`,
+      'aria-pressed': selected ? 'true' : 'false',
+      'aria-label': `${kind} ${option.label}`,
+      onclick: () => onPick(option.id),
+    },
+    h('span', {
+      class: 'pet-swatch',
+      style: tint ? `background:${tint}` : 'background:linear-gradient(135deg,#fff,#c9c2b4)',
+    }),
+    option.label));
+  }
+  return swatches;
 }
 
 function renderPetColorRows(pet) {
-  const colors = pet.colors || { eyes: null, primary: null, secondary: null };
+  const animal = pet.animal || 'penguin';
+  const coat = pet.coat || 'natural';
+  const eyeColor = pet.eyeColor || 'natural';
   const rows = h('div', { class: 'pet-color-rows' });
-  for (const [slot, label] of PET_COLOR_SLOTS) {
-    const value = colors[slot] || null;
-    const swatches = h('div', { class: 'pet-colours', role: 'group', 'aria-label': `${label} colour` });
-    for (const swatch of PET_COLOURS) {
-      const selected = swatch.hex ? value === swatch.hex : !value;
-      swatches.append(h('button', {
-        type: 'button',
-        'aria-label': `${label} ${swatch.name}`,
-        'aria-pressed': selected ? 'true' : 'false',
-        style: swatch.hex ? `background:${swatch.hex}` : 'background:linear-gradient(135deg,#fff,#d9d3ea)',
-        onclick: () => {
-          openWheel = null;
-          updatePet({ colors: { ...colors, [slot]: swatch.hex } });
-        },
-      }));
-    }
-    const picker = renderPetColorPicker(slot, label, value, (hex, commit) => {
-      const next = { ...(S.settings.pet?.colors || colors), [slot]: hex };
-      if (!commit) {
-        S.settings.pet = { ...(S.settings.pet || model.defaultPet()), colors: next };
-        applyPetConfig();
-        const dot = document.querySelector(`[data-pet-slot="${slot}"] .color-chip-dot`);
-        if (dot) dot.style.background = hex;
-        return;
-      }
-      updatePet({ colors: next });
-    });
-    swatches.append(picker.chip);
-    rows.append(h('div', { class: 'pet-color-row', dataset: { petSlot: slot } },
-      h('span', { class: 'pet-color-label', text: label }),
-      swatches));
-    if (picker.wheel) rows.append(picker.wheel);
-  }
+  rows.append(
+    h('p', { class: 'field-label', text: 'Coat' }),
+    renderVariantChips('Coat', model.coatsFor(animal), coat, 'Coat', (id) => updatePet({ coat: id })),
+    h('p', { class: 'field-label', text: 'Fun colours' }),
+    h('p', { class: 'fine', text: 'Fun colours change the coat only. Face, paws, nose, and beak stay natural.' }),
+    renderVariantChips('Fun colours', model.funCoats(), coat, 'Coat', (id) => updatePet({ coat: id })),
+    h('p', { class: 'field-label', text: 'Eyes' }),
+    renderVariantChips('Eyes', model.eyeColoursFor(animal), eyeColor, 'Eyes', (id) => updatePet({ eyeColor: id })),
+  );
   return rows;
 }
 

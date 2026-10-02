@@ -315,7 +315,7 @@ test('a v1 save keeps its theme, accent, and categories', () => {
     ],
   };
   const next = migrateSettings(v1);
-  assert.equal(next.schemaVersion, 2);
+  assert.equal(next.schemaVersion, 3);
   assert.equal(next.textColor, null);
   assert.equal(next.bgColor, null);
   assert.equal(next.theme, 'ocean');
@@ -337,19 +337,29 @@ test('a v1 save keeps its theme, accent, and categories', () => {
   assert.equal(next.categories[0].color, '#1D63B8');
   assert.equal(next.setupComplete, true);
   assert.equal(next.pet.animal, 'penguin');
-  assert.equal(next.pet.colors.primary, null);
-  assert.equal(next.pet.colors.eyes, null);
+  assert.equal(next.pet.coat, 'natural');
+  assert.equal(next.pet.eyeColor, 'natural');
+  assert.equal(next.pet.colors, undefined);
   assert.equal(next.pet.hat, false);
   const kept = migrateSettings({
     ...v1,
     schemaVersion: 2,
-    pet: { animal: 'tiger', color: '#ffd23f', eyes: 'sparkly', cheeks: false, hat: true, height: 1.2, body: 0.9 },
+    pet: {
+      animal: 'tiger',
+      color: '#ffd23f',
+      colors: { eyes: '#2244aa', primary: '#ffd23f', secondary: '#88ffcc' },
+      eyes: 'sparkly',
+      cheeks: false,
+      hat: true,
+      height: 1.2,
+      body: 0.9,
+    },
   });
-  assert.equal(kept.schemaVersion, 2);
+  assert.equal(kept.schemaVersion, 3);
   assert.equal(kept.pet.animal, 'tiger');
-  assert.equal(kept.pet.colors.primary, '#FFD23F');
-  assert.equal(kept.pet.colors.eyes, null);
-  assert.equal(kept.pet.colors.secondary, null);
+  assert.equal(kept.pet.coat, 'natural');
+  assert.equal(kept.pet.eyeColor, 'natural');
+  assert.equal(kept.pet.colors, undefined);
   assert.equal(kept.pet.eyes, 'sparkly');
   assert.equal(kept.pet.cheeks, false);
   assert.equal(kept.pet.hat, true);
@@ -370,18 +380,37 @@ test('a v1 save keeps its theme, accent, and categories', () => {
   assert.equal(custom.title, "Sam's Day");
 });
 
+test('schema 3 keeps a real coat and drops one the animal does not have', () => {
+  const kept = migrateSettings({
+    schemaVersion: 3,
+    pet: { animal: 'dog', coat: 'chocolate', eyeColor: 'blue', eyes: 'happy' },
+  });
+  assert.equal(kept.schemaVersion, 3);
+  assert.equal(kept.pet.coat, 'chocolate');
+  assert.equal(kept.pet.eyeColor, 'blue');
+  assert.equal(kept.pet.eyes, 'happy');
+  const dropped = migrateSettings({
+    schemaVersion: 3,
+    pet: { animal: 'penguin', coat: 'chocolate', eyeColor: 'blue' },
+  });
+  assert.equal(dropped.pet.animal, 'penguin');
+  assert.equal(dropped.pet.coat, 'natural');
+  assert.equal(dropped.pet.eyeColor, 'natural');
+  assert.equal(normalizePet({ animal: 'lion', coat: 'blue' }).coat, 'blue');
+  assert.equal(normalizePet({ animal: 'fox', coat: 'arctic' }).coat, 'arctic');
+  assert.equal(defaultSettings().schemaVersion, 3);
+  assert.equal(defaultSettings().pet.coat, 'natural');
+});
+
 test('retired pets migrate onto the cube lineup', () => {
   assert.equal(normalizePet({ animal: 'horse', hat: true, eyes: 'sparkly' }).animal, 'fox');
   assert.equal(normalizePet({ animal: 'horse', hat: true }).hat, true);
   assert.equal(normalizePet({ animal: 'shark', color: '#ffd23f' }).animal, 'penguin');
-  assert.equal(normalizePet({ animal: 'shark', color: '#ffd23f' }).colors.primary, '#FFD23F');
-  const slots = normalizePet({
-    animal: 'dog',
-    colors: { eyes: '#2244aa', primary: null, secondary: '#88ffcc' },
-  });
-  assert.equal(slots.colors.eyes, '#2244AA');
-  assert.equal(slots.colors.primary, null);
-  assert.equal(slots.colors.secondary, '#88FFCC');
+  assert.equal(normalizePet({ animal: 'shark', color: '#ffd23f', colors: { primary: '#FFD23F' } }).coat, 'natural');
+  const slots = normalizePet({ animal: 'dog', coat: 'chocolate', eyeColor: 'blue' });
+  assert.equal(slots.coat, 'chocolate');
+  assert.equal(slots.eyeColor, 'blue');
+  assert.equal(slots.colors, undefined);
   assert.equal(normalizePet({ animal: 'axolotl' }).animal, 'bunny');
   assert.equal(normalizePet({ animal: 'capybara' }).animal, 'koala');
   assert.equal(normalizePet({ animal: 'dragon' }).animal, 'lion');
