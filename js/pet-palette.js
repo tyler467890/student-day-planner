@@ -1,17 +1,17 @@
 /**
- * Recolour Kenney Cube Pets by palette cell.
- * The shared colormap is a grid of shaded swatches. Parts that share a swatch
- * are split onto a free cell so Eyes, Main, and Second each change only their
- * own parts. Eye whites, nose, mouth, and dark markings stay on the original art.
+ * Recolour Kenney Cube Pets by coat and iris only.
+ * Natural leaves the GLB colormap untouched. A coat or eye colour splits the
+ * shared swatch so face, muzzle, paws, nose, beak, belly, stripes, and eye
+ * whites stay on the original art.
  *
- * `paintPetColors` is the runtime hook. A colour wheel can call the same
- * `{ eyes, primary, secondary }` object this painter already accepts.
+ * `paintPetColors(pet, { fur, eyes })` — null means that region stays natural.
  */
 
 import { BufferAttribute, CanvasTexture, SRGBColorSpace } from 'three';
 
-const ROLE = { empty: 0, keep: 1, primary: 2, secondary: 3, eyes: 4 };
 const COLS = 16;
+const ROLE = { empty: 0, keep: 1, fur: 2, eyes: 4 };
+const cellId = (col, band) => col + band * COLS;
 
 function lightness(r, g, b) {
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
@@ -76,6 +76,7 @@ function collectTriangles(pet) {
       const corners = ids.map((id) => [uv.getX(id), uv.getY(id)]);
       const u = (corners[0][0] + corners[1][0] + corners[2][0]) / 3;
       const v = (corners[0][1] + corners[1][1] + corners[2][1]) / 3;
+      const cx = (pos.getX(ids[0]) + pos.getX(ids[1]) + pos.getX(ids[2])) / 3;
       const cy = (pos.getY(ids[0]) + pos.getY(ids[1]) + pos.getY(ids[2])) / 3;
       const cz = (pos.getZ(ids[0]) + pos.getZ(ids[1]) + pos.getZ(ids[2])) / 3;
       tris.push({
@@ -85,6 +86,7 @@ function collectTriangles(pet) {
         uv: corners,
         u,
         v,
+        cx,
         cy,
         cz,
         cell: cellOf(u, v),
@@ -95,61 +97,66 @@ function collectTriangles(pet) {
   return tris;
 }
 
-function classify(tris, sample) {
-  const body = tris.filter((tri) => tri.node === 'body');
-  if (!body.length) {
-    tris.forEach((tri) => { tri.role = ROLE.keep; });
-    return;
-  }
-  let yMin = Infinity;
-  let yMax = -Infinity;
-  let zMin = Infinity;
-  let zMax = -Infinity;
-  for (const tri of body) {
-    if (tri.cy < yMin) yMin = tri.cy;
-    if (tri.cy > yMax) yMax = tri.cy;
-    if (tri.cz < zMin) zMin = tri.cz;
-    if (tri.cz > zMax) zMax = tri.cz;
-  }
-  const ySpan = yMax - yMin || 1;
-  const zSpan = zMax - zMin || 1;
-  const torso = new Map();
-  for (const tri of body) {
-    const yn = (tri.cy - yMin) / ySpan;
-    const zn = (tri.cz - zMin) / zSpan;
-    tri.light = sample(tri.u, tri.v);
-    if (yn > 0.2 && yn < 0.75 && zn > 0.08 && zn < 0.62) {
-      torso.set(tri.cell, (torso.get(tri.cell) || 0) + 1);
-    }
-  }
-  let primaryCell = null;
-  let best = 0;
-  for (const [cell, n] of torso) {
-    if (n > best) {
-      best = n;
-      primaryCell = cell;
-    }
-  }
-  if (primaryCell == null) primaryCell = body[0].cell;
-  const cellCount = new Map();
-  for (const tri of tris) {
-    if (tri.light == null) tri.light = sample(tri.u, tri.v);
-    cellCount.set(tri.cell, (cellCount.get(tri.cell) || 0) + 1);
-  }
+function nodeKind(name) {
+  if (name === 'body' || name === 'tail') return name;
+  if (name.startsWith('leg')) return 'leg';
+  if (name.startsWith('wing')) return 'wing';
+  return 'other';
+}
 
+/** Pupils sit on the face plane, left and right of the nose. */
+function isPupil(tri) {
+  const ax = Math.abs(tri.cx);
+  return tri.node === 'body'
+    && tri.cell === cellId(15, 3)
+    && ax > 0.12 && ax < 0.27
+    && tri.cy > 0.55 && tri.cy < 0.92
+    && tri.cz > 0.58 && tri.cz < 0.68;
+}
+
+function isFur(animal, tri) {
+  const kind = nodeKind(tri.node);
+  const cell = tri.cell;
+  switch (animal) {
+    case 'dog':
+      return kind === 'body' && cell === cellId(5, 2);
+    case 'cat':
+      return cell === cellId(13, 3) && (kind === 'body' || kind === 'tail' || kind === 'leg');
+    case 'bunny':
+      return kind === 'body' && cell === cellId(5, 2);
+    case 'penguin':
+      return cell === cellId(15, 3) && (kind === 'body' || kind === 'wing');
+    case 'monkey':
+      return cell === cellId(5, 2) && (kind === 'body' || kind === 'tail');
+    case 'tiger':
+      return cell === cellId(7, 3) && (kind === 'body' || kind === 'tail' || kind === 'leg');
+    case 'pig':
+      return cell === cellId(1, 3) && (kind === 'body' || kind === 'leg');
+    case 'lion':
+      return cell === cellId(15, 2) && (kind === 'body' || kind === 'tail' || kind === 'leg');
+    case 'panda':
+      return cell === cellId(15, 3) && (kind === 'body' || kind === 'leg');
+    case 'fox':
+      return cell === cellId(7, 3) && (kind === 'body' || kind === 'tail' || kind === 'leg');
+    case 'koala':
+      return cell === cellId(13, 3) && (kind === 'body' || kind === 'leg');
+    case 'chick':
+      return cell === cellId(15, 2) && (kind === 'body' || kind === 'wing');
+    default:
+      return false;
+  }
+}
+
+function isEye(animal, tri) {
+  if (animal === 'cat') return tri.node === 'body' && tri.cell === cellId(15, 2);
+  return isPupil(tri);
+}
+
+function classify(tris, animal) {
   for (const tri of tris) {
-    const yn = (tri.cy - yMin) / ySpan;
-    const zn = (tri.cz - zMin) / zSpan;
-    // Face band, below the ears. Ear tips sit higher than this.
-    const eye = tri.node === 'body' && yn > 0.5 && yn < 0.84 && zn > 0.58;
-    const snout = tri.node === 'body' && zn > 0.8 && yn > 0.22 && yn < 0.7;
-    if (eye && tri.light > 0.9) tri.role = ROLE.keep;
-    else if (eye && tri.light < 0.45) tri.role = ROLE.eyes;
-    else if (eye && tri.cell !== primaryCell) tri.role = ROLE.eyes;
-    else if (snout && tri.cell !== primaryCell && tri.light < 0.55) tri.role = ROLE.keep;
-    else if (tri.cell === primaryCell) tri.role = ROLE.primary;
-    else if (tri.light < 0.22 && (cellCount.get(tri.cell) || 0) < 36) tri.role = ROLE.keep;
-    else tri.role = ROLE.secondary;
+    if (isEye(animal, tri)) tri.role = ROLE.eyes;
+    else if (isFur(animal, tri)) tri.role = ROLE.fur;
+    else tri.role = ROLE.keep;
   }
 }
 
@@ -179,7 +186,7 @@ function remapUvs(tris) {
     for (const tri of group) counts.set(tri.role, (counts.get(tri.role) || 0) + 1);
     let owner = ROLE.keep;
     if (!counts.has(ROLE.keep)) {
-      owner = ROLE.primary;
+      owner = ROLE.fur;
       let n = 0;
       for (const [role, count] of counts) {
         if (count > n) {
@@ -293,6 +300,14 @@ function tintPixel(r, g, b, target, maxL) {
   return hslToRgb(target.h, target.s, nl);
 }
 
+/** Pupils are nearly black. Lift them enough that brown and blue still read. */
+function tintEyePixel(r, g, b, target, maxL) {
+  const sl = lightness(r, g, b);
+  const scale = maxL > 0.02 ? sl / maxL : 1;
+  const nl = Math.min(0.62, Math.max(0.2, 0.2 + scale * 0.32));
+  return hslToRgb(target.h, Math.max(target.s, 0.55), nl);
+}
+
 function readImage(texture) {
   const image = texture.image;
   const width = image.width;
@@ -313,26 +328,54 @@ function cloneMeshes(pet) {
   });
 }
 
+function snapshotSource(pet) {
+  if (pet.coatSource) return;
+  const maps = new Map();
+  const colors = new Map();
+  for (const mat of pet.materials) {
+    if (!mat) continue;
+    maps.set(mat.uuid, mat.map || null);
+    if (mat.color) colors.set(mat.uuid, mat.color.getHex());
+  }
+  const geos = new Map();
+  pet.root.traverse((obj) => {
+    if (obj.isMesh && obj.geometry) geos.set(obj.uuid, obj.geometry);
+  });
+  pet.coatSource = { maps, colors, geos };
+}
+
+function restorePalette(pet) {
+  if (!pet.coatSource || !pet.palette) return;
+  pet.root.traverse((obj) => {
+    const geo = pet.coatSource.geos.get(obj.uuid);
+    if (obj.isMesh && geo) obj.geometry = geo;
+  });
+  for (const mat of pet.materials) {
+    if (!mat) continue;
+    const map = pet.coatSource.maps.get(mat.uuid);
+    if (map) mat.map = map;
+    const hex = pet.coatSource.colors.get(mat.uuid);
+    if (mat.color && hex != null) mat.color.setHex(hex);
+    mat.needsUpdate = true;
+  }
+  pet.palette = null;
+}
+
 /**
- * Build the per-pet mask once, then repaint when the three colours change.
- * Null colours leave that slot on Kenney's original palette.
+ * Build the per-pet mask once, then repaint when the coat or eye colour changes.
+ * Null fur and eyes skip this and keep the original Kenney texture.
  */
 export function attachPalette(pet) {
   if (pet.palette) return pet.palette;
   const material = pet.materials.find((mat) => mat.map && mat.map.image);
   if (!material) return null;
+  snapshotSource(pet);
   cloneMeshes(pet);
   const { canvas, ctx, original } = readImage(material.map);
-  const { width, height, data } = original;
-  const sample = (u, v) => {
-    const x = Math.min(width - 1, Math.max(0, Math.round(u * (width - 1))));
-    const y = Math.min(height - 1, Math.max(0, Math.round(v * (height - 1))));
-    const i = (y * width + x) * 4;
-    return lightness(data[i], data[i + 1], data[i + 2]);
-  };
+  const { width, height } = original;
   const tris = collectTriangles(pet);
   for (const tri of tris) tri.src = tri.uv.map((pair) => pair.slice());
-  classify(tris, sample);
+  classify(tris, pet.animal);
   remapUvs(tris);
   const drawn = raster(tris, width, height);
   const texture = new CanvasTexture(canvas);
@@ -354,15 +397,20 @@ export function attachPalette(pet) {
 }
 
 export function paintPetColors(pet, colors = {}) {
+  const fur = colors.fur || null;
+  const eyes = colors.eyes || null;
+  if (!fur && !eyes) {
+    restorePalette(pet);
+    return;
+  }
   const palette = attachPalette(pet);
   if (!palette) return;
   const { ctx, original, texture, mask, width, height } = palette;
   const image = new ImageData(new Uint8ClampedArray(original.data), width, height);
   const pixels = image.data;
   const targets = {
-    [ROLE.primary]: colors.primary ? hexToHsl(colors.primary) : null,
-    [ROLE.secondary]: colors.secondary ? hexToHsl(colors.secondary) : null,
-    [ROLE.eyes]: colors.eyes ? hexToHsl(colors.eyes) : null,
+    [ROLE.fur]: fur ? hexToHsl(fur) : null,
+    [ROLE.eyes]: eyes ? hexToHsl(eyes) : null,
   };
   const { role, src } = mask;
   const peak = new Map();
@@ -394,7 +442,8 @@ export function paintPetColors(pet, colors = {}) {
       ((src[i] % width) + 0.5) / width,
       (Math.floor(src[i] / width) + 0.5) / height,
     );
-    const [r, g, b] = tintPixel(
+    const tint = kind === ROLE.eyes ? tintEyePixel : tintPixel;
+    const [r, g, b] = tint(
       original.data[from], original.data[from + 1], original.data[from + 2],
       target,
       peak.get(key) || 0.7,
