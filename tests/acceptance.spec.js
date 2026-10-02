@@ -1119,10 +1119,10 @@ test('today and simplified settings screenshots', async ({ page }) => {
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.getByRole('button', { name: 'Your pet' }).click();
   await expect(page.getByRole('heading', { name: 'Your pet' })).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Eyes colour' })).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Main colour' })).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Second colour' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Coat' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Fun colours' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Eyes' })).toBeVisible();
   await page.locator('.pet-color-rows').screenshot({ path: `${ART}/pet-colour-rows-phone.png` });
-  await page.getByRole('button', { name: 'Second Natural' }).click();
-  await expect(page.getByRole('button', { name: 'Second Natural' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Coat Natural' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Eyes Natural' })).toHaveAttribute('aria-pressed', 'true');
 });
