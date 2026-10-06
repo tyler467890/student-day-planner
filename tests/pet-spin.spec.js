@@ -164,6 +164,7 @@ test('drag, spin, and framing at phone and desktop size', async ({ browser }) =>
   expect(Math.abs(yawAfterTouch - yawBeforeTouch)).toBeGreaterThan(0.7);
   await expect(page.getByRole('heading', { level: 1, name: 'My Day' })).toBeVisible();
 
+  await page.waitForTimeout(450);
   await page.getByRole('button', { name: 'Your pet' }).click();
   await page.getByRole('button', { name: 'Cat', exact: true }).click();
   await page.getByRole('button', { name: 'Shop', exact: true }).click();

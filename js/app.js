@@ -1317,7 +1317,6 @@ function paintPetFallback() {
 }
 
 let suppressPetClick = false;
-let petTapTimer = 0;
 let lastPetTap = 0;
 
 function shopLikeScreen() {
@@ -1325,27 +1324,23 @@ function shopLikeScreen() {
 }
 
 function onPetActivate(event) {
-  if (petTapTimer) {
-    clearTimeout(petTapTimer);
-    petTapTimer = 0;
-  }
   petStage?.poke();
-  if (!S.settings.setupComplete || S.screen === 'pet') return;
-  if (shopLikeScreen() && !reducedMotion()) {
-    const now = performance.now();
-    if ((event?.detail || 0) >= 2 || now - lastPetTap < 420) {
-      lastPetTap = 0;
-      petStage?.spinTurn();
-      return;
+  // Shop and closet taps only react, or spin on a double tap. Opening the
+  // pet screen from those previews used to wait out a double-tap, which
+  // felt like a delay and dropped the try-on. Today still opens on one tap.
+  if (shopLikeScreen()) {
+    if (!reducedMotion()) {
+      const now = performance.now();
+      if ((event?.detail || 0) >= 2 || (lastPetTap && now - lastPetTap < 400)) {
+        lastPetTap = 0;
+        petStage?.spinTurn();
+        return;
+      }
+      lastPetTap = now;
     }
-    lastPetTap = now;
-    petTapTimer = setTimeout(() => {
-      petTapTimer = 0;
-      if (!shopLikeScreen()) return;
-      openPetScreen('today');
-    }, 450);
     return;
   }
+  if (!S.settings.setupComplete || S.screen === 'pet') return;
   openPetScreen('today');
 }
 
@@ -1361,19 +1356,12 @@ function bindPetTurn(holder, btn) {
   btn.addEventListener('dblclick', (event) => {
     if (!shopLikeScreen() || reducedMotion()) return;
     event.preventDefault();
-    if (petTapTimer) {
-      clearTimeout(petTapTimer);
-      petTapTimer = 0;
-    }
     lastPetTap = 0;
     petStage?.spinTurn();
   });
   holder.addEventListener('pointerdown', (event) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return;
-    if (petTapTimer) {
-      clearTimeout(petTapTimer);
-      petTapTimer = 0;
-    }
+    lastPetTap = 0;
     active = { id: event.pointerId, x: event.clientX, y: event.clientY, drag: false };
     petStage?.grab();
   });
@@ -1391,7 +1379,11 @@ function bindPetTurn(holder, btn) {
       active.drag = true;
       active.x = event.clientX;
       active.y = event.clientY;
-      try { holder.setPointerCapture(event.pointerId); } catch { /* pointer already up */ }
+      // Touch already captured the tap button (it sits on top of the pet).
+      // Capturing the area instead releases that button, and the resulting
+      // lostpointercapture bubbles here and ends the drag after the first
+      // few pixels. Capture the button so the finger keeps driving the turn.
+      try { btn.setPointerCapture(event.pointerId); } catch { /* pointer already up */ }
       // Count the movement that crossed the threshold, so the pet doesn't lag the finger.
       petStage?.nudge(-dx * 0.014);
       event.preventDefault();
@@ -1418,7 +1410,12 @@ function bindPetTurn(holder, btn) {
   };
   holder.addEventListener('pointerup', finish);
   holder.addEventListener('pointercancel', finish);
-  holder.addEventListener('lostpointercapture', finish);
+  holder.addEventListener('lostpointercapture', (event) => {
+    // A child's capture loss is not the finger lifting. Ignore it so the
+    // drag keeps tracking until this button actually gives the pointer up.
+    if (event.target !== btn) return;
+    finish(event);
+  });
 }
 
 function ensurePetHolder() {
@@ -1755,7 +1752,8 @@ function renderShop() {
       tile.append(h('span', { class: 'shop-lock', text: '🔒', 'aria-hidden': 'true' }));
       tile.append(h('span', { class: 'shop-cond', text: item.rare.label }));
     } else if (owned) {
-      tile.append(h('span', { class: 'shop-pill is-wear', text: 'Wear' }));
+      const wearing = S.settings.wardrobe?.outfit?.[item.slot] === item.id;
+      tile.append(h('span', { class: 'shop-pill is-wear', text: wearing ? 'Wearing' : 'Wear' }));
     } else {
       tile.append(h('span', { class: 'shop-price' }, h('span', { class: 'coin sm', text: '★' }), String(item.price)));
     }
