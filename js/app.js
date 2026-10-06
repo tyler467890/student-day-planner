@@ -1114,7 +1114,7 @@ function renderSuggestBubble() {
     h('button', {
       type: 'button',
       class: 'text-btn suggest-time-btn',
-      'aria-label': `Change time, ${timeLabel}`,
+      'aria-label': `Choose when, ${timeLabel}`,
       onclick: () => { void openSuggestionTime(); },
     }, timeLabel)),
   timeRow,

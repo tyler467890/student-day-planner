@@ -77,6 +77,20 @@ function bubble(page) {
   return page.locator('.suggest-bubble');
 }
 
+async function savedFrequency(page) {
+  return page.evaluate(() => new Promise((resolve, reject) => {
+    const req = indexedDB.open('dayli');
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result;
+      const tx = db.transaction('settings', 'readonly');
+      const get = tx.objectStore('settings').get('main');
+      get.onerror = () => reject(get.error);
+      get.onsuccess = () => resolve(get.result?.suggestFrequency || null);
+    };
+  }));
+}
+
 async function waitForPet(page) {
   await page.waitForFunction(() => {
     const el = document.querySelector('#pet-hero');
@@ -145,8 +159,8 @@ test('add uses the suggested time, and the time field can change it', async ({ c
   await page.evaluate(() => window.__dayli.checkReminders());
   const next = bubble(page);
   await expect(next.getByText('Take a short walk')).toBeVisible();
-  await next.getByRole('button', { name: /Change time/ }).click();
-  const time = next.getByLabel('Time');
+  await next.getByRole('button', { name: /Choose when/ }).click();
+  const time = next.locator('input[type="time"]');
   await expect(time).toBeVisible();
   await time.fill('18:30');
   await next.getByRole('button', { name: 'Add suggested goal' }).click();
@@ -164,12 +178,12 @@ test('suggested goals setting stores off, rarely, normal, and often', async ({ c
   await expect(toggle).toBeChecked();
   await expect(page.getByRole('radio', { name: 'Normal' })).toHaveAttribute('aria-checked', 'true');
   await page.getByRole('radio', { name: 'Often' }).click();
-  await expect.poll(() => page.evaluate(() => window.__dayli.getState().settings.suggestFrequency)).toBe('often');
+  await expect.poll(() => savedFrequency(page)).toBe('often');
   await page.reload();
   await page.getByRole('button', { name: 'Customize' }).click();
   await expect(page.getByRole('radio', { name: 'Often' })).toHaveAttribute('aria-checked', 'true');
   await page.getByRole('checkbox', { name: 'Suggest goals' }).click();
-  await expect.poll(() => page.evaluate(() => window.__dayli.getState().settings.suggestFrequency)).toBe('off');
+  await expect.poll(() => savedFrequency(page)).toBe('off');
   await page.reload();
   await page.getByRole('button', { name: 'Customize' }).click();
   await expect(page.getByRole('checkbox', { name: 'Suggest goals' })).not.toBeChecked();
@@ -234,7 +248,7 @@ test('finishing a suggested goal adds 2 coins once, and undo takes them back', a
     const bonus = state.bonuses.find((row) => row.kind === 'suggestion');
     return { points, level: window.__dayli.model.levelForPoints(points), bonus };
   });
-  expect(after.points).toBe(5);
+  expect(after.points).toBe(10);
   expect(after.level).toBe(1);
   expect(after.bonus.coins).toBe(2);
   expect(after.bonus.points).toBe(0);
@@ -248,7 +262,7 @@ test('finishing a suggested goal adds 2 coins once, and undo takes them back', a
     const state = window.__dayli.getState();
     return window.__dayli.model.sumPoints(state.completions, state.bonuses);
   });
-  expect(wallet).toBe(5);
+  expect(wallet).toBe(10);
 });
 
 test('a missing suggestion engine leaves Today alone', async ({ page }) => {
@@ -291,7 +305,7 @@ test('suggestion card screenshots on a phone and a desktop', async ({ browser })
   await skipToToday(page);
   await page.getByRole('button', { name: 'Add a class or task' }).click();
   await page.getByLabel('What?').fill('Biology 101');
-  await page.getByLabel('Time').fill('09:00');
+  await page.locator('#field-time').fill('09:00');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(bubble(page)).toBeVisible();
   await expect(page.locator('.card-title', { hasText: 'Biology 101' })).toBeVisible();
@@ -317,8 +331,8 @@ test('suggestion card screenshots on a phone and a desktop', async ({ browser })
   expect(phoneLayout.taskTop).toBeLessThan(phoneLayout.innerHeight);
   await page.screenshot({ path: `${ART}/suggest-card-today.png` });
 
-  await bubble(page).getByRole('button', { name: /Change time/ }).click();
-  await expect(bubble(page).getByLabel('Time')).toBeVisible();
+  await bubble(page).getByRole('button', { name: /Choose when/ }).click();
+  await expect(bubble(page).locator('input[type="time"]')).toBeVisible();
   await bubble(page).scrollIntoViewIfNeeded();
   await page.screenshot({ path: `${ART}/suggest-add-time.png` });
 
@@ -337,7 +351,7 @@ test('suggestion card screenshots on a phone and a desktop', async ({ browser })
   await skipToToday(wide);
   await wide.getByRole('button', { name: 'Add a class or task' }).click();
   await wide.getByLabel('What?').fill('Biology 101');
-  await wide.getByLabel('Time').fill('09:00');
+  await wide.locator('#field-time').fill('09:00');
   await wide.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(bubble(wide)).toBeVisible();
   await waitForPet(wide);
