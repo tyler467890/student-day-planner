@@ -1,3 +1,3 @@
 {
-  "_comment": "Map an item id to a GLB to replace the cube-style placeholder. Paths must start with items/glbs/ and end with .glb. Hat files should put the brim near y=1.431 so the per-pet anchors still seat them. A string path is enough; an object may add scale, rotY and at [x, depth, up]. Example: \"party_hat\": \"items/glbs/custom/party_hat.glb\""
+  "_comment": "Map an item id to a GLB to replace the cube-style placeholder. Paths must start with items/glbs/ and end with .glb. Hat files should put the brim near y=1.431 so the per-pet anchors still seat them. A string path is enough; an object may add scale, rotY and at [x, depth, up]. Per-pet seat nudges go in items/fits.json. Example: \"party_hat\": \"items/glbs/custom/party_hat.glb\""
 }

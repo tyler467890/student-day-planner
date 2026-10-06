@@ -6,11 +6,11 @@
 
 import {
   Group, Mesh, BoxGeometry, ConeGeometry, CylinderGeometry, SphereGeometry,
-  MeshPhysicalMaterial, BufferGeometry, BufferAttribute,
+  TorusGeometry, MeshPhysicalMaterial, DoubleSide, BufferGeometry, BufferAttribute,
   Box3, Vector3,
 } from 'three';
 import { itemById } from './shop.js';
-import { HEAD_TOP, PET_FIT, anchorFor, fitFor } from './pet-fit.js';
+import { HEAD_TOP, PET_FIT, anchorFromFit, mergeFit } from './pet-fit.js';
 
 const BODY_Y = 0.18125;
 const TOP = HEAD_TOP;
@@ -40,6 +40,7 @@ export function bindLoader(gltfLoader) {
 }
 
 let overrideMap = null;
+let fitMap = null;
 
 function customSpec(raw) {
   const src = typeof raw === 'string' ? raw : raw?.src;
@@ -68,13 +69,27 @@ async function loadOverrides() {
   return overrideMap;
 }
 
+/** items/fits.json nudges the built-in per-pet seats without a code change. */
+async function loadFits() {
+  if (fitMap) return fitMap;
+  try {
+    const res = await fetch(new URL('../items/fits.json', import.meta.url));
+    const data = res.ok ? await res.json() : {};
+    fitMap = data && typeof data === 'object' ? data : {};
+  } catch {
+    fitMap = {};
+  }
+  return fitMap;
+}
+
 async function placeCustom(parent, spec) {
   const url = new URL(`../${spec.src}`, import.meta.url).href;
   await placeGlb(parent, url, spec.at, spec.scale, spec.rotY);
 }
 
 function vinyl(hex, opts = {}) {
-  const key = `${hex}|${opts.metal || 0}|${opts.emit || 0}|${opts.rough ?? 0.5}`;
+  const side = opts.side ?? 0;
+  const key = `${hex}|${opts.metal || 0}|${opts.emit || 0}|${opts.rough ?? 0.5}|${side}`;
   let mat = mats.get(key);
   if (mat) return mat;
   mat = new MeshPhysicalMaterial({
@@ -84,6 +99,7 @@ function vinyl(hex, opts = {}) {
     clearcoat: 0.2,
     emissive: opts.emit ? hex : 0x000000,
     emissiveIntensity: opts.emit || 0,
+    side,
   });
   mats.set(key, mat);
   return mat;
@@ -102,34 +118,134 @@ function box(parent, loc, size, color, opts = {}) {
 }
 
 function pyramid(parent, loc, radius, height, color, opts = {}) {
-  const sides = opts.sides || 4;
+  const sides = opts.sides || 24;
   const mesh = new Mesh(new ConeGeometry(radius, height, sides), vinyl(color, opts));
   mesh.position.set(loc[0], loc[2], -loc[1]);
-  if (sides === 4) mesh.rotation.y = Math.PI / 4;
   if (opts.tilt) mesh.rotation.x += opts.tilt;
   mesh.castShadow = true;
   parent.add(mesh);
   return mesh;
 }
 
-function ball(parent, loc, radius, color, opts = {}) {
-  const mesh = new Mesh(new SphereGeometry(radius, 16, 12), vinyl(color, opts));
+function placeMesh(mesh, loc) {
   mesh.position.set(loc[0], loc[2], -loc[1]);
   mesh.castShadow = true;
+}
+
+function addMesh(parent, geometry, loc, color, opts = {}) {
+  const mesh = new Mesh(geometry, vinyl(color, opts));
+  placeMesh(mesh, loc);
+  if (opts.rot) {
+    const [rx, ry, rz] = opts.rot;
+    mesh.rotation.set((rx || 0) * Math.PI / 180, (rz || 0) * Math.PI / 180, -(ry || 0) * Math.PI / 180);
+  }
   parent.add(mesh);
   return mesh;
 }
 
-function ring(parent, z, half, thick, h, color, opts = {}) {
-  const a = half - thick / 2;
-  const bars = [
-    [0, -a, 2 * half, thick],
-    [0, a, 2 * half, thick],
-    [-a, 0, thick, 2 * half - 2 * thick + 0.02],
-    [a, 0, thick, 2 * half - 2 * thick + 0.02],
-  ];
-  if (opts.openSides) bars.splice(2, 2);
-  for (const [x, y, sx, sy] of bars) box(parent, [x, y, z], [sx, sy, h], color, opts);
+/** Thin disc. theta 0 points toward the camera. */
+function disc(parent, loc, radius, thick, color, opts = {}) {
+  return addMesh(
+    parent,
+    new CylinderGeometry(
+      radius,
+      opts.radiusBottom ?? radius,
+      thick,
+      opts.sides || 32,
+      1,
+      false,
+      opts.thetaStart || 0,
+      opts.thetaLength ?? Math.PI * 2,
+    ),
+    loc,
+    color,
+    opts,
+  );
+}
+
+/** Open curved shell. Fabric stays one thin surface, visible from both sides. */
+function shell(parent, loc, radiusTop, radiusBottom, height, color, opts = {}) {
+  return addMesh(
+    parent,
+    new CylinderGeometry(
+      radiusTop,
+      radiusBottom,
+      height,
+      opts.sides || 32,
+      1,
+      true,
+      opts.thetaStart || 0,
+      opts.thetaLength ?? Math.PI * 2,
+    ),
+    loc,
+    color,
+    { ...opts, side: DoubleSide },
+  );
+}
+
+/**
+ * Ribbon wrapped around Y. `flat` stretches the tube vertically so the
+ * band reads as cloth (tall and paper-thin) rather than a rope.
+ */
+function band(parent, loc, radius, tube, color, opts = {}) {
+  const geo = new TorusGeometry(
+    radius,
+    tube,
+    opts.tubeSeg || 10,
+    opts.arcSeg || 40,
+    opts.arc ?? Math.PI * 2,
+  );
+  const mesh = new Mesh(geo, vinyl(color, { ...opts, side: DoubleSide }));
+  mesh.rotation.x = Math.PI / 2;
+  if (opts.arc && opts.aim === 'back') mesh.rotation.y = -Math.PI / 2 - opts.arc / 2;
+  else if (opts.arc && opts.aim === 'front') mesh.rotation.y = Math.PI / 2 - opts.arc / 2;
+  if (opts.flat) mesh.scale.y = opts.flat;
+  placeMesh(mesh, loc);
+  parent.add(mesh);
+  return mesh;
+}
+
+function dome(parent, loc, radius, color, opts = {}) {
+  const mesh = addMesh(
+    parent,
+    new SphereGeometry(radius, opts.sides || 28, 18, 0, Math.PI * 2, 0, opts.phi || Math.PI * 0.5),
+    loc,
+    color,
+    opts,
+  );
+  mesh.scale.set(opts.wide || 1, opts.squash || 1, opts.deep || 1);
+  return mesh;
+}
+
+function puff(parent, loc, radius, scale, color, opts = {}) {
+  const mesh = addMesh(
+    parent,
+    new SphereGeometry(radius, opts.seg || 18, opts.segH || 14),
+    loc,
+    color,
+    opts,
+  );
+  mesh.scale.set(scale[0], scale[1], scale[2]);
+  if (opts.tilt) mesh.rotation.z = opts.tilt;
+  return mesh;
+}
+
+function tube(parent, loc, radius, height, color, opts = {}) {
+  return addMesh(
+    parent,
+    new CylinderGeometry(opts.radiusTop ?? radius, radius, height, opts.sides || 16),
+    loc,
+    color,
+    opts,
+  );
+}
+
+function ball(parent, loc, radius, color, opts = {}) {
+  const mesh = new Mesh(new SphereGeometry(radius, 20, 16), vinyl(color, opts));
+  mesh.position.set(loc[0], loc[2], -loc[1]);
+  mesh.castShadow = true;
+  parent.add(mesh);
+  return mesh;
 }
 
 function loadScene(url) {
@@ -212,68 +328,85 @@ async function topHat(parent) {
 }
 
 function partyHat(parent) {
-  pyramid(parent, [0.08, 0, TOP + 0.42], 0.36, 0.84, '#ff6fa8');
-  box(parent, [0.08, 0, TOP + 0.08], [0.78, 0.78, 0.1], '#ffd23f');
-  box(parent, [0.08, 0, TOP + 0.86], [0.16, 0.16, 0.16], '#fff3a0');
+  pyramid(parent, [0.06, 0, TOP + 0.46], 0.32, 0.78, '#ff6fa8', { sides: 28 });
+  disc(parent, [0.06, 0, TOP + 0.05], 0.4, 0.028, '#ffd23f');
+  ball(parent, [0.06, 0, TOP + 0.86], 0.07, '#fff3a0');
 }
 
 function beanie(parent) {
-  box(parent, [0, 0, TOP + 0.16], [1.22, 1.22, 0.38], '#4fb3ff');
-  ring(parent, TOP + 0.02, 0.64, 0.12, 0.16, '#ffffff');
-  ball(parent, [0, 0, TOP + 0.4], 0.12, '#ffffff');
+  dome(parent, [0, 0, TOP - 0.02], 0.64, '#4fb3ff', { squash: 0.62, phi: Math.PI * 0.52 });
+  band(parent, [0, 0, TOP + 0.02], 0.64, 0.028, '#ffffff', { flat: 1.8 });
+  ball(parent, [0, 0, TOP + 0.42], 0.1, '#ffffff');
 }
 
 function cap(parent) {
-  box(parent, [0, -0.02, TOP + 0.14], [1.12, 1.02, 0.28], '#ff5a5f');
-  box(parent, [0, FRONT - 0.08, TOP + 0.04], [0.96, 0.42, 0.06], '#ff5a5f');
-  box(parent, [0, 0.02, TOP + 0.3], [0.14, 0.14, 0.06], '#ffffff');
+  dome(parent, [0, 0.04, TOP], 0.58, '#ff5a5f', { squash: 0.5, wide: 1.05, deep: 0.92 });
+  disc(parent, [0, -0.22, TOP + 0.02], 0.48, 0.026, '#ff5a5f', {
+    thetaStart: -Math.PI / 2,
+    thetaLength: Math.PI,
+    sides: 24,
+  });
+  ball(parent, [0, 0.02, TOP + 0.32], 0.04, '#ffffff');
 }
 
 function flowerCrown(parent) {
-  ring(parent, TOP + 0.02, 0.66, 0.08, 0.08, '#6bcb77');
+  band(parent, [0, 0, TOP + 0.04], 0.64, 0.016, '#6bcb77', { flat: 1.8 });
   const cols = ['#ff7eb6', '#ffd23f', '#b388ff', '#ff9f43'];
-  const pts = [[-0.55, -0.55], [0, -0.62], [0.55, -0.55], [0.62, 0], [0.55, 0.55], [0, 0.62], [-0.55, 0.55], [-0.62, 0]];
-  pts.forEach(([x, y], i) => {
-    box(parent, [x, y, TOP + 0.08], [0.22, 0.22, 0.14], cols[i % 4]);
-    box(parent, [x, y, TOP + 0.16], [0.08, 0.08, 0.06], '#ffffff');
-  });
+  for (let i = 0; i < 8; i += 1) {
+    const a = (i / 8) * Math.PI * 2;
+    const x = Math.sin(a) * 0.64;
+    const depth = -Math.cos(a) * 0.64;
+    puff(parent, [x, depth, TOP + 0.1], 0.09, [1, 0.65, 1], cols[i % 4]);
+    ball(parent, [x, depth, TOP + 0.15], 0.028, '#fff6d8');
+  }
 }
 
 function gradCap(parent) {
-  box(parent, [0, 0, TOP + 0.1], [0.92, 0.92, 0.22], '#2d2f48');
-  box(parent, [0, 0, TOP + 0.24], [1.35, 1.35, 0.07], '#2d2f48');
-  box(parent, [0.55, -0.15, TOP + 0.18], [0.04, 0.04, 0.36], '#ffd23f');
-  ball(parent, [0.55, -0.15, TOP + 0.02], 0.06, '#ffd23f');
+  tube(parent, [0, 0, TOP + 0.1], 0.42, 0.2, '#2d2f48', { sides: 28 });
+  box(parent, [0, 0, TOP + 0.22], [1.28, 1.28, 0.03], '#2d2f48');
+  tube(parent, [0.48, -0.12, TOP + 0.08], 0.012, 0.28, '#ffd23f', { sides: 8 });
+  ball(parent, [0.48, -0.12, TOP - 0.05], 0.045, '#ffd23f');
 }
 
 async function wizardHat(parent) {
-  box(parent, [0, 0, TOP + 0.04], [1.35, 1.35, 0.08], '#7b5cff');
-  pyramid(parent, [0, 0.02, TOP + 0.58], 0.48, 1.05, '#7b5cff');
+  disc(parent, [0, 0, TOP + 0.03], 0.66, 0.028, '#7b5cff');
+  pyramid(parent, [0, 0.02, TOP + 0.58], 0.42, 1.02, '#7b5cff', { sides: 28 });
   await placeGlb(parent, GLB.star, [0, -0.28, TOP + 0.38], 0.55, -12);
 }
 
 function flameBand(parent) {
-  ring(parent, TOP - 0.02, 0.66, 0.1, 0.16, '#ff6b35');
-  [[-0.28, 0.38], [0, 0.55], [0.28, 0.38]].forEach(([x, h], i) => {
-    const flame = pyramid(parent, [x, FRONT + 0.02, TOP + h / 2], 0.12, h, '#ffb627', { emit: 0.35 });
+  band(parent, [0, 0, TOP + 0.02], 0.64, 0.018, '#ff6b35', { flat: 2.4 });
+  [[-0.24, 0.32], [0, 0.46], [0.24, 0.32]].forEach(([x, h], i) => {
+    const flame = pyramid(parent, [x, -0.5, TOP + 0.08 + h / 2], 0.08, h, '#ffb627', { emit: 0.35, sides: 18 });
     flame.userData.fx = 'flame';
     flame.userData.phase = i;
   });
 }
 
 function sprout(parent) {
-  box(parent, [0, 0, TOP + 0.2], [0.1, 0.1, 0.36], '#4caf50');
-  box(parent, [-0.16, 0, TOP + 0.36], [0.32, 0.08, 0.16], '#6bcb77', { rot: [0, 18, 25] });
-  box(parent, [0.16, 0, TOP + 0.42], [0.32, 0.08, 0.16], '#8be08f', { rot: [0, -18, -25] });
+  tube(parent, [0, 0, TOP + 0.2], 0.045, 0.34, '#4caf50', { sides: 12 });
+  const left = puff(parent, [-0.14, 0, TOP + 0.34], 0.16, [1.35, 0.32, 0.55], '#6bcb77');
+  left.rotation.z = 0.55;
+  const right = puff(parent, [0.15, 0, TOP + 0.4], 0.15, [1.3, 0.3, 0.5], '#8be08f');
+  right.rotation.z = -0.65;
 }
 
 async function crown(parent) {
   const gold = '#ffc83d';
-  ring(parent, TOP + 0.12, 0.62, 0.12, 0.28, gold, { metal: 0.55, rough: 0.35 });
-  [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5], [0, -0.62]].forEach(([x, y]) => {
-    box(parent, [x, y, TOP + 0.32], [0.16, 0.16, 0.16], gold, { metal: 0.55, rough: 0.35 });
-  });
-  await placeGlb(parent, GLB.jewel, [0, FRONT - 0.02, TOP + 0.16], 0.55);
+  const metal = { metal: 0.55, rough: 0.35 };
+  band(parent, [0, 0, TOP + 0.16], 0.6, 0.026, gold, { flat: 3.6, ...metal });
+  for (let i = 0; i < 5; i += 1) {
+    const a = (i / 5) * Math.PI * 2;
+    pyramid(
+      parent,
+      [Math.sin(a) * 0.6, -Math.cos(a) * 0.6, TOP + 0.38],
+      0.08,
+      0.2,
+      gold,
+      { sides: 12, ...metal },
+    );
+  }
+  await placeGlb(parent, GLB.jewel, [0, -0.62, TOP + 0.16], 0.55);
 }
 
 async function glasses(parent, sun) {
@@ -281,27 +414,28 @@ async function glasses(parent, sun) {
 }
 
 function bowTie(parent) {
-  const z = 0.42;
-  const y = FRONT - 0.02;
-  box(parent, [-0.16, y, z], [0.24, 0.16, 0.16], '#ff4f79', { rot: [0, 0, 18] });
-  box(parent, [0.16, y, z], [0.24, 0.16, 0.16], '#ff4f79', { rot: [0, 0, -18] });
-  box(parent, [0, y - 0.02, z], [0.1, 0.1, 0.12], '#e03a63');
+  const z = 0.44;
+  const y = FRONT - 0.01;
+  puff(parent, [-0.15, y, z], 0.15, [1.25, 0.7, 0.2], '#ff4f79', { tilt: 0.42 });
+  puff(parent, [0.15, y, z], 0.15, [1.25, 0.7, 0.2], '#ff4f79', { tilt: -0.42 });
+  puff(parent, [0, y, z], 0.048, [0.7, 0.85, 0.4], '#e03a63');
 }
 
 function scarf(parent) {
-  ring(parent, 0.46, 0.7, 0.14, 0.18, '#ff6b6b');
-  ring(parent, 0.5, 0.72, 0.06, 0.05, '#ffffff');
-  box(parent, [0.22, FRONT - 0.06, 0.22], [0.22, 0.1, 0.42], '#ff6b6b');
-  box(parent, [0.24, FRONT - 0.1, 0.08], [0.24, 0.04, 0.06], '#ffffff');
+  band(parent, [0, 0, 0.5], 0.6, 0.016, '#ff6b6b', { flat: 3.4 });
+  band(parent, [0, 0, 0.44], 0.608, 0.01, '#ffffff', { flat: 1.2 });
+  box(parent, [0.1, -0.62, 0.24], [0.15, 0.016, 0.38], '#ff6b6b');
+  box(parent, [-0.04, -0.6, 0.22], [0.15, 0.016, 0.32], '#ff6b6b');
+  box(parent, [0.1, -0.62, 0.06], [0.15, 0.018, 0.028], '#ffffff');
+  box(parent, [-0.04, -0.6, 0.07], [0.15, 0.018, 0.024], '#ffffff');
 }
 
 function backpack(parent, winged) {
-  const y = 0.72;
-  box(parent, [0, y, 0.72], [0.78, 0.32, 0.72], '#ffb627');
-  box(parent, [0, y + 0.02, 0.95], [0.7, 0.28, 0.28], '#ff8c42');
+  puff(parent, [0, 0.78, 0.78], 0.36, [1.05, 1.2, 0.78], '#ffb627');
+  puff(parent, [0, 0.86, 1.02], 0.2, [1.35, 0.62, 0.48], '#ff8c42');
   if (!winged) {
-    box(parent, [-0.32, 0.15, 0.85], [0.1, 0.08, 0.55], '#ff8c42');
-    box(parent, [0.32, 0.15, 0.85], [0.1, 0.08, 0.55], '#ff8c42');
+    tube(parent, [-0.34, 0.18, 0.82], 0.032, 0.5, '#ff8c42', { sides: 10 });
+    tube(parent, [0.34, 0.18, 0.82], 0.032, 0.5, '#ff8c42', { sides: 10 });
   }
 }
 
@@ -330,34 +464,59 @@ async function sparkles(parent) {
 }
 
 function tutu(parent, winged) {
-  const z = 0.32;
-  const half = winged ? 0.62 : 0.86;
-  ring(parent, z, half, 0.16, 0.12, '#ff7eb6', { openSides: winged });
-  ring(parent, z - 0.08, half + 0.08, 0.1, 0.08, '#ffd0e4', { openSides: winged });
+  const y = 0.3;
+  const layers = [
+    { rt: 0.5, rb: 0.86, h: 0.05, c: '#ff7eb6', dy: 0 },
+    { rt: 0.52, rb: 0.96, h: 0.036, c: '#ffd0e4', dy: -0.018 },
+  ];
+  for (const layer of layers) {
+    if (winged) {
+      const arc = 1.15;
+      shell(parent, [0, 0, y + layer.dy], layer.rt, layer.rb, layer.h, layer.c, {
+        thetaStart: -arc / 2, thetaLength: arc, sides: 20,
+      });
+      shell(parent, [0, 0, y + layer.dy], layer.rt, layer.rb, layer.h, layer.c, {
+        thetaStart: Math.PI - arc / 2, thetaLength: arc, sides: 20,
+      });
+    } else {
+      shell(parent, [0, 0, y + layer.dy], layer.rt, layer.rb, layer.h, layer.c, { sides: 36 });
+    }
+  }
 }
 
 function heroMask(parent) {
-  box(parent, [0, FRONT - 0.02, 0.78], [1.05, 0.08, 0.28], '#2d2f48');
-  box(parent, [-0.22, FRONT - 0.04, 0.78], [0.22, 0.06, 0.14], '#ffe08a');
-  box(parent, [0.22, FRONT - 0.04, 0.78], [0.22, 0.06, 0.14], '#ffe08a');
+  const arc = 1.35;
+  shell(parent, [0, 0.04, 0.78], 0.66, 0.66, 0.18, '#2d2f48', {
+    thetaStart: -arc / 2,
+    thetaLength: arc,
+    sides: 24,
+  });
+  puff(parent, [-0.22, FRONT, 0.78], 0.1, [1.15, 0.62, 0.28], '#ffe08a');
+  puff(parent, [0.22, FRONT, 0.78], 0.1, [1.15, 0.62, 0.28], '#ffe08a');
 }
 
 function sweater(parent, winged) {
   const color = '#6d4aff';
   const stripe = '#ffffff';
-  if (winged) {
-    box(parent, [0, FRONT + 0.02, 0.62], [1.2, 0.1, 0.55], color);
-    box(parent, [0, 0.62, 0.62], [1.2, 0.1, 0.55], color);
-    box(parent, [0, FRONT + 0.04, 0.72], [1.16, 0.06, 0.1], stripe);
-  } else {
-    ring(parent, 0.62, 0.7, 0.1, 0.5, color);
-    ring(parent, 0.74, 0.72, 0.06, 0.1, stripe);
+  const y = 0.58;
+  const arc = 1.3;
+  const panels = winged
+    ? [{ thetaStart: -arc / 2, thetaLength: arc }, { thetaStart: Math.PI - arc / 2, thetaLength: arc }]
+    : [{ thetaStart: 0, thetaLength: Math.PI * 2 }];
+  for (const panel of panels) {
+    shell(parent, [0, 0, y], 0.66, 0.7, 0.46, color, { ...panel, sides: winged ? 20 : 32 });
+    shell(parent, [0, 0, y + 0.15], 0.68, 0.72, 0.05, stripe, { ...panel, sides: winged ? 20 : 32 });
   }
 }
 
 function cape(parent) {
-  box(parent, [0, 0.78, 0.7], [0.9, 0.08, 0.9], '#c23b4a');
-  box(parent, [0, 0.7, 1.05], [0.95, 0.08, 0.16], '#ffd23f');
+  const arc = Math.PI * 0.9;
+  shell(parent, [0, 0.1, 0.58], 0.56, 0.82, 0.9, '#c23b4a', {
+    thetaStart: Math.PI - arc / 2,
+    thetaLength: arc,
+    sides: 28,
+  });
+  band(parent, [0, 0.04, 1.0], 0.58, 0.014, '#ffd23f', { flat: 2.2, arc: Math.PI * 0.8, aim: 'back' });
 }
 
 async function snowfall(parent) {
@@ -374,17 +533,21 @@ async function snowfall(parent) {
 }
 
 function wingPair(parent, color, metal = 0) {
-  box(parent, [-0.85, 0.15, 0.75], [0.7, 0.08, 0.55], color, { metal, rot: [0, 0, 18] });
-  box(parent, [0.85, 0.15, 0.75], [0.7, 0.08, 0.55], color, { metal, rot: [0, 0, -18] });
-  box(parent, [-0.55, 0.2, 0.95], [0.4, 0.06, 0.28], color, { metal });
-  box(parent, [0.55, 0.2, 0.95], [0.4, 0.06, 0.28], color, { metal });
+  [-1, 1].forEach((sign) => {
+    const upper = puff(parent, [sign * 0.78, 0.26, 0.84], 0.4, [1.2, 0.58, 0.14], color, { metal });
+    upper.rotation.z = sign * -0.45;
+    upper.rotation.y = sign * 0.3;
+    const lower = puff(parent, [sign * 0.58, 0.16, 0.64], 0.26, [1.1, 0.48, 0.14], color, { metal });
+    lower.rotation.z = sign * -0.18;
+    lower.rotation.y = sign * 0.18;
+  });
 }
 
 function jetpack(parent) {
-  box(parent, [0, 0.7, 0.85], [0.7, 0.28, 0.45], '#d9dde8', { metal: 0.35 });
-  [[-0.22], [0.22]].forEach(([x], i) => {
-    box(parent, [x, 0.78, 0.7], [0.22, 0.22, 0.7], '#8d93a8', { metal: 0.4 });
-    const flame = pyramid(parent, [x, 0.78, 0.28], 0.1, 0.28, '#ff7a45', { emit: 0.45 });
+  puff(parent, [0, 0.68, 0.9], 0.3, [1.15, 0.68, 0.72], '#d9dde8', { metal: 0.35 });
+  [-0.2, 0.2].forEach((x, i) => {
+    tube(parent, [x, 0.76, 0.72], 0.1, 0.58, '#8d93a8', { metal: 0.4, sides: 18 });
+    const flame = pyramid(parent, [x, 0.76, 0.3], 0.08, 0.24, '#ff7a45', { emit: 0.45, sides: 16 });
     flame.rotation.x = Math.PI;
     flame.userData.fx = 'flame';
     flame.userData.phase = i;
@@ -397,23 +560,23 @@ async function heartCheeks(parent) {
 }
 
 function bellCollar(parent) {
-  ring(parent, 0.4, 0.68, 0.08, 0.1, '#ffd23f', { metal: 0.45 });
-  ball(parent, [0, FRONT - 0.04, 0.3], 0.1, '#ffe58a', { metal: 0.35 });
+  band(parent, [0, 0, 0.42], 0.62, 0.02, '#ffd23f', { flat: 1.5, metal: 0.45, rough: 0.35 });
+  ball(parent, [0, FRONT - 0.02, 0.32], 0.08, '#ffe58a', { metal: 0.35 });
 }
 
 async function starMedal(parent) {
-  box(parent, [0, FRONT - 0.02, 0.7], [0.16, 0.06, 0.45], '#e23b4a');
-  box(parent, [-0.12, FRONT, 0.95], [0.1, 0.05, 0.22], '#e23b4a', { rot: [0, 0, 28] });
-  box(parent, [0.12, FRONT, 0.95], [0.1, 0.05, 0.22], '#e23b4a', { rot: [0, 0, -28] });
-  await placeGlb(parent, GLB.star, [0, FRONT - 0.08, 0.42], 0.55);
+  box(parent, [0, FRONT - 0.02, 0.72], [0.11, 0.016, 0.4], '#e23b4a');
+  box(parent, [-0.09, FRONT, 0.94], [0.09, 0.014, 0.18], '#e23b4a', { rot: [0, 0, 32] });
+  box(parent, [0.09, FRONT, 0.94], [0.09, 0.014, 0.18], '#e23b4a', { rot: [0, 0, -32] });
+  await placeGlb(parent, GLB.star, [0, FRONT - 0.06, 0.42], 0.55);
 }
 
 function rainbow(parent) {
   const cols = ['#ff5a7a', '#ffb627', '#ffe14a', '#3dce7a', '#4aa3ff', '#7b5cff'];
   cols.forEach((color, i) => {
     const ringMesh = new Mesh(
-      new CylinderGeometry(0.95 + i * 0.015, 0.95, 0.05, 28, 1, true),
-      vinyl(color, { emit: 0.25, rough: 0.4 }),
+      new CylinderGeometry(0.95 + i * 0.012, 0.95, 0.032, 40, 1, true),
+      vinyl(color, { emit: 0.25, rough: 0.4, side: DoubleSide }),
     );
     ringMesh.position.y = 0.7;
     ringMesh.userData.fx = 'spin';
@@ -487,17 +650,17 @@ function seat(group, pose) {
 
 export async function buildOutfit(anchors, outfit, animal) {
   if (!anchors) return;
-  const fit = fitFor(animal);
-  seat(anchors.hat, anchorFor(animal, 'hat'));
-  seat(anchors.face, anchorFor(animal, 'face'));
-  seat(anchors.neck, anchorFor(animal, 'neck'));
-  seat(anchors.body, anchorFor(animal, 'body'));
-  seat(anchors.back, anchorFor(animal, 'back'));
-  seat(anchors.effect, anchorFor(animal, 'effect'));
+  const [map, fits] = await Promise.all([loadOverrides(), loadFits()]);
+  const fit = mergeFit(animal, fits);
+  seat(anchors.hat, anchorFromFit(fit, 'hat'));
+  seat(anchors.face, anchorFromFit(fit, 'face'));
+  seat(anchors.neck, anchorFromFit(fit, 'neck'));
+  seat(anchors.body, anchorFromFit(fit, 'body'));
+  seat(anchors.back, anchorFromFit(fit, 'back'));
+  seat(anchors.effect, anchorFromFit(fit, 'effect'));
   for (const group of [anchors.hat, anchors.face, anchors.neck, anchors.body, anchors.back, anchors.effect]) {
     emptyGroup(group);
   }
-  const map = await loadOverrides();
   const ctx = { winged: Boolean(fit.winged), animal, fit };
   const jobs = [];
   for (const slot of ['hat', 'face', 'neck', 'body', 'back', 'effect']) {
@@ -544,7 +707,7 @@ export function tickAccessories(root, time) {
 }
 
 export function frameFor(animal, outfit) {
-  const fit = fitFor(animal);
+  const fit = mergeFit(animal, fitMap || {});
   let top = fit.top;
   for (const id of Object.values(outfit || {})) {
     const item = itemById(id);

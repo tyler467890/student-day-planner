@@ -6,7 +6,7 @@ import {
   walletBalance, wear,
 } from '../js/shop.js';
 import { levelForPoints, migrateSettings } from '../js/model.js';
-import { anchorFor } from '../js/pet-fit.js';
+import { HEAD_TOP, anchorFor, anchorFromFit, fitFor, mergeFit } from '../js/pet-fit.js';
 
 test('coins are points divided by one rate', () => {
   assert.equal(POINTS_PER_COIN, 5);
@@ -128,14 +128,29 @@ test('one item per slot, and each pet keeps its own closet', () => {
   assert.equal(again.wardrobe.outfits.dog.hat, 'cap');
 });
 
-test('the lion hat sits above the mane and the bunny hat tips forward', () => {
-  const lion = anchorFor('lion', 'hat');
-  const dog = anchorFor('dog', 'hat');
-  assert.ok(lion.brimY > dog.brimY + 0.12);
+test('hat seats stay on the Dayli 1.3.2 fits and a fits file can nudge one pet', () => {
+  const hats = {
+    dog: 0, cat: 0, bunny: -0.02, penguin: 0, monkey: 0, tiger: 0,
+    pig: 0, lion: 0, panda: 0, fox: 0, koala: 0, chick: 0,
+  };
+  for (const [animal, hat] of Object.entries(hats)) {
+    assert.equal(fitFor(animal).hat, hat, animal);
+  }
+  assert.equal(anchorFor('lion', 'hat').brimY, anchorFor('dog', 'hat').brimY);
+  assert.equal(anchorFor('lion', 'hat').brimY, HEAD_TOP);
+  assert.equal(anchorFor('lion', 'hat').scale, 1);
+  assert.equal(anchorFor('penguin', 'hat').brimZ, -0.03);
+  assert.equal(anchorFor('chick', 'hat').brimZ, -0.03);
+  assert.equal(anchorFor('monkey', 'hat').brimZ, -0.03);
   const bunny = anchorFor('bunny', 'hat');
   assert.ok(bunny.tilt > 0.2);
   assert.ok(bunny.brimZ > 0.3);
-  assert.ok(anchorFor('fox', 'face').z > anchorFor('koala', 'face').z);
+  const nudged = mergeFit('lion', { _comment: 'drop-in', lion: { hat: 0.15, hatScale: 0.9 } });
+  assert.equal(nudged.hat, 0.15);
+  assert.equal(nudged.hatScale, 0.9);
+  assert.equal(fitFor('lion').hat, 0);
+  assert.equal(anchorFromFit(nudged, 'hat').brimY, HEAD_TOP + 0.15);
+  assert.equal(mergeFit('dog', { lion: { hat: 0.15 } }).hat, 0);
 });
 
 test('looks stop at three and a try-on does not replace the saved outfit', () => {

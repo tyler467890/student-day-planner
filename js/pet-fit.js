@@ -5,9 +5,16 @@
  * +Z is toward the camera (the face). Accessories hang off the body,
  * so these offsets follow idle, dance and the buy spin.
  *
+ * Hat numbers are the Dayli 1.3.2 seats (the brim already rests on the
+ * cube top). A positive hat lift opens a gap under the brim, so these
+ * stay at 0. Penguin, chick and monkey shift back a hair so the hat
+ * sits over the front tuft. The bunny hat sits on the front of the head,
+ * in front of the ears, tipped forward. The lion's brim sinks into the
+ * mane because the mane rises above the cube.
+ *
  * A polished GLB dropped in items/overrides.json is parented to the same
  * slot anchor, so it inherits this fit. Build hat files with the brim
- * near y = 1.431.
+ * near y = 1.431. Per-pet nudges belong in items/fits.json, not here.
  */
 
 export const HEAD_TOP = 1.431;
@@ -33,27 +40,39 @@ export const SLOT_ANCHOR = {
  * winged: penguin and chick wings replace arms, so skirts open at the sides.
  */
 export const PET_FIT = {
-  dog: { hat: 0, face: 0.78, faceZ: 0.04, neck: 0.4, top: 1.62, wide: 0.82 },
-  cat: { hat: 0.02, face: 0.72, faceZ: 0.02, neck: 0.38, top: 1.68, wide: 0.84, hatScale: 0.9 },
+  dog: { hat: 0, face: 0.78, neck: 0.4, top: 1.62, wide: 0.82 },
+  cat: { hat: 0, face: 0.72, neck: 0.38, top: 1.68, wide: 0.84 },
   bunny: { hat: -0.02, face: 0.78, neck: 0.4, top: 2.12, wide: 0.9, hatZ: 0.5, hatScale: 0.66, hatTilt: 0.38 },
-  penguin: { hat: 0.2, face: 0.8, neck: 0.5, top: 1.82, wide: 1.15, hatZ: 0, hatScale: 0.86, backY: 0.08, backZ: -0.08, winged: true },
-  monkey: { hat: 0.02, face: 0.76, neck: 0.44, top: 1.7, wide: 1.2, hatZ: -0.04, hatScale: 0.88 },
-  tiger: { hat: 0.02, face: 0.8, faceZ: 0.04, neck: 0.4, top: 1.64, wide: 0.9, hatScale: 0.9 },
-  pig: { hat: 0, face: 0.88, faceZ: 0.16, neck: 0.44, neckZ: 0.06, top: 1.62, wide: 0.84 },
-  lion: { hat: 0.15, face: 0.8, faceZ: 0.02, neck: 0.44, top: 1.95, wide: 1.15, hatScale: 0.9 },
-  panda: { hat: 0.02, face: 0.78, faceZ: 0.04, neck: 0.4, top: 1.58, wide: 0.9, hatScale: 0.88 },
-  fox: { hat: 0.04, face: 0.84, faceZ: 0.12, neck: 0.42, top: 1.78, wide: 0.88, hatScale: 0.86 },
-  koala: { hat: 0, face: 0.74, neck: 0.38, top: 1.56, wide: 1.05, hatScale: 0.82 },
-  chick: { hat: 0.2, face: 0.8, neck: 0.5, top: 1.82, wide: 1.12, hatZ: 0, hatScale: 0.86, backY: 0.08, backZ: -0.08, winged: true },
+  penguin: { hat: 0, face: 0.8, neck: 0.5, top: 1.7, wide: 1.15, hatZ: -0.03, winged: true },
+  monkey: { hat: 0, face: 0.76, neck: 0.44, top: 1.7, wide: 1.2, hatZ: -0.03 },
+  tiger: { hat: 0, face: 0.74, neck: 0.4, top: 1.64, wide: 0.9 },
+  pig: { hat: 0, face: 0.8, neck: 0.44, top: 1.62, wide: 0.84 },
+  lion: { hat: 0, face: 0.76, neck: 0.42, top: 1.9, wide: 1.05 },
+  panda: { hat: 0, face: 0.74, neck: 0.4, top: 1.58, wide: 0.9 },
+  fox: { hat: 0, face: 0.74, neck: 0.4, top: 1.78, wide: 0.88 },
+  koala: { hat: 0, face: 0.72, neck: 0.38, top: 1.56, wide: 1.05 },
+  chick: { hat: 0, face: 0.8, neck: 0.5, top: 1.7, wide: 1.12, hatZ: -0.03, winged: true },
 };
 
 export function fitFor(animal) {
   return PET_FIT[animal] || PET_FIT.dog;
 }
 
-/** World pose of a slot anchor for one animal. Hats scale around the brim. */
-export function anchorFor(animal, slot) {
-  const fit = fitFor(animal);
+/** Copy the built-in seat, then apply items/fits.json for that animal. */
+export function mergeFit(animal, overrides) {
+  const fit = { ...(PET_FIT[animal] || PET_FIT.dog) };
+  const extra = overrides?.[animal];
+  if (extra && typeof extra === 'object') {
+    for (const [key, value] of Object.entries(extra)) {
+      if (key.startsWith('_')) continue;
+      fit[key] = value;
+    }
+  }
+  return fit;
+}
+
+/** World pose of a slot anchor. Hats scale around the brim. */
+export function anchorFromFit(fit, slot) {
   if (slot === 'hat') {
     const scale = fit.hatScale || 1;
     const tilt = fit.hatTilt || 0;
@@ -94,4 +113,8 @@ export function anchorFor(animal, slot) {
     return { x: 0, y: fit.bodyY || 0, z: 0, scale: fit.bodyScale || 1, tilt: 0 };
   }
   return { x: 0, y: fit.effectY || 0, z: 0, scale: 1, tilt: 0 };
+}
+
+export function anchorFor(animal, slot) {
+  return anchorFromFit(fitFor(animal), slot);
 }
