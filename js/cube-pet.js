@@ -4,26 +4,29 @@
  * with one shared colormap. Hats attach to the cube head, not the ears.
  */
 
-import {
-  AnimationMixer, Group, Mesh, SphereGeometry, MeshBasicMaterial, LoopRepeat, Color,
-} from 'three';
+import { AnimationMixer, LoopRepeat, Color } from 'three';
+import { makeAnchors } from './accessories.js';
 
 export const NATURAL = '#ffffff';
 
 const CLIP = {
   idle: 'idle',
   sleepy: 'idle',
+  static: 'static',
   walk: 'walk',
+  run: 'run',
+  eat: 'eat',
   wave: 'gesture-positive',
   jump: 'dance',
   spin: 'dance',
   celebrate: 'dance',
   dance: 'dance',
-  wiggle: 'idle',
+  levelup: 'dance',
+  wiggle: 'gesture-positive',
   confetti: 'dance',
   stars: 'gesture-positive',
   cheer: 'gesture-positive',
-  signature: 'idle',
+  signature: 'gesture-positive',
 };
 
 export function clipFor(mode) {
@@ -67,17 +70,6 @@ export function hatSeat(geometry) {
   return { y: 1.27, width: 0.9 };
 }
 
-function faceFront(geometry, y) {
-  const pos = geometry.attributes.position;
-  let maxZ = 0.35;
-  for (let i = 0; i < pos.count; i += 1) {
-    if (Math.abs(pos.getY(i) - y) > 0.1) continue;
-    if (Math.abs(pos.getX(i)) > 0.28) continue;
-    if (pos.getZ(i) > maxZ) maxZ = pos.getZ(i);
-  }
-  return maxZ;
-}
-
 export function prepareCube(gltf, animal = '') {
   const root = gltf.scene;
   const clips = {};
@@ -96,31 +88,7 @@ export function prepareCube(gltf, animal = '') {
       if (mat && !materials.includes(mat)) materials.push(mat);
     }
   });
-  const seat = body && body.geometry ? hatSeat(body.geometry) : { y: 1.27, width: 0.9 };
-  const hatAnchor = new Group();
-  hatAnchor.name = 'hat_anchor';
-  hatAnchor.position.set(0, seat.y, 0.02);
-  const hatScale = Math.min(1.15, Math.max(0.9, seat.width / 0.95));
-  hatAnchor.scale.setScalar(hatScale);
-  (body || root).add(hatAnchor);
-
-  const blush = new Group();
-  blush.name = 'cheeks';
-  const blushMat = new MeshBasicMaterial({
-    color: 0xff9eb8,
-    transparent: true,
-    opacity: 0.8,
-    depthWrite: false,
-  });
-  const front = body && body.geometry ? faceFront(body.geometry, seat.y - 0.3) : 0.5;
-  for (const side of [-1, 1]) {
-    const cheek = new Mesh(new SphereGeometry(1, 10, 8), blushMat);
-    cheek.scale.set(0.065, 0.038, 0.02);
-    cheek.position.set(side * 0.18, seat.y - 0.32, front + 0.015);
-    cheek.renderOrder = 2;
-    blush.add(cheek);
-  }
-  (body || root).add(blush);
+  const anchors = makeAnchors(body || root);
 
   const idle = clips.idle || gltf.animations[0];
   const action = mixer.clipAction(idle);
@@ -144,8 +112,8 @@ export function prepareCube(gltf, animal = '') {
     clipName: idle.name,
     token: 0,
     body,
-    hatAnchor,
-    blush,
+    hatAnchor: anchors.hat,
+    anchors,
     materials,
     baseColor: NATURAL,
   };
@@ -168,17 +136,17 @@ export function poseClip(pet, mode, dt, seek, token) {
     pet.token = token;
     pet.mixer.setTime(0);
   }
+  const rate = mode === 'sleepy' ? 0.35 : 1;
+  if (pet.action) pet.action.timeScale = rate;
   if (typeof seek === 'number') {
     const dur = Math.max(clip.duration, 0.001);
     const t = ((seek % dur) + dur) % dur;
     pet.mixer.setTime(t);
   } else if (dt) {
-    const rate = mode === 'sleepy' ? 0.35 : 1;
-    pet.mixer.update(dt * rate);
+    pet.mixer.update(dt);
   } else {
     pet.mixer.update(0);
   }
-  if (mode === 'sleepy' && pet.body) pet.body.rotateX(0.2);
 }
 
 export function tintMaterials(materials, hex) {

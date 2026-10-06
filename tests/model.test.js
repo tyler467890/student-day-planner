@@ -315,7 +315,7 @@ test('a v1 save keeps its theme, accent, and categories', () => {
     ],
   };
   const next = migrateSettings(v1);
-  assert.equal(next.schemaVersion, 3);
+  assert.equal(next.schemaVersion, 4);
   assert.equal(next.textColor, null);
   assert.equal(next.bgColor, null);
   assert.equal(next.theme, 'ocean');
@@ -355,7 +355,7 @@ test('a v1 save keeps its theme, accent, and categories', () => {
       body: 0.9,
     },
   });
-  assert.equal(kept.schemaVersion, 3);
+  assert.equal(kept.schemaVersion, 4);
   assert.equal(kept.pet.animal, 'tiger');
   assert.equal(kept.pet.coat, 'natural');
   assert.equal(kept.pet.eyeColor, 'natural');
@@ -385,7 +385,7 @@ test('schema 3 keeps a real coat and drops one the animal does not have', () => 
     schemaVersion: 3,
     pet: { animal: 'dog', coat: 'chocolate', eyeColor: 'blue', eyes: 'happy' },
   });
-  assert.equal(kept.schemaVersion, 3);
+  assert.equal(kept.schemaVersion, 4);
   assert.equal(kept.pet.coat, 'chocolate');
   assert.equal(kept.pet.eyeColor, 'blue');
   assert.equal(kept.pet.eyes, 'happy');
@@ -398,22 +398,22 @@ test('schema 3 keeps a real coat and drops one the animal does not have', () => 
   assert.equal(dropped.pet.eyeColor, 'natural');
   assert.equal(normalizePet({ animal: 'lion', coat: 'blue' }).coat, 'blue');
   assert.equal(normalizePet({ animal: 'fox', coat: 'arctic' }).coat, 'arctic');
-  assert.equal(defaultSettings().schemaVersion, 3);
+  assert.equal(defaultSettings().schemaVersion, 4);
   assert.equal(defaultSettings().pet.coat, 'natural');
 });
 
 test('retired pets migrate onto the cube lineup', () => {
-  assert.equal(normalizePet({ animal: 'horse', hat: true, eyes: 'sparkly' }).animal, 'fox');
+  assert.equal(normalizePet({ animal: 'horse', hat: true, eyes: 'sparkly' }).animal, 'dog');
   assert.equal(normalizePet({ animal: 'horse', hat: true }).hat, true);
-  assert.equal(normalizePet({ animal: 'shark', color: '#ffd23f' }).animal, 'penguin');
+  assert.equal(normalizePet({ animal: 'shark', color: '#ffd23f' }).animal, 'dog');
   assert.equal(normalizePet({ animal: 'shark', color: '#ffd23f', colors: { primary: '#FFD23F' } }).coat, 'natural');
   const slots = normalizePet({ animal: 'dog', coat: 'chocolate', eyeColor: 'blue' });
   assert.equal(slots.coat, 'chocolate');
   assert.equal(slots.eyeColor, 'blue');
   assert.equal(slots.colors, undefined);
-  assert.equal(normalizePet({ animal: 'axolotl' }).animal, 'bunny');
-  assert.equal(normalizePet({ animal: 'capybara' }).animal, 'koala');
-  assert.equal(normalizePet({ animal: 'dragon' }).animal, 'lion');
+  assert.equal(normalizePet({ animal: 'axolotl' }).animal, 'dog');
+  assert.equal(normalizePet({ animal: 'capybara' }).animal, 'dog');
+  assert.equal(normalizePet({ animal: 'dragon' }).animal, 'dog');
   assert.equal(normalizePet({ animal: 'tiger' }).animal, 'tiger');
   assert.equal(normalizePet({ animal: 'chick' }).animal, 'chick');
   assert.equal(normalizePet({ animal: 'nope' }).animal, 'penguin');

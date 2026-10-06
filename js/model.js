@@ -4,6 +4,7 @@
  */
 
 import { defaultCelebrations, normalizeCelebrations } from './celebrations.js';
+import { defaultWardrobe, keepLegacyHat, normalizeWardrobe } from './shop.js';
 
 export const POINTS = { easy: 5, medium: 10, hard: 20 };
 export const DAY_COMPLETE_BONUS = 10;
@@ -88,13 +89,13 @@ export const PET_ANIMALS = [
   ['chick', 'Chick'],
 ];
 
-/** Saves from the retired procedural lineup land on a cube pet. */
+/** Animals that are not in Cube Pets 2.0 land on the dog. */
 const PET_MIGRATION = {
-  horse: 'fox',
-  shark: 'penguin',
-  axolotl: 'bunny',
-  capybara: 'koala',
-  dragon: 'lion',
+  horse: 'dog',
+  shark: 'dog',
+  axolotl: 'dog',
+  capybara: 'dog',
+  dragon: 'dog',
 };
 
 const NATURAL = { id: 'natural', label: 'Natural', fur: null };
@@ -300,7 +301,8 @@ export function defaultSettings() {
     photoBlur: 0,
     categories: defaultCategories(),
     pet: defaultPet(),
-    schemaVersion: 3,
+    wardrobe: defaultWardrobe(),
+    schemaVersion: 4,
   };
 }
 
@@ -996,6 +998,7 @@ export function migrateSettings(saved) {
     categories: Array.isArray(saved.categories) && saved.categories.length ? saved.categories : base.categories,
     installedOn: isPlannerYmd(saved.installedOn) ? saved.installedOn : null,
     pet: normalizePet(saved.pet),
+    wardrobe: keepLegacyHat(normalizeWardrobe(saved.wardrobe), Boolean(saved.pet?.hat)),
     id: 'main',
   };
   delete merged.dayStart;
@@ -1006,8 +1009,8 @@ export function migrateSettings(saved) {
   // v3 puts every saved pet back on Natural so the real animal colours return.
   if (version < 3) {
     merged.pet = { ...merged.pet, coat: 'natural', eyeColor: 'natural' };
-    merged.schemaVersion = 3;
   }
+  merged.schemaVersion = 4;
   merged.textColor = normalizeHex(saved.textColor);
   merged.bgColor = normalizeHex(saved.bgColor);
   if (!THEMES[merged.theme]) merged.theme = base.theme;
