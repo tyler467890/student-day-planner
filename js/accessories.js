@@ -422,12 +422,12 @@ function bowTie(parent) {
 }
 
 function scarf(parent) {
-  band(parent, [0, 0, 0.5], 0.6, 0.016, '#ff6b6b', { flat: 3.4 });
-  band(parent, [0, 0, 0.44], 0.608, 0.01, '#ffffff', { flat: 1.2 });
-  box(parent, [0.1, -0.62, 0.24], [0.15, 0.016, 0.38], '#ff6b6b');
-  box(parent, [-0.04, -0.6, 0.22], [0.15, 0.016, 0.32], '#ff6b6b');
-  box(parent, [0.1, -0.62, 0.06], [0.15, 0.018, 0.028], '#ffffff');
-  box(parent, [-0.04, -0.6, 0.07], [0.15, 0.018, 0.024], '#ffffff');
+  band(parent, [0, 0, 0.48], 0.55, 0.014, '#ff6b6b', { flat: 3.6 });
+  band(parent, [0, 0, 0.43], 0.556, 0.009, '#ffffff', { flat: 1.15 });
+  box(parent, [0.09, -0.56, 0.2], [0.14, 0.014, 0.44], '#ff6b6b');
+  box(parent, [-0.05, -0.54, 0.18], [0.14, 0.014, 0.36], '#ff6b6b');
+  box(parent, [0.09, -0.56, -0.01], [0.14, 0.016, 0.026], '#ffffff');
+  box(parent, [-0.05, -0.54, 0.01], [0.14, 0.016, 0.022], '#ffffff');
 }
 
 function backpack(parent, winged) {
