@@ -5,21 +5,21 @@
 
 import {
   Scene, PerspectiveCamera, WebGLRenderer, Group, Mesh,
-  SphereGeometry, ConeGeometry, CylinderGeometry, PlaneGeometry,
-  MeshPhysicalMaterial, ShadowMaterial, Sprite, SpriteMaterial, CanvasTexture,
+  PlaneGeometry, ShadowMaterial, Sprite, SpriteMaterial, CanvasTexture,
   HemisphereLight, DirectionalLight,
   SRGBColorSpace, NoToneMapping, PCFSoftShadowMap,
 } from 'three';
 import { GLTFLoader } from '../vendor/examples/jsm/loaders/GLTFLoader.js';
-import { prepareCube, poseClip, applyFlourish, restoreBinds } from './cube-pet.js';
-import { paintPetColors } from './pet-palette.js';
-import { resolveCoat, resolveEye } from './model.js';
+import { prepareCube, poseClip } from './cube-pet.js';
+import { bindLoader, buildOutfit, frameFor, preloadAccessories, tickAccessories } from './accessories.js';
 
 const DURATION = {
   wave: 1.55,
   jump: 1.35,
   spin: 1.35,
   celebrate: 2.2,
+  levelup: 2.8,
+  static: 1,
   sleepy: 2.8,
   dance: 1.7,
   wiggle: 1.5,
@@ -38,24 +38,10 @@ export function webglAvailable() {
   }
 }
 
-function vinyl(color, roughness = 0.4) {
-  return new MeshPhysicalMaterial({
-    color,
-    roughness,
-    metalness: 0,
-    clearcoat: 0.35,
-    clearcoatRoughness: 0.25,
-  });
-}
-
 export function createPetStage(canvas) {
   const scene = new Scene();
-  const camera = new PerspectiveCamera(32, 1, 0.1, 40);
-  const lookX = 0.08;
-  const lookY = 0.86;
-  const camY = 1.08;
-  const camZ = 4.7;
-  camera.position.set(lookX, camY, camZ);
+  const camera = new PerspectiveCamera(30, 1, 0.1, 40);
+  camera.position.set(0.4, 0.9, 3.4);
   const renderer = new WebGLRenderer({
     canvas,
     alpha: true,
@@ -101,21 +87,6 @@ export function createPetStage(canvas) {
   const holder = new Group();
   turntable.add(holder);
 
-  const hat = new Group();
-  const hatCone = new Mesh(new ConeGeometry(0.2, 0.5, 16), vinyl(0xff4d8d, 0.38));
-  hatCone.position.y = 0.28;
-  hatCone.castShadow = true;
-  const hatBrim = new Mesh(new CylinderGeometry(0.24, 0.26, 0.06, 16), vinyl(0xffd23f, 0.4));
-  hatBrim.position.y = 0.03;
-  hatBrim.castShadow = true;
-  const stripe = new Mesh(new CylinderGeometry(0.13, 0.15, 0.07, 16), vinyl(0xffffff, 0.35));
-  stripe.position.y = 0.24;
-  const pom = new Mesh(new SphereGeometry(0.075, 14, 10), vinyl(0xfff3a0, 0.35));
-  pom.position.y = 0.56;
-  hat.add(hatCone, hatBrim, stripe, pom);
-  hat.rotation.z = -0.08;
-  hat.visible = false;
-
   const zzzCanvas = document.createElement('canvas');
   zzzCanvas.width = 128;
   zzzCanvas.height = 64;
@@ -133,13 +104,7 @@ export function createPetStage(canvas) {
 
   const state = {
     animal: 'penguin',
-    coat: 'natural',
-    eyeColor: 'natural',
-    eyes: 'round',
-    cheeks: true,
-    hat: false,
-    height: 1,
-    body: 1,
+    outfit: {},
     mode: 'idle',
     modeT: 0,
     time: 0,
@@ -154,6 +119,8 @@ export function createPetStage(canvas) {
   const cache = new Map();
   const inflight = new Map();
   const loader = new GLTFLoader();
+  bindLoader(loader);
+  preloadAccessories();
 
   function modelUrl(name) {
     return new URL(`../models/${name}.glb`, import.meta.url).href;
@@ -172,47 +139,51 @@ export function createPetStage(canvas) {
     return task;
   }
 
-  function applyColors(pet) {
-    const coat = resolveCoat(state.animal, state.coat);
-    const eye = resolveEye(state.animal, state.eyeColor);
-    paintPetColors(pet, { fur: coat.fur, eyes: eye.hex });
+  function restingMode() {
+    if (state.ambient === 'sleepy') return 'sleepy';
+    return 'idle';
   }
 
-  function restingMode() {
-    if (state.ambient === 'sleepy' || state.idleFor > 20) return 'sleepy';
-    return 'idle';
+  function frameCamera() {
+    const w = canvas.clientWidth || 1;
+    const h = canvas.clientHeight || 1;
+    const aspect = w / Math.max(1, h);
+    const fit = frameFor(state.animal, state.outfit);
+    const fov = 30 * Math.PI / 180;
+    const mid = (fit.bottom + fit.top) / 2;
+    const halfH = (fit.top - fit.bottom) / 2;
+    const distV = halfH / Math.tan(fov / 2);
+    const distH = (fit.wide / Math.max(0.45, aspect)) / Math.tan(fov / 2);
+    const dist = Math.max(distV, distH) * 1.08;
+    camera.fov = 30;
+    camera.aspect = aspect;
+    camera.position.set(0.38, mid + 0.04, dist);
+    camera.lookAt(0, mid - 0.02, 0);
+    camera.updateProjectionMatrix();
   }
 
   function applyPose(dt) {
     if (!current) return;
     const pet = current;
-    pet.root.scale.set(state.body, state.height, state.body);
-    restoreBinds(pet);
-    poseClip(pet, state.mode, dt, null, state.poseToken);
-    if (pet.blush) pet.blush.visible = state.cheeks;
-    hat.visible = state.hat;
+    pet.root.scale.set(1, 1, 1);
+    poseClip(pet, state.mode, dt, state.frozen ? state.modeT : null, state.poseToken);
+    tickAccessories(pet.anchors?.root, state.time);
     const mode = state.mode;
-    const t = state.modeT;
     zzz.visible = mode === 'sleepy';
     if (mode === 'sleepy') {
-      zzz.position.set(0.42, pet.hatAnchor.position.y + 0.12, 0.12);
-      zzz.position.y += Math.sin(state.time * 1.6) * 0.04;
+      const bob = Math.sin(state.time * 1.4) * 0.04;
+      zzz.position.set(0.55, 1.55 + bob, 0.2);
     }
-    const fx = applyFlourish(pet, mode, t);
-    holder.position.set(fx.x, fx.y, fx.z);
-    holder.rotation.set(fx.rx, 0, fx.rz);
-    turntable.rotation.y = -0.38 + fx.spin;
-    camera.position.set(lookX, camY, camZ);
-    camera.lookAt(lookX, lookY, 0);
+    holder.position.set(0, mode === 'levelup' ? Math.abs(Math.sin(state.modeT * 6)) * 0.06 : 0, 0);
+    holder.rotation.set(0, 0, 0);
+    turntable.rotation.y = -0.42;
   }
 
   function present(pet) {
     if (current && current !== pet) holder.remove(current.root);
     current = pet;
     if (!pet.root.parent) holder.add(pet.root);
-    pet.hatAnchor.add(hat);
-    if (pet.body) pet.body.add(zzz);
-    applyColors(pet);
+    if (pet.body && zzz.parent !== pet.body) pet.body.add(zzz);
     applyPose(0);
     resize();
     renderer.render(scene, camera);
@@ -222,8 +193,7 @@ export function createPetStage(canvas) {
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
     if (!w || !h) return;
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
+    frameCamera();
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(w, h, false);
   }
@@ -268,20 +238,19 @@ export function createPetStage(canvas) {
   let serial = 0;
   function setPet(config) {
     const next = config || {};
-    state.coat = next.coat || 'natural';
-    state.eyeColor = next.eyeColor || 'natural';
-    state.eyes = next.eyes || 'round';
-    state.cheeks = next.cheeks !== false;
-    state.hat = Boolean(next.hat);
-    state.height = Math.min(1.4, Math.max(0.75, Number(next.height) || 1));
-    state.body = Math.min(1.3, Math.max(0.8, Number(next.body) || 1));
+    state.outfit = next.outfit || {};
     const animal = next.animal || 'penguin';
     const mine = ++serial;
     state.animal = animal;
     return ensure(animal).then((pet) => {
       if (mine !== serial) return pet;
       present(pet);
-      return pet;
+      return buildOutfit(pet.anchors, state.outfit, animal).then(() => {
+        if (mine !== serial) return pet;
+        frameCamera();
+        renderer.render(scene, camera);
+        return pet;
+      });
     });
   }
 

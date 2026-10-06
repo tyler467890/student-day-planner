@@ -847,11 +847,12 @@ test('screenshots', async ({ browser }) => {
   await expect(page.getByRole('heading', { name: 'Your pet' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Stretch', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Dance', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await page.getByRole('button', { name: 'Hat', exact: true }).click();
-  await page.locator('.pet-color-rows').screenshot({ path: `${ART}/pet-colour-rows-phone.png` });
-  await page.getByRole('button', { name: 'Coat Blue' }).click();
-  await page.waitForTimeout(300);
+  await page.getByRole('button', { name: 'Shop', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Pet Shop' })).toBeVisible();
+  await page.getByRole('button', { name: 'Top Hat', exact: true }).click();
+  await page.waitForTimeout(400);
   await page.screenshot({ path: `${ART}/pet-customizer.png` });
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.getByRole('button', { name: 'Back', exact: true }).click();
 
   await page.getByRole('button', { name: 'Customize' }).click();
@@ -961,17 +962,11 @@ test('text and background colours, contrast fix, and v1 settings', async ({ page
 
   await page.getByRole('button', { name: 'Change pet' }).click();
   await page.getByRole('button', { name: 'Dog', exact: true }).click();
-  await page.getByRole('button', { name: 'Coat Chocolate' }).click();
-  await page.getByRole('button', { name: 'Eyes Blue' }).click();
   const coloured = await page.evaluate(() => window.__dayli.getState().settings.pet);
   expect(coloured.animal).toBe('dog');
-  expect(coloured.coat).toBe('chocolate');
-  expect(coloured.eyeColor).toBe('blue');
   await page.getByRole('button', { name: 'Penguin', exact: true }).click();
   const back = await page.evaluate(() => window.__dayli.getState().settings.pet);
   expect(back.animal).toBe('penguin');
-  expect(back.coat).toBe('natural');
-  expect(back.eyeColor).toBe('natural');
   await page.getByRole('button', { name: 'Back', exact: true }).click();
 
   await page.reload();
@@ -1032,7 +1027,7 @@ test('text and background colours, contrast fix, and v1 settings', async ({ page
     const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim().toUpperCase();
     return { settings, bg };
   });
-  expect(migrated.settings.schemaVersion).toBe(3);
+  expect(migrated.settings.schemaVersion).toBe(4);
   expect(migrated.settings.textColor).toBeNull();
   expect(migrated.settings.bgColor).toBeNull();
   expect(migrated.settings.theme).toBe('ocean');
@@ -1119,10 +1114,8 @@ test('today and simplified settings screenshots', async ({ page }) => {
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await page.getByRole('button', { name: 'Your pet' }).click();
   await expect(page.getByRole('heading', { name: 'Your pet' })).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Coat' })).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Fun colours' })).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Eyes' })).toBeVisible();
-  await page.locator('.pet-color-rows').screenshot({ path: `${ART}/pet-colour-rows-phone.png` });
-  await expect(page.getByRole('button', { name: 'Coat Natural' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('button', { name: 'Eyes Natural' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Shop', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Closet', exact: true })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Coat' })).toHaveCount(0);
+  await expect(page.getByText('Pets by Kenney, CC0')).toHaveCount(0);
 });

@@ -9,6 +9,10 @@ import * as db from './db.js';
 import * as push from './push.js';
 import { celebrationChoices, pickCelebration } from './celebrations.js';
 import { playCelebrationAudio, playChime } from './sounds.js';
+import {
+  SLOT_TABS, buy, coinsShort, deleteLook, grantQualified, itemById, itemsInSlot,
+  previewOutfit, resetOutfit, saveLook, applyLook, thumbUrl, walletBalance, wear, removeWorn,
+} from './shop.js';
 
 const {
   POINTS, DAY_COMPLETE_BONUS, THEMES, ACCENTS, WEEKDAY_LABELS,
@@ -51,6 +55,14 @@ let petBoot = null;
 let petKey = '';
 let petPending = null;
 let petReturn = 'today';
+let shopFrom = 'pet';
+let shopTab = 'hat';
+let shopTry = null;
+let closetSlot = null;
+let rareCard = null;
+let rareQueue = [];
+let rarePreview = null;
+let buyPrompt = null;
 let openWheel = null;
 let wheelBitmap = null;
 let wheelBitmapDpr = 0;
@@ -368,6 +380,7 @@ async function completeInstance(inst, { fromUndo = false } = {}) {
   const day = syncDayBonuses(inst.date);
   const level = syncLevel();
   const streak = streakInfo();
+  syncRares(true);
   const showDay = day.justFinished && inst.date === plannerToday() && !S.settings.dayCompleteShown[inst.date];
   if (showDay) S.settings.dayCompleteShown[inst.date] = true;
   markReminderDone(inst.taskId, inst.date);
@@ -377,7 +390,8 @@ async function completeInstance(inst, { fromUndo = false } = {}) {
   if (!fromUndo) {
     const moment = { ...day, ...level, streak: streak.streak, showDay };
     playComplete(inst, points, moment);
-    reactPet(petReactionKind(inst, moment));
+    if (moment.leveled && celebrationMode() === 'full') reactPet('levelup');
+    else reactPet(petReactionKind(inst, moment));
     showUndo(`Done! +${points}`, async () => {
       restore(snap);
       petPending = null;
@@ -408,6 +422,7 @@ function playComplete(inst, points, result) {
     if (mode === 'full') spawnConfetti();
   }
   if (result.leveled) openLevelPop(result.level);
+  if (!result.showDay && !result.leveled) showNextRare();
 }
 
 function spawnFloat(instanceId, points, mode) {
@@ -510,6 +525,12 @@ function openDayCard(streak) {
   if (nice) nice.focus();
 }
 
+function closeDayCard() {
+  dayCard = null;
+  renderOverlayBits();
+  showNextRare();
+}
+
 function openLevelPop(level) {
   levelPop = { level, title: levelTitle(level) };
   renderOverlayBits();
@@ -517,6 +538,7 @@ function openLevelPop(level) {
   openLevelPop.timer = setTimeout(() => {
     levelPop = null;
     renderOverlayBits();
+    showNextRare();
   }, 3000);
   announce(`Level ${level}, ${levelTitle(level)}`);
 }
@@ -956,7 +978,7 @@ function petLabel(id) {
 
 function petOnScreen() {
   if (!S.settings.setupComplete) return (S.settings.setupStep || 1) >= 4;
-  return !S.screen || S.screen === 'today' || S.screen === 'pet';
+  return !S.screen || S.screen === 'today' || S.screen === 'pet' || S.screen === 'shop' || S.screen === 'closet';
 }
 
 function isLateNight() {
@@ -1016,12 +1038,23 @@ function ensurePetHolder() {
 
 let petApply = Promise.resolve();
 
+function coinBalance() {
+  const spent = S.settings.wardrobe?.spent || 0;
+  return walletBalance(S.completions, S.bonuses, spent);
+}
+
+function shownOutfit() {
+  const base = previewOutfit(S.settings.wardrobe, shopTry);
+  return previewOutfit({ outfit: base }, rarePreview);
+}
+
 function applyPetConfig() {
   if (!petStage) return petApply;
   petApply = petApply.then(() => {
     const pet = S.settings.pet || model.defaultPet();
-    const key = JSON.stringify(pet);
-    return petStage.setPet(pet).then(() => {
+    const outfit = shownOutfit();
+    const key = JSON.stringify({ animal: pet.animal, outfit });
+    return petStage.setPet({ ...pet, outfit }).then(() => {
       petKey = key;
       if (petHolder && petHolder.dataset.state !== 'fallback') petHolder.dataset.state = 'ready';
     });
@@ -1073,7 +1106,7 @@ function mountPet(parent) {
   parent.append(holder);
   bootPet().then(() => {
     if (!petStage || !petHolder || petHolder.dataset.state === 'fallback') return;
-    if (JSON.stringify(S.settings.pet) !== petKey) applyPetConfig();
+    applyPetConfig();
     petStage.setActive(petOnScreen());
     syncPetAmbient();
     requestAnimationFrame(() => petStage?.resize());
@@ -1146,10 +1179,13 @@ function renderPetColorRows(pet) {
 function renderPetControls() {
   const pet = S.settings.pet || model.defaultPet();
   const wrap = h('div', { class: 'pet-controls' });
+  wrap.append(h('div', { class: 'row-btns' },
+    h('button', { type: 'button', class: 'btn secondary', onclick: () => openShop('pet') }, 'Shop'),
+    h('button', { type: 'button', class: 'btn secondary', onclick: () => openCloset() }, 'Closet')));
   wrap.append(h('p', { class: 'field-label', text: 'Animal' }), renderAnimalGrid());
   const selected = new Set(pet.celebrations || []);
   wrap.append(h('p', { class: 'field-label', text: 'Celebrations' }));
-  wrap.append(h('p', { class: 'fine', text: 'Pick more than one. Finishing a task plays a random choice.' }));
+  wrap.append(h('p', { class: 'fine', text: 'Finishing a task plays a cheer or a dance. A level-up is a bigger dance.' }));
   wrap.append(h('div', { class: 'chips', role: 'group', 'aria-label': 'Celebrations' },
     celebrationChoices(pet.animal).map((choice) => {
       const on = selected.has(choice.id);
@@ -1165,40 +1201,6 @@ function renderPetControls() {
         },
       }, choice.label);
     })));
-  wrap.append(renderPetColorRows(pet));
-  wrap.append(h('p', { class: 'field-label', text: 'Face' }));
-  wrap.append(h('div', { class: 'chips' },
-    ['round', 'happy', 'sparkly'].map((eyes) => h('button', {
-      type: 'button',
-      class: `chip${pet.eyes === eyes ? ' is-selected' : ''}`,
-      onclick: () => updatePet({ eyes }),
-    }, eyes === 'round' ? 'Round eyes' : eyes === 'happy' ? 'Happy eyes' : 'Sparkly eyes')),
-    h('button', {
-      type: 'button',
-      class: `chip${pet.cheeks ? ' is-selected' : ''}`,
-      'aria-pressed': pet.cheeks ? 'true' : 'false',
-      onclick: () => updatePet({ cheeks: !pet.cheeks }),
-    }, 'Cheeks'),
-    h('button', {
-      type: 'button',
-      class: `chip${pet.hat ? ' is-selected' : ''}`,
-      'aria-pressed': pet.hat ? 'true' : 'false',
-      onclick: () => updatePet({ hat: !pet.hat }),
-    }, 'Hat')));
-  const height = h('input', {
-    type: 'range', min: '0.75', max: '1.4', step: '0.01', value: String(pet.height || 1), 'aria-label': 'Height',
-  });
-  const body = h('input', {
-    type: 'range', min: '0.8', max: '1.3', step: '0.01', value: String(pet.body || 1), 'aria-label': 'Body size',
-  });
-  const live = (key, input) => {
-    input.addEventListener('input', () => updatePet({ [key]: Number(input.value) }, { redraw: false }));
-  };
-  live('height', height);
-  live('body', body);
-  wrap.append(h('div', { class: 'pet-sliders' },
-    h('label', {}, 'Height', height),
-    h('label', {}, 'Body size', body)));
   return wrap;
 }
 
@@ -1211,11 +1213,304 @@ function renderPet() {
       'aria-label': 'Back',
       onclick: () => { S.screen = petReturn || 'today'; render(); },
     }, icon(I.left)),
-    h('h1', { class: 'setup-title', text: 'Your pet' })));
+    h('h1', { class: 'setup-title', text: 'Your pet' }),
+    coinPill(true)));
   const stage = h('div', { class: 'pet-setup-stage' });
   mountPet(stage);
   page.append(stage, renderPetControls());
   return page;
+}
+
+function coinPill(opensShop) {
+  const coins = coinBalance();
+  const props = {
+    class: 'coin-pill',
+    'aria-label': `${coins} coins`,
+  };
+  if (opensShop) {
+    return h('button', {
+      ...props,
+      type: 'button',
+      onclick: () => openShop(S.screen === 'closet' ? 'closet' : 'pet'),
+    }, h('span', { class: 'coin', text: '★' }), h('span', { class: 'num', text: String(coins) }));
+  }
+  return h('div', props, h('span', { class: 'coin', text: '★' }), h('span', { class: 'num', text: String(coins) }));
+}
+
+function openShop(from) {
+  shopFrom = from || 'pet';
+  shopTry = null;
+  S.screen = 'shop';
+  render();
+}
+
+function openCloset() {
+  shopTry = null;
+  S.screen = 'closet';
+  render();
+}
+
+function syncRares(celebrate) {
+  const total = sumPoints(S.completions, S.bonuses);
+  const level = Math.max(levelForPoints(total), S.settings.highestLevel || 1);
+  const best = streakInfo().best || 0;
+  const result = grantQualified(S.settings.wardrobe, { level, best }, {
+    celebrate,
+    at: currentDate().toISOString(),
+  });
+  S.settings.wardrobe = result.wardrobe;
+  for (const id of result.newly) {
+    if (!rareQueue.includes(id)) rareQueue.push(id);
+  }
+  return result.newly;
+}
+
+function showNextRare() {
+  if (dayCard || levelPop || rareCard || !rareQueue.length) return;
+  const id = rareQueue.shift();
+  const item = itemById(id);
+  if (!item) return;
+  rareCard = item;
+  rarePreview = item.id;
+  if (celebrationMode() === 'full') reactPet('cheer');
+  applyPetConfig();
+  renderOverlayBits();
+}
+
+function closeRare(wearIt) {
+  const item = rareCard;
+  rareCard = null;
+  rarePreview = null;
+  if (wearIt && item) S.settings.wardrobe = wear(S.settings.wardrobe, item.id);
+  persistAll();
+  render();
+  showNextRare();
+}
+
+function setWardrobe(next) {
+  S.settings.wardrobe = next;
+  persistAll();
+  applyPetConfig();
+  render();
+}
+
+function renderShop() {
+  const page = h('main', { class: 'shell shop-screen' });
+  page.append(h('header', { class: 'top-row' },
+    h('button', {
+      type: 'button',
+      class: 'icon-btn',
+      'aria-label': 'Back',
+      onclick: () => {
+        shopTry = null;
+        S.screen = shopFrom === 'closet' ? 'closet' : 'pet';
+        render();
+      },
+    }, icon(I.left)),
+    h('h1', { class: 'setup-title', text: 'Pet Shop' }),
+    coinPill(false)));
+  const stage = h('div', { class: 'shop-stage' });
+  if (shopTry) stage.append(h('span', { class: 'shop-tag', text: 'Trying on' }));
+  mountPet(stage);
+  page.append(stage);
+  page.append(h('div', { class: 'shop-tabs', role: 'tablist', 'aria-label': 'Slots' },
+    SLOT_TABS.map(([id, label]) => h('button', {
+      type: 'button',
+      class: `shop-tab${shopTab === id ? ' is-on' : ''}`,
+      role: 'tab',
+      'aria-selected': shopTab === id ? 'true' : 'false',
+      onclick: () => { shopTab = id; render(); },
+    }, label))));
+  const grid = h('div', { class: 'shop-grid' });
+  for (const item of itemsInSlot(shopTab)) {
+    const owned = Boolean(S.settings.wardrobe?.owned?.[item.id]);
+    const locked = Boolean(item.rare) && !owned;
+    const selected = shopTry === item.id;
+    const tile = h('button', {
+      type: 'button',
+      class: `shop-tile${selected ? ' is-sel' : ''}${locked ? ' is-locked' : ''}`,
+      'aria-pressed': selected ? 'true' : 'false',
+      'aria-label': item.name,
+      onclick: () => { shopTry = item.id; render(); },
+    });
+    tile.append(h('img', { src: thumbUrl(item.id), alt: '' }));
+    tile.append(h('span', { class: 'shop-name', text: item.short }));
+    if (locked) {
+      tile.append(h('span', { class: 'shop-lock', text: '🔒', 'aria-hidden': 'true' }));
+      tile.append(h('span', { class: 'shop-cond', text: item.rare.label }));
+    } else if (owned) {
+      tile.append(h('span', { class: 'shop-pill is-wear', text: 'Wear' }));
+    } else {
+      tile.append(h('span', { class: 'shop-price' }, h('span', { class: 'coin sm', text: '★' }), String(item.price)));
+    }
+    grid.append(tile);
+  }
+  page.append(grid);
+  if (shopTry) page.append(renderShopBar());
+  return page;
+}
+
+function renderShopBar() {
+  const item = itemById(shopTry);
+  if (!item) return null;
+  const owned = Boolean(S.settings.wardrobe?.owned?.[item.id]);
+  const locked = Boolean(item.rare) && !owned;
+  const balance = coinBalance();
+  const short = coinsShort(balance, item);
+  let button;
+  if (locked) {
+    button = h('button', { type: 'button', class: 'btn shop-buy is-wait', disabled: 'true' }, 'Locked');
+  } else if (owned) {
+    const wearing = S.settings.wardrobe?.outfit?.[item.slot] === item.id;
+    button = h('button', {
+      type: 'button',
+      class: 'btn shop-buy is-wear',
+      onclick: () => setWardrobe(wearing ? removeWorn(S.settings.wardrobe, item.id) : wear(S.settings.wardrobe, item.id)),
+    }, wearing ? 'Wearing' : 'Wear');
+  } else if (short > 0) {
+    button = h('button', { type: 'button', class: 'btn shop-buy is-wait', disabled: 'true' }, `Need ${short} more`);
+  } else {
+    button = h('button', {
+      type: 'button',
+      class: 'btn shop-buy',
+      onclick: () => { buyPrompt = item.id; renderOverlayBits(); },
+    }, 'Buy ', h('span', { class: 'coin sm', text: '★' }), String(item.price));
+  }
+  const sub = locked
+    ? 'Keep your streak going to unlock this!'
+    : (owned ? 'Yours to wear' : 'Preview is free');
+  return h('div', { class: 'shop-bar' },
+    h('div', { class: 'shop-bar-info' },
+      h('p', { class: 'shop-bar-title', text: item.name }),
+      h('p', { class: 'shop-bar-sub', text: sub })),
+    button);
+}
+
+function confirmBuy() {
+  const item = itemById(buyPrompt);
+  if (!item) { buyPrompt = null; return; }
+  const balance = coinBalance();
+  const result = buy(S.settings.wardrobe, item.id, balance, currentDate().toISOString());
+  buyPrompt = null;
+  if (!result.ok) {
+    renderOverlayBits();
+    return;
+  }
+  S.settings.wardrobe = result.wardrobe;
+  persistAll();
+  render();
+}
+
+function renderCloset() {
+  const page = h('main', { class: 'shell shop-screen closet-screen' });
+  const owned = S.settings.wardrobe?.owned || {};
+  const outfit = S.settings.wardrobe?.outfit || {};
+  page.append(h('header', { class: 'top-row' },
+    h('button', {
+      type: 'button',
+      class: 'icon-btn',
+      'aria-label': 'Back',
+      onclick: () => { S.screen = 'pet'; render(); },
+    }, icon(I.left)),
+    h('h1', { class: 'setup-title', text: 'My Closet' }),
+    coinPill(true)));
+  const stage = h('div', { class: 'shop-stage closet-stage' });
+  mountPet(stage);
+  page.append(stage);
+  const slotNames = { hat: 'Hat', face: 'Face', neck: 'Neck', body: 'Body', back: 'Back', effect: 'Effect' };
+  const slots = h('div', { class: 'slot-row' });
+  for (const id of Object.keys(slotNames)) {
+    const label = slotNames[id];
+    const worn = outfit[id] ? itemById(outfit[id]) : null;
+    const on = closetSlot === id;
+    slots.append(h('button', {
+      type: 'button',
+      class: `slot-btn${on ? ' is-on' : ''}`,
+      'aria-pressed': on ? 'true' : 'false',
+      'aria-label': worn ? `${label}, ${worn.name}` : `${label}, empty`,
+      onclick: () => { closetSlot = closetSlot === id ? null : id; render(); },
+    },
+    worn
+      ? h('img', { src: thumbUrl(worn.id), alt: '' })
+      : h('span', { class: 'slot-empty', text: '+' }),
+    h('span', { text: label })));
+  }
+  page.append(slots);
+  const grid = h('div', { class: 'shop-grid' });
+  const mine = itemsInSlot(closetSlot).filter((item) => owned[item.id]);
+  if (!mine.length) {
+    grid.append(h('p', { class: 'fine shop-empty', text: 'Nothing here yet. The shop is one tap away.' }));
+  }
+  for (const item of mine) {
+    const wearing = outfit[item.slot] === item.id;
+    const tile = h('div', { class: `shop-tile closet-tile${wearing ? ' is-sel' : ''}` });
+    tile.append(h('img', { src: thumbUrl(item.id), alt: '' }));
+    if (wearing) tile.append(h('span', { class: 'shop-check', text: '✓' }));
+    tile.append(h('span', { class: 'shop-name', text: item.short }));
+    tile.append(h('button', {
+      type: 'button',
+      class: `shop-pill ${wearing ? 'is-remove' : 'is-wear'}`,
+      onclick: () => setWardrobe(wearing ? removeWorn(S.settings.wardrobe, item.id) : wear(S.settings.wardrobe, item.id)),
+    }, wearing ? 'Remove' : 'Wear'));
+    grid.append(tile);
+  }
+  page.append(grid);
+  const looks = S.settings.wardrobe?.looks || [];
+  if (looks.length) {
+    page.append(h('div', { class: 'look-row' }, looks.map((look) => h('button', {
+      type: 'button',
+      class: 'chip',
+      onclick: () => setWardrobe(applyLook(S.settings.wardrobe, look.id)),
+    }, look.name, h('span', {
+      class: 'look-x',
+      'aria-label': `Delete ${look.name}`,
+      onclick: (event) => {
+        event.stopPropagation();
+        setWardrobe(deleteLook(S.settings.wardrobe, look.id));
+      },
+    }, '×')))));
+  }
+  page.append(h('div', { class: 'shop-bar closet-bar' },
+    h('button', {
+      type: 'button',
+      class: 'btn ghost',
+      onclick: () => setWardrobe(resetOutfit(S.settings.wardrobe)),
+    }, 'Reset'),
+    h('button', {
+      type: 'button',
+      class: 'btn shop-save',
+      onclick: () => saveCurrentLook(),
+    }, 'Save look')));
+  return page;
+}
+
+function saveCurrentLook() {
+  const looks = S.settings.wardrobe?.looks || [];
+  if (looks.length >= 3) {
+    announce('You can keep 3 looks. Delete one to save another.');
+    return;
+  }
+  const wrap = h('div', { class: 'sheet-wrap', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Save look' });
+  const input = h('input', { class: 'text-input', maxlength: '24', 'aria-label': 'Look name', value: `Look ${looks.length + 1}` });
+  wrap.append(
+    h('button', { type: 'button', class: 'sheet-backdrop', 'aria-label': 'Cancel', onclick: () => wrap.remove() }),
+    h('div', { class: 'sheet' },
+      h('h2', { text: 'Name this look' }),
+      input,
+      h('div', { class: 'row-btns' },
+        h('button', {
+          type: 'button',
+          class: 'btn primary',
+          onclick: () => {
+            const result = saveLook(S.settings.wardrobe, input.value);
+            wrap.remove();
+            if (result.ok) setWardrobe(result.wardrobe);
+          },
+        }, 'Save'),
+        h('button', { type: 'button', class: 'btn ghost', onclick: () => wrap.remove() }, 'Not now'))));
+  overlayEl().append(wrap);
+  input.focus();
+  input.select();
 }
 
 function render() {
@@ -1228,6 +1523,8 @@ function render() {
   else if (S.screen === 'customize') root.append(renderCustomize());
   else if (S.screen === 'help') root.append(renderHelp());
   else if (S.screen === 'pet') root.append(renderPet());
+  else if (S.screen === 'shop') root.append(renderShop());
+  else if (S.screen === 'closet') root.append(renderCloset());
   else root.append(renderToday());
   renderOverlayBits();
   if (openWheel) {
@@ -2483,6 +2780,7 @@ function renderCustomize() {
     h('h2', { text: 'About' }),
     h('p', { text: `${PRODUCT_NAME} ${APP_VERSION}` }),
     h('p', { class: 'privacy', text: "Your planner lives on this device. We don't see your tasks. If you turn on reminders while the app is closed, only the reminder time and text are sent to our reminder service, and deleted after sending." }),
+    h('p', { class: 'fine', text: 'Pets by Kenney, CC0. Some shop items are Kenney models, also CC0.' }),
     h('p', { class: 'fine', text: 'Nunito is used under the SIL Open Font License. Icons in the app are original.' }),
     !isStandalone() ? h('button', { type: 'button', class: 'btn secondary', onclick: () => promptInstall() }, 'Install app') : null,
     h('button', { type: 'button', class: 'btn ghost', onclick: () => { S.screen = 'help'; render(); } }, 'Help')));
@@ -2920,7 +3218,7 @@ function renderOverlayBits() {
       h('h2', { text: 'Day complete! 🎉' }),
       h('p', { text: '+10 bonus' }),
       h('p', { text: `🔥 ${dayCard.streak}-day streak` }),
-      h('button', { type: 'button', class: 'btn primary', id: 'day-nice', onclick: () => { dayCard = null; renderOverlayBits(); } }, 'Nice'),
+      h('button', { type: 'button', class: 'btn primary', id: 'day-nice', onclick: () => closeDayCard() }, 'Nice'),
     );
     overlayEl().append(day);
   }
@@ -2931,9 +3229,47 @@ function renderOverlayBits() {
       type: 'button',
       id: 'level-pop',
       class: 'level-pop',
-      onclick: () => { levelPop = null; clearTimeout(openLevelPop.timer); renderOverlayBits(); },
+      onclick: () => { levelPop = null; clearTimeout(openLevelPop.timer); renderOverlayBits(); showNextRare(); },
     }, `Level ${levelPop.level} · ${levelPop.title}`);
     overlayEl().append(pop);
+  }
+  let rare = document.getElementById('rare-card');
+  if (!rareCard) rare?.remove();
+  else if (!rare) {
+    const fade = celebrationMode() !== 'full';
+    rare = h('div', {
+      id: 'rare-card',
+      class: `day-card rare-card${fade ? ' is-fade' : ''}`,
+      role: 'dialog',
+      'aria-label': `New rare, ${rareCard.name}`,
+    });
+    rare.append(
+      h('p', { class: 'rare-kicker', text: 'New rare!' }),
+      h('img', { class: 'rare-thumb', src: thumbUrl(rareCard.id), alt: '' }),
+      h('h2', { text: rareCard.name }),
+      h('div', { class: 'row-btns' },
+        h('button', { type: 'button', class: 'btn primary', id: 'rare-wear', onclick: () => closeRare(true) }, 'Wear it'),
+        h('button', { type: 'button', class: 'btn ghost', onclick: () => closeRare(false) }, 'Later')),
+    );
+    overlayEl().append(rare);
+    document.getElementById('rare-wear')?.focus();
+  }
+  let buySheet = document.getElementById('buy-sheet');
+  if (!buyPrompt) buySheet?.remove();
+  else if (!buySheet) {
+    const item = itemById(buyPrompt);
+    const left = coinBalance() - (item?.price || 0);
+    buySheet = h('div', { id: 'buy-sheet', class: 'sheet-wrap', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Buy item' });
+    buySheet.append(
+      h('button', { type: 'button', class: 'sheet-backdrop', 'aria-label': 'Not now', onclick: () => { buyPrompt = null; renderOverlayBits(); } }),
+      h('div', { class: 'sheet' },
+        h('h2', { text: `Buy ${item?.name || 'this'} for ${item?.price}?` }),
+        h('p', { text: `You'll have ${Math.max(0, left)} left.` }),
+        h('div', { class: 'row-btns' },
+          h('button', { type: 'button', class: 'btn primary', onclick: () => confirmBuy() }, 'Buy'),
+          h('button', { type: 'button', class: 'btn ghost', onclick: () => { buyPrompt = null; renderOverlayBits(); } }, 'Not now'))),
+    );
+    overlayEl().append(buySheet);
   }
 }
 
@@ -3346,6 +3682,7 @@ function closeTop() {
   if (document.getElementById('edit-sheet')) { closeSheet(); return; }
   const sheet = overlayEl().querySelector('.sheet-wrap');
   if (sheet) {
+    if (sheet.id === 'buy-sheet') buyPrompt = null;
     sheet.remove();
     if (!document.getElementById('edit-sheet')) {
       sheetOpen = false;
@@ -3353,8 +3690,9 @@ function closeTop() {
     }
     return;
   }
-  if (dayCard) { dayCard = null; renderOverlayBits(); return; }
-  if (levelPop) { levelPop = null; renderOverlayBits(); }
+  if (rareCard) { closeRare(false); return; }
+  if (dayCard) { closeDayCard(); return; }
+  if (levelPop) { levelPop = null; clearTimeout(openLevelPop.timer); renderOverlayBits(); showNextRare(); }
 }
 
 async function handleLaunchParams() {
@@ -3421,6 +3759,7 @@ async function boot() {
   }
   refreshPhotoUrl();
   noteHighWater();
+  syncRares(false);
   sessionStarted = currentMs();
   for (const r of S.reminders) {
     if (r.state === 'scheduled' && Date.parse(r.fireAtUTC) < sessionStarted) r.state = 'missed';
