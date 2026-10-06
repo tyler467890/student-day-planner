@@ -4,7 +4,7 @@
  */
 
 import { defaultCelebrations, normalizeCelebrations } from './celebrations.js';
-import { defaultWardrobe, keepLegacyHat, normalizeWardrobe } from './shop.js';
+import { bindPet, defaultWardrobe, keepLegacyHat, normalizeWardrobe } from './shop.js';
 
 export const POINTS = { easy: 5, medium: 10, hard: 20 };
 export const DAY_COMPLETE_BONUS = 10;
@@ -987,7 +987,10 @@ export function fixTextColor(settings, photo = null) {
 /** Fill new colour fields without dropping a v1 save's theme, accent, or categories. */
 export function migrateSettings(saved) {
   const base = defaultSettings();
-  if (!saved || typeof saved !== 'object') return base;
+  if (!saved || typeof saved !== 'object') {
+    base.wardrobe = bindPet(base.wardrobe, base.pet.animal);
+    return base;
+  }
   const version = Number(saved.schemaVersion) || 1;
   const merged = {
     ...base,
@@ -998,7 +1001,10 @@ export function migrateSettings(saved) {
     categories: Array.isArray(saved.categories) && saved.categories.length ? saved.categories : base.categories,
     installedOn: isPlannerYmd(saved.installedOn) ? saved.installedOn : null,
     pet: normalizePet(saved.pet),
-    wardrobe: keepLegacyHat(normalizeWardrobe(saved.wardrobe), Boolean(saved.pet?.hat)),
+    wardrobe: bindPet(
+      keepLegacyHat(normalizeWardrobe(saved.wardrobe), Boolean(saved.pet?.hat)),
+      normalizePet(saved.pet).animal,
+    ),
     id: 'main',
   };
   delete merged.dayStart;

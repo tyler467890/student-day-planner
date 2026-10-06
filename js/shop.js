@@ -83,12 +83,17 @@ export function emptyOutfit() {
   return { hat: null, face: null, neck: null, body: null, back: null, effect: null };
 }
 
+export const PET_IDS = ['dog', 'cat', 'bunny', 'penguin', 'monkey', 'tiger', 'pig', 'lion', 'panda', 'fox', 'koala', 'chick'];
+
 export function defaultWardrobe() {
   return {
     spent: 0,
     owned: {},
     outfit: emptyOutfit(),
+    outfits: {},
     looks: [],
+    looksByPet: {},
+    pet: null,
     raresReady: false,
     keptHat: false,
   };
@@ -99,26 +104,19 @@ function cleanSlot(id) {
   return item ? item.id : null;
 }
 
-export function normalizeWardrobe(saved) {
-  const base = defaultWardrobe();
-  if (!saved || typeof saved !== 'object') return base;
+function readOutfit(src) {
   const outfit = emptyOutfit();
-  const src = saved.outfit || {};
+  if (!src || typeof src !== 'object') return outfit;
   for (const slot of SLOTS) {
     const item = itemById(src[slot]);
     if (item && item.slot === slot) outfit[slot] = item.id;
   }
-  const owned = {};
-  const rawOwned = saved.owned && typeof saved.owned === 'object' ? saved.owned : {};
-  for (const [id, rec] of Object.entries(rawOwned)) {
-    if (!itemById(id)) continue;
-    owned[id] = {
-      at: typeof rec?.at === 'string' ? rec.at : null,
-      source: rec?.source === 'unlock' || rec?.source === 'kept' ? rec.source : 'buy',
-    };
-  }
+  return outfit;
+}
+
+function cleanLooks(list, owned) {
   const looks = [];
-  for (const look of Array.isArray(saved.looks) ? saved.looks : []) {
+  for (const look of Array.isArray(list) ? list : []) {
     if (looks.length >= 3 || !look || typeof look !== 'object') continue;
     const next = emptyOutfit();
     for (const slot of SLOTS) {
@@ -132,15 +130,84 @@ export function normalizeWardrobe(saved) {
       outfit: next,
     });
   }
+  return looks;
+}
+
+function petId(animal) {
+  return PET_IDS.includes(animal) ? animal : null;
+}
+
+/** Keep the active pet's outfit and named looks in the per-pet maps. */
+function remember(next) {
+  if (!next.pet) return next;
+  next.outfits[next.pet] = { ...next.outfit };
+  next.looksByPet[next.pet] = next.looks;
+  return next;
+}
+
+export function normalizeWardrobe(saved) {
+  const base = defaultWardrobe();
+  if (!saved || typeof saved !== 'object') return base;
+  const owned = {};
+  const rawOwned = saved.owned && typeof saved.owned === 'object' ? saved.owned : {};
+  for (const [id, rec] of Object.entries(rawOwned)) {
+    if (!itemById(id)) continue;
+    owned[id] = {
+      at: typeof rec?.at === 'string' ? rec.at : null,
+      source: rec?.source === 'unlock' || rec?.source === 'kept' ? rec.source : 'buy',
+    };
+  }
+  const outfits = {};
+  const rawOutfits = saved.outfits && typeof saved.outfits === 'object' ? saved.outfits : {};
+  for (const [animal, fit] of Object.entries(rawOutfits)) {
+    if (!petId(animal)) continue;
+    outfits[animal] = readOutfit(fit);
+  }
+  const looksByPet = {};
+  const rawLooks = saved.looksByPet && typeof saved.looksByPet === 'object' ? saved.looksByPet : {};
+  for (const [animal, list] of Object.entries(rawLooks)) {
+    if (!petId(animal)) continue;
+    looksByPet[animal] = cleanLooks(list, owned);
+  }
+  const pet = petId(saved.pet);
   const spent = Number(saved.spent);
   return {
     spent: Number.isFinite(spent) && spent > 0 ? Math.round(spent) : 0,
     owned,
-    outfit,
-    looks,
+    outfit: readOutfit(saved.outfit),
+    outfits,
+    looks: cleanLooks(saved.looks, owned),
+    looksByPet,
+    pet,
     raresReady: Boolean(saved.raresReady),
     keptHat: Boolean(saved.keptHat),
   };
+}
+
+/**
+ * The worn outfit and up to three saved looks belong to one animal.
+ * Switching pets puts the previous look away and brings the next one out.
+ */
+export function bindPet(wardrobe, animal) {
+  const next = normalizeWardrobe(wardrobe);
+  const id = petId(animal) || 'penguin';
+  if (!next.pet) {
+    if (!next.outfits[id]) next.outfits[id] = { ...next.outfit };
+    if (!next.looksByPet[id]) next.looksByPet[id] = next.looks;
+    next.pet = id;
+    next.outfit = { ...emptyOutfit(), ...next.outfits[id] };
+    next.looks = next.looksByPet[id];
+    return next;
+  }
+  if (next.pet === id) return next;
+  next.outfits[next.pet] = { ...next.outfit };
+  next.looksByPet[next.pet] = next.looks;
+  next.pet = id;
+  next.outfit = { ...emptyOutfit(), ...(next.outfits[id] || emptyOutfit()) };
+  next.looks = next.looksByPet[id] || [];
+  if (!next.outfits[id]) next.outfits[id] = { ...next.outfit };
+  if (!next.looksByPet[id]) next.looksByPet[id] = next.looks;
+  return next;
 }
 
 export function qualifies(item, stats) {
@@ -207,7 +274,7 @@ export function wear(wardrobe, itemId) {
   const next = normalizeWardrobe(wardrobe);
   if (!item || !next.owned[item.id]) return next;
   next.outfit[item.slot] = item.id;
-  return next;
+  return remember(next);
 }
 
 export function removeWorn(wardrobe, itemId) {
@@ -215,13 +282,13 @@ export function removeWorn(wardrobe, itemId) {
   const next = normalizeWardrobe(wardrobe);
   if (!item) return next;
   if (next.outfit[item.slot] === item.id) next.outfit[item.slot] = null;
-  return next;
+  return remember(next);
 }
 
 export function resetOutfit(wardrobe) {
   const next = normalizeWardrobe(wardrobe);
   next.outfit = emptyOutfit();
-  return next;
+  return remember(next);
 }
 
 export function saveLook(wardrobe, name) {
@@ -233,13 +300,13 @@ export function saveLook(wardrobe, name) {
     name: label,
     outfit: { ...next.outfit },
   });
-  return { ok: true, wardrobe: next };
+  return { ok: true, wardrobe: remember(next) };
 }
 
 export function deleteLook(wardrobe, id) {
   const next = normalizeWardrobe(wardrobe);
   next.looks = next.looks.filter((look) => look.id !== id);
-  return next;
+  return remember(next);
 }
 
 export function applyLook(wardrobe, id) {
@@ -252,7 +319,7 @@ export function applyLook(wardrobe, id) {
     if (itemId && next.owned[itemId]) outfit[slot] = itemId;
   }
   next.outfit = outfit;
-  return next;
+  return remember(next);
 }
 
 /** Outfit shown on the pet. A try-on replaces one slot and is not saved. */

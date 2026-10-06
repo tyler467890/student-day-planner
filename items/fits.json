@@ -1,0 +1,3 @@
+{
+  "_comment": "Optional per-pet fit overrides. Keys are animal ids: dog, cat, bunny, penguin, monkey, tiger, pig, lion, panda, fox, koala, chick. Fields match the built-in seats: hat, hatZ, hatScale, hatTilt, face, faceZ, faceScale, neck, neckZ, bodyY, bodyScale, backY, backZ, backScale, effectY, top, wide, winged. Keys starting with _ are ignored. Hat brim stays at y=1.431 when hat is 0. Example: \"lion\": { \"hat\": 0.15 }"
+}

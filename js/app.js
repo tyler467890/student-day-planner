@@ -10,7 +10,7 @@ import * as push from './push.js';
 import { celebrationChoices, pickCelebration } from './celebrations.js';
 import { playCelebrationAudio, playChime } from './sounds.js';
 import {
-  SLOT_TABS, buy, coinsShort, deleteLook, grantQualified, itemById, itemsInSlot,
+  SLOT_TABS, bindPet, buy, coinsShort, deleteLook, grantQualified, itemById, itemsInSlot,
   previewOutfit, resetOutfit, saveLook, applyLook, thumbUrl, walletBalance, wear, removeWorn,
 } from './shop.js';
 
@@ -1123,6 +1123,9 @@ function openPetScreen(from) {
 function updatePet(patch, { redraw = true } = {}) {
   const merged = { ...(S.settings.pet || model.defaultPet()), ...patch };
   S.settings.pet = model.normalizePet(merged);
+  if (S.settings.wardrobe?.pet !== S.settings.pet.animal) {
+    S.settings.wardrobe = bindPet(S.settings.wardrobe, S.settings.pet.animal);
+  }
   persistAll();
   if (redraw) render();
   else applyPetConfig();
@@ -1221,10 +1224,15 @@ function renderPet() {
   return page;
 }
 
+let coinPulse = false;
+let justBought = false;
+
 function coinPill(opensShop) {
   const coins = coinBalance();
+  const pulse = coinPulse;
+  coinPulse = false;
   const props = {
-    class: 'coin-pill',
+    class: `coin-pill${pulse ? ' is-down' : ''}`,
     'aria-label': `${coins} coins`,
   };
   if (opensShop) {
@@ -1311,6 +1319,12 @@ function renderShop() {
     coinPill(false)));
   const stage = h('div', { class: 'shop-stage' });
   if (shopTry) stage.append(h('span', { class: 'shop-tag', text: 'Trying on' }));
+  if (justBought) {
+    justBought = false;
+    const burst = h('div', { class: 'shop-spark', 'aria-hidden': 'true' });
+    for (let i = 0; i < 8; i += 1) burst.append(h('i'));
+    stage.append(burst);
+  }
   mountPet(stage);
   page.append(stage);
   page.append(h('div', { class: 'shop-tabs', role: 'tablist', 'aria-label': 'Slots' },
@@ -1397,8 +1411,16 @@ function confirmBuy() {
     return;
   }
   S.settings.wardrobe = result.wardrobe;
+  shopTry = item.id;
+  justBought = true;
+  coinPulse = true;
   persistAll();
   render();
+  const spin = celebrationMode() === 'full';
+  applyPetConfig().then(() => {
+    if (spin) petStage?.react('spin');
+  });
+  if (S.settings.sound !== false && celebrationMode() !== 'off') playChime(0.32);
 }
 
 function renderCloset() {
