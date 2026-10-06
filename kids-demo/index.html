@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hello, Little Sun — kids sing-along demo</title>
+  <link rel="stylesheet" href="../fonts/fonts.css">
+  <link rel="stylesheet" href="demo.css">
+</head>
+<body>
+  <main class="page">
+    <article class="player">
+      <div class="stage" id="stage" data-state="idle">
+        <div class="sky" aria-hidden="true"></div>
+        <div class="cloud cloud-a" aria-hidden="true"></div>
+        <div class="cloud cloud-b" aria-hidden="true"></div>
+
+        <svg class="rainbow" id="rainbow" viewBox="0 0 400 220" aria-hidden="true">
+          <path d="M20 210 A180 180 0 0 1 380 210" fill="none" stroke="#ff6b6b" stroke-width="18" stroke-linecap="round"/>
+          <path d="M48 210 A152 152 0 0 1 352 210" fill="none" stroke="#ffb703" stroke-width="18" stroke-linecap="round"/>
+          <path d="M76 210 A124 124 0 0 1 324 210" fill="none" stroke="#7bdff2" stroke-width="18" stroke-linecap="round"/>
+          <path d="M104 210 A96 96 0 0 1 296 210" fill="none" stroke="#8fd06a" stroke-width="18" stroke-linecap="round"/>
+        </svg>
+
+        <div class="sun" id="sun" aria-hidden="true">
+          <svg viewBox="0 0 200 200">
+            <g class="rays">
+              <rect x="94" y="4" width="12" height="34" rx="6" fill="#ffe08a" transform="rotate(0 100 100)"/>
+              <rect x="94" y="4" width="12" height="34" rx="6" fill="#ffe08a" transform="rotate(45 100 100)"/>
+              <rect x="94" y="4" width="12" height="34" rx="6" fill="#ffe08a" transform="rotate(90 100 100)"/>
+              <rect x="94" y="4" width="12" height="34" rx="6" fill="#ffe08a" transform="rotate(135 100 100)"/>
+              <rect x="94" y="4" width="12" height="34" rx="6" fill="#ffe08a" transform="rotate(180 100 100)"/>
+              <rect x="94" y="4" width="12" height="34" rx="6" fill="#ffe08a" transform="rotate(225 100 100)"/>
+              <rect x="94" y="4" width="12" height="34" rx="6" fill="#ffe08a" transform="rotate(270 100 100)"/>
+              <rect x="94" y="4" width="12" height="34" rx="6" fill="#ffe08a" transform="rotate(315 100 100)"/>
+            </g>
+            <circle cx="100" cy="104" r="62" fill="#ffd23f"/>
+            <ellipse cx="78" cy="92" rx="22" ry="14" fill="#fff6c8" opacity="0.55"/>
+            <circle cx="70" cy="116" r="9" fill="#ffb3c1" opacity="0.85"/>
+            <circle cx="130" cy="116" r="9" fill="#ffb3c1" opacity="0.85"/>
+            <ellipse class="eye" cx="78" cy="100" rx="7" ry="9" fill="#3a2a22"/>
+            <ellipse class="eye" cx="122" cy="100" rx="7" ry="9" fill="#3a2a22"/>
+            <circle cx="80" cy="97" r="2.2" fill="#fff"/>
+            <circle cx="124" cy="97" r="2.2" fill="#fff"/>
+            <path d="M76 122 Q100 146 124 122" fill="none" stroke="#e07a3d" stroke-width="6" stroke-linecap="round"/>
+          </svg>
+        </div>
+
+        <svg class="hills" viewBox="0 0 1600 420" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 170 C220 70 420 230 680 130 C940 30 1180 210 1600 90 L1600 420 L0 420 Z" fill="#9ed67a"/>
+          <path d="M0 250 C280 170 520 300 820 210 C1120 120 1320 260 1600 190 L1600 420 L0 420 Z" fill="#6db84a"/>
+        </svg>
+
+        <div class="bird" id="bird" aria-hidden="true">
+          <svg viewBox="0 0 140 90">
+            <ellipse class="wing" cx="48" cy="48" rx="28" ry="12" fill="#2f79c4"/>
+            <ellipse cx="62" cy="54" rx="32" ry="20" fill="#4c9be8"/>
+            <circle cx="92" cy="40" r="18" fill="#4c9be8"/>
+            <polygon points="106,40 128,34 108,50" fill="#f4b942"/>
+            <circle cx="98" cy="36" r="3.2" fill="#1d2433"/>
+            <circle cx="99" cy="35" r="1.1" fill="#fff"/>
+            <ellipse cx="58" cy="70" rx="10" ry="5" fill="#2f79c4" opacity="0.35"/>
+          </svg>
+        </div>
+
+        <div class="flower" id="flower-1" style="--petal:#ff8fab; left:16%" aria-hidden="true">
+          <svg viewBox="0 0 80 130">
+            <rect x="36" y="52" width="8" height="68" rx="4" fill="#3e8f3a"/>
+            <circle cx="28" cy="40" r="14" fill="var(--petal)"/>
+            <circle cx="52" cy="40" r="14" fill="var(--petal)"/>
+            <circle cx="24" cy="58" r="14" fill="var(--petal)"/>
+            <circle cx="56" cy="58" r="14" fill="var(--petal)"/>
+            <circle cx="40" cy="30" r="14" fill="var(--petal)"/>
+            <circle cx="40" cy="48" r="10" fill="#ffe56b"/>
+          </svg>
+        </div>
+        <div class="flower" id="flower-2" style="--petal:#c9a6ff; left:42%" aria-hidden="true">
+          <svg viewBox="0 0 80 130">
+            <rect x="36" y="52" width="8" height="68" rx="4" fill="#3e8f3a"/>
+            <circle cx="28" cy="40" r="14" fill="var(--petal)"/>
+            <circle cx="52" cy="40" r="14" fill="var(--petal)"/>
+            <circle cx="24" cy="58" r="14" fill="var(--petal)"/>
+            <circle cx="56" cy="58" r="14" fill="var(--petal)"/>
+            <circle cx="40" cy="30" r="14" fill="var(--petal)"/>
+            <circle cx="40" cy="48" r="10" fill="#ffe56b"/>
+          </svg>
+        </div>
+        <div class="flower" id="flower-3" style="--petal:#ffd23f; left:70%" aria-hidden="true">
+          <svg viewBox="0 0 80 130">
+            <rect x="36" y="52" width="8" height="68" rx="4" fill="#3e8f3a"/>
+            <circle cx="28" cy="40" r="14" fill="var(--petal)"/>
+            <circle cx="52" cy="40" r="14" fill="var(--petal)"/>
+            <circle cx="24" cy="58" r="14" fill="var(--petal)"/>
+            <circle cx="56" cy="58" r="14" fill="var(--petal)"/>
+            <circle cx="40" cy="30" r="14" fill="var(--petal)"/>
+            <circle cx="40" cy="48" r="10" fill="#fff6c2"/>
+          </svg>
+        </div>
+
+        <div class="title-card" id="title-card">
+          <p class="kicker">Sing-along for kids</p>
+          <h1>Hello, Little Sun</h1>
+          <p class="tagline">A one-minute hello song</p>
+        </div>
+
+        <div class="end-card" id="end-card" hidden>
+          <p class="kicker">The end</p>
+          <h2>Thanks for watching!</h2>
+          <button type="button" id="replay">Watch again</button>
+        </div>
+
+        <p class="count-pop" id="count-pop" aria-hidden="true"></p>
+        <p class="caption" id="caption" aria-live="polite"></p>
+
+        <button type="button" class="play-btn" id="play">
+          <span class="play-icon" aria-hidden="true"></span>
+          <span>Play video</span>
+        </button>
+
+        <div class="progress" aria-hidden="true">
+          <div class="progress-bar" id="bar"></div>
+        </div>
+      </div>
+
+      <header class="meta">
+        <div class="avatar" aria-hidden="true">★</div>
+        <div>
+          <h2>Hello, Little Sun</h2>
+          <p>Sparkle Studio · original kids demo · about 1 minute</p>
+        </div>
+      </header>
+    </article>
+  </main>
+  <script src="demo.js"></script>
+</body>
+</html>
