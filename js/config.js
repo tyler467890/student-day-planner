@@ -20,7 +20,7 @@
  */
 
 export const PRODUCT_NAME = 'Dayli';
-export const APP_VERSION = '1.3.3';
+export const APP_VERSION = '1.3.4';
 
 /** @type {string} Empty string disables closed-app push. */
 export const PUSH_SERVER_URL = '';
