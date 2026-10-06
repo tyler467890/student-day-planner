@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Pet fit sheet</title>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "../vendor/three.module.js"
+    }
+  }
+  </script>
+  <style>
+    body { margin: 0; background: #efeaf8; }
+    #stage {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 220px;
+      height: 250px;
+      opacity: 0;
+      pointer-events: none;
+    }
+    #sheet { display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="stage" width="220" height="250"></canvas>
+  <canvas id="sheet"></canvas>
+  <script type="module">
+    import { createPetStage } from '../js/pet-stage.js';
+    import { ITEMS } from '../js/shop.js';
+
+    const PETS = ['dog', 'cat', 'bunny', 'penguin', 'monkey', 'tiger', 'pig', 'lion', 'panda', 'fox', 'koala', 'chick'];
+    const GROUPS = {
+      featured: ['top_hat', 'round_glasses', 'scarf', 'backpack', 'wings'],
+      hats: ITEMS.filter((item) => item.slot === 'hat').map((item) => item.id),
+      face: ITEMS.filter((item) => item.slot === 'face').map((item) => item.id),
+      neck: ITEMS.filter((item) => item.slot === 'neck').map((item) => item.id),
+      body: ITEMS.filter((item) => item.slot === 'body').map((item) => item.id),
+      back: ITEMS.filter((item) => item.slot === 'back').map((item) => item.id),
+      effect: ITEMS.filter((item) => item.slot === 'effect').map((item) => item.id),
+    };
+    const params = new URLSearchParams(location.search);
+    const set = params.get('set') || 'featured';
+    const items = GROUPS[set] || set.split(',').filter((id) => ITEMS.some((item) => item.id === id));
+    const byId = new Map(ITEMS.map((item) => [item.id, item]));
+
+    const cellW = 210;
+    const cellH = 240;
+    const labelH = 18;
+    const head = 26;
+    const sheet = document.getElementById('sheet');
+    sheet.width = Math.max(1, cellW * items.length);
+    sheet.height = head + (cellH + labelH) * PETS.length;
+    const ctx = sheet.getContext('2d');
+    ctx.fillStyle = '#efeaf8';
+    ctx.fillRect(0, 0, sheet.width, sheet.height);
+    ctx.fillStyle = '#2a1860';
+    ctx.font = 'bold 13px Nunito, sans-serif';
+    items.forEach((id, col) => ctx.fillText(byId.get(id).short, col * cellW + 8, 18));
+
+    const stageCanvas = document.getElementById('stage');
+    const stage = createPetStage(stageCanvas);
+
+    function paintCell(animal, item, col, row) {
+      const y = head + row * (cellH + labelH);
+      const x = col * cellW;
+      const grad = ctx.createLinearGradient(0, y, 0, y + cellH);
+      grad.addColorStop(0, '#cdebff');
+      grad.addColorStop(1, '#e7f8ee');
+      ctx.fillStyle = grad;
+      ctx.fillRect(x + 6, y + 4, cellW - 12, cellH - 8);
+      ctx.drawImage(stageCanvas, x + 6, y + 4, cellW - 12, cellH - 8);
+      ctx.fillStyle = '#2a1860';
+      ctx.font = '12px sans-serif';
+      ctx.fillText(animal, x + 10, y + cellH + 12);
+    }
+
+    window.__sheet = { done: false, error: null };
+    try {
+      for (let row = 0; row < PETS.length; row += 1) {
+        for (let col = 0; col < items.length; col += 1) {
+          const item = byId.get(items[col]);
+          await stage.setPet({
+            animal: PETS[row],
+            outfit: { [item.slot]: item.id },
+          });
+          stage.poseAt('static', 0);
+          await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          paintCell(PETS[row], item, col, row);
+        }
+      }
+      window.__sheet = { done: true, items: items.length, pets: PETS.length };
+    } catch (err) {
+      window.__sheet = { done: true, error: String(err) };
+    }
+  </script>
+</body>
+</html>

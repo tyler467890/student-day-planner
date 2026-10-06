@@ -179,7 +179,16 @@ export function createPetStage(canvas) {
     }
     holder.position.set(0, mode === 'levelup' ? Math.abs(Math.sin(state.modeT * 6)) * 0.06 : 0, 0);
     holder.rotation.set(0, 0, 0);
-    turntable.rotation.y = -0.42;
+    // A new purchase plays the dance clip and turns the whole pet once.
+    // Accessories are parented to the body, so they come along.
+    let spin = 0;
+    if (mode === 'spin') {
+      const limit = DURATION.spin || 1.35;
+      const p = Math.min(Math.max(state.modeT, 0) / limit, 1);
+      const eased = p < 0.5 ? 2 * p * p : 1 - ((-2 * p + 2) ** 2) / 2;
+      spin = eased * Math.PI * 2;
+    }
+    turntable.rotation.y = -0.42 + spin;
   }
 
   function present(pet) {

@@ -10,31 +10,13 @@ import {
   Box3, Vector3,
 } from 'three';
 import { itemById } from './shop.js';
+import { HEAD_TOP, PET_FIT, anchorFor, fitFor } from './pet-fit.js';
 
 const BODY_Y = 0.18125;
-const TOP = 1.431;
+const TOP = HEAD_TOP;
 const FRONT = -0.625;
 
-// The brim is already built on the cube top (y = 1.431). A positive hat
-// lift opens a gap under the brim, so these stay at 0 and the brim rests
-// on the head. Penguin, chick and monkey shift back a hair so the hat
-// sits over the front tuft. The bunny hat sits on the front of the head,
-// in front of the ears, tipped forward. The lion's
-// brim sinks into the mane because the mane rises above the cube.
-export const PET_FIT = {
-  dog: { hat: 0, face: 0.78, neck: 0.4, top: 1.62, wide: 0.82 },
-  cat: { hat: 0, face: 0.72, neck: 0.38, top: 1.68, wide: 0.84 },
-  bunny: { hat: -0.02, face: 0.78, neck: 0.4, top: 2.12, wide: 0.9, hatZ: 0.5, hatScale: 0.66, hatTilt: 0.38 },
-  penguin: { hat: 0, face: 0.8, neck: 0.5, top: 1.7, wide: 1.15, hatZ: -0.03, winged: true },
-  monkey: { hat: 0, face: 0.76, neck: 0.44, top: 1.7, wide: 1.2, hatZ: -0.03 },
-  tiger: { hat: 0, face: 0.74, neck: 0.4, top: 1.64, wide: 0.9 },
-  pig: { hat: 0, face: 0.8, neck: 0.44, top: 1.62, wide: 0.84 },
-  lion: { hat: 0, face: 0.76, neck: 0.42, top: 1.9, wide: 1.05 },
-  panda: { hat: 0, face: 0.74, neck: 0.4, top: 1.58, wide: 0.9 },
-  fox: { hat: 0, face: 0.74, neck: 0.4, top: 1.78, wide: 0.88 },
-  koala: { hat: 0, face: 0.72, neck: 0.38, top: 1.56, wide: 1.05 },
-  chick: { hat: 0, face: 0.8, neck: 0.5, top: 1.7, wide: 1.12, hatZ: -0.03, winged: true },
-};
+export { PET_FIT };
 
 const GLB = {
   glasses: new URL('../items/glbs/mini/aid-glasses.glb', import.meta.url).href,
@@ -55,6 +37,40 @@ let hatTemplate = null;
 
 export function bindLoader(gltfLoader) {
   loader = gltfLoader;
+}
+
+let overrideMap = null;
+
+function customSpec(raw) {
+  const src = typeof raw === 'string' ? raw : raw?.src;
+  if (typeof src !== 'string' || !/^items\/glbs\/[a-z0-9_./-]+\.glb$/.test(src)) return null;
+  const scale = Number(typeof raw === 'object' ? raw.scale : 1);
+  const rotY = Number(typeof raw === 'object' ? raw.rotY : 0);
+  const at = typeof raw === 'object' && Array.isArray(raw.at) ? raw.at : [0, 0, 0];
+  return {
+    src,
+    scale: Number.isFinite(scale) && scale > 0 ? scale : 1,
+    rotY: Number.isFinite(rotY) ? rotY : 0,
+    at,
+  };
+}
+
+/** items/overrides.json maps an item id to a GLB that replaces the placeholder. */
+async function loadOverrides() {
+  if (overrideMap) return overrideMap;
+  try {
+    const res = await fetch(new URL('../items/overrides.json', import.meta.url));
+    const data = res.ok ? await res.json() : {};
+    overrideMap = data && typeof data === 'object' ? data : {};
+  } catch {
+    overrideMap = {};
+  }
+  return overrideMap;
+}
+
+async function placeCustom(parent, spec) {
+  const url = new URL(`../${spec.src}`, import.meta.url).href;
+  await placeGlb(parent, url, spec.at, spec.scale, spec.rotY);
 }
 
 function vinyl(hex, opts = {}) {
@@ -463,34 +479,44 @@ function emptyGroup(group) {
   while (group.children.length) group.remove(group.children[0]);
 }
 
+function seat(group, pose) {
+  group.rotation.set(pose.tilt || 0, 0, 0);
+  group.scale.setScalar(pose.scale || 1);
+  group.position.set(pose.x || 0, pose.y || 0, pose.z || 0);
+}
+
 export async function buildOutfit(anchors, outfit, animal) {
   if (!anchors) return;
-  const fit = PET_FIT[animal] || PET_FIT.dog;
-  const hatScale = fit.hatScale || 1;
-  const tilt = fit.hatTilt || 0;
-  const brimY = TOP + (fit.hat || 0);
-  const brimZ = fit.hatZ || 0;
-  // Scale and tilt around the brim, so a forward tip still meets the head.
-  anchors.hat.rotation.set(tilt, 0, 0);
-  anchors.hat.scale.setScalar(hatScale);
-  anchors.hat.position.set(
-    0,
-    brimY - hatScale * TOP * Math.cos(tilt),
-    brimZ - hatScale * TOP * Math.sin(tilt),
-  );
-  anchors.face.position.set(0, (fit.face || 0.78) - 0.78, fit.faceZ || 0);
-  anchors.neck.position.set(0, (fit.neck || 0.4) - 0.4, 0);
-  anchors.back.position.set(0, 0, fit.backZ || 0);
+  const fit = fitFor(animal);
+  seat(anchors.hat, anchorFor(animal, 'hat'));
+  seat(anchors.face, anchorFor(animal, 'face'));
+  seat(anchors.neck, anchorFor(animal, 'neck'));
+  seat(anchors.body, anchorFor(animal, 'body'));
+  seat(anchors.back, anchorFor(animal, 'back'));
+  seat(anchors.effect, anchorFor(animal, 'effect'));
   for (const group of [anchors.hat, anchors.face, anchors.neck, anchors.body, anchors.back, anchors.effect]) {
     emptyGroup(group);
   }
+  const map = await loadOverrides();
   const ctx = { winged: Boolean(fit.winged), animal, fit };
   const jobs = [];
   for (const slot of ['hat', 'face', 'neck', 'body', 'back', 'effect']) {
     const id = outfit?.[slot];
+    if (!id) continue;
+    const custom = customSpec(map[id]);
     const build = BUILDERS[id];
-    if (!build) continue;
-    jobs.push(build(anchors[slot], ctx).catch((err) => {
+    jobs.push((async () => {
+      if (custom) {
+        try {
+          await placeCustom(anchors[slot], custom);
+          return;
+        } catch (err) {
+          console.error(err);
+        }
+      }
+      if (!build) return;
+      await build(anchors[slot], ctx);
+    })().catch((err) => {
       console.error(err);
       box(anchors[slot], [0, 0, TOP + 0.2], [0.3, 0.3, 0.3], '#ffd23f');
     }));
@@ -518,7 +544,7 @@ export function tickAccessories(root, time) {
 }
 
 export function frameFor(animal, outfit) {
-  const fit = PET_FIT[animal] || PET_FIT.dog;
+  const fit = fitFor(animal);
   let top = fit.top;
   for (const id of Object.values(outfit || {})) {
     const item = itemById(id);
