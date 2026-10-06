@@ -172,7 +172,10 @@ export function createPetStage(canvas) {
     zzz.visible = mode === 'sleepy';
     if (mode === 'sleepy') {
       const bob = Math.sin(state.time * 1.4) * 0.04;
-      zzz.position.set(0.55, 1.55 + bob, 0.2);
+      const fit = frameFor(state.animal, state.outfit);
+      // Body sits 0.181 above the ground. Keep Zzz above the hat, off to the side.
+      const y = (fit.top - 0.181) + 0.06 + bob;
+      zzz.position.set(0.86, y, 0.2);
     }
     holder.position.set(0, mode === 'levelup' ? Math.abs(Math.sin(state.modeT * 6)) * 0.06 : 0, 0);
     holder.rotation.set(0, 0, 0);

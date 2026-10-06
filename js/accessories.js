@@ -15,24 +15,25 @@ const BODY_Y = 0.18125;
 const TOP = 1.431;
 const FRONT = -0.625;
 
-// Hat lift is world Y above the shared cube top (1.431).
-// Side ears (cat, fox, tiger) get a small lift so the brim sits between them.
-// Front crests (penguin, chick, monkey) shift the hat back a little.
-// Bunny ears cover the front of the skull, so the hat sits on the flat back.
-// The lion mane is a full ring, so the hat sits on top of it.
+// The brim is already built on the cube top (y = 1.431). A positive hat
+// lift opens a gap under the brim, so these stay at 0 and the brim rests
+// on the head. Penguin, chick and monkey shift back a hair so the hat
+// sits over the front tuft. The bunny hat is smaller and centred so it
+// shows between the ears from the front three-quarter view. The lion's
+// brim sinks into the mane because the mane rises above the cube.
 export const PET_FIT = {
   dog: { hat: 0, face: 0.78, neck: 0.4, top: 1.62, wide: 0.82 },
-  cat: { hat: 0.08, face: 0.72, neck: 0.38, top: 1.7, wide: 0.84, hatScale: 0.94 },
-  bunny: { hat: 0.06, face: 0.78, neck: 0.4, top: 2.12, wide: 0.9, hatZ: -0.26, hatScale: 0.76 },
-  penguin: { hat: 0.18, face: 0.8, neck: 0.5, top: 1.72, wide: 1.15, hatZ: -0.1, hatScale: 0.94, winged: true },
-  monkey: { hat: 0.18, face: 0.76, neck: 0.44, top: 1.72, wide: 1.2, hatZ: -0.1, hatScale: 0.94 },
-  tiger: { hat: 0.1, face: 0.74, neck: 0.4, top: 1.66, wide: 0.9, hatScale: 0.96 },
+  cat: { hat: 0, face: 0.72, neck: 0.38, top: 1.68, wide: 0.84 },
+  bunny: { hat: 0, face: 0.78, neck: 0.4, top: 2.12, wide: 0.9, hatZ: 0.02, hatScale: 0.78 },
+  penguin: { hat: 0, face: 0.8, neck: 0.5, top: 1.7, wide: 1.15, hatZ: -0.03, winged: true },
+  monkey: { hat: 0, face: 0.76, neck: 0.44, top: 1.7, wide: 1.2, hatZ: -0.03 },
+  tiger: { hat: 0, face: 0.74, neck: 0.4, top: 1.64, wide: 0.9 },
   pig: { hat: 0, face: 0.8, neck: 0.44, top: 1.62, wide: 0.84 },
-  lion: { hat: 0.32, face: 0.76, neck: 0.42, top: 2.05, wide: 1.1, hatScale: 1.1 },
-  panda: { hat: 0.02, face: 0.74, neck: 0.4, top: 1.58, wide: 0.9 },
-  fox: { hat: 0.2, face: 0.74, neck: 0.4, top: 1.88, wide: 0.88, hatZ: -0.06, hatScale: 0.9 },
-  koala: { hat: 0.02, face: 0.72, neck: 0.38, top: 1.56, wide: 1.05 },
-  chick: { hat: 0.18, face: 0.8, neck: 0.5, top: 1.72, wide: 1.12, hatZ: -0.1, hatScale: 0.94, winged: true },
+  lion: { hat: 0, face: 0.76, neck: 0.42, top: 1.9, wide: 1.05 },
+  panda: { hat: 0, face: 0.74, neck: 0.4, top: 1.58, wide: 0.9 },
+  fox: { hat: 0, face: 0.74, neck: 0.4, top: 1.78, wide: 0.88 },
+  koala: { hat: 0, face: 0.72, neck: 0.38, top: 1.56, wide: 1.05 },
+  chick: { hat: 0, face: 0.8, neck: 0.5, top: 1.7, wide: 1.12, hatZ: -0.03, winged: true },
 };
 
 const GLB = {
