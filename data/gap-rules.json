@@ -1,326 +1,1047 @@
 {
   "version": 1,
-  "categories": {
-    "study": {
-      "label": "Study",
-      "lifeImprovement": false,
-      "keywords": [
-        "study",
-        "studying",
-        "homework",
-        "revise",
-        "revision",
-        "exam",
-        "exams",
-        "quiz",
-        "assignment",
-        "essay",
-        "read chapter",
-        "flashcards",
-        "coursework"
-      ]
+  "settings": {
+    "maxPerDay": 1,
+    "maxPerWeek": 2,
+    "showChanceWhenEligible": 0.3,
+    "minDaysBetweenSuggestions": 3,
+    "cooldownAfterDismissDays": 7,
+    "cooldownAfterAcceptDays": 3,
+    "neverRepeatDismissedIds": true,
+    "categorySnoozeAfterDismissals": {
+      "count": 3,
+      "withinDays": 30,
+      "snoozeDays": 30
     },
-    "school": {
-      "label": "School",
-      "lifeImprovement": false,
-      "keywords": [
-        "school",
-        "class",
-        "lecture",
-        "lesson",
-        "tutorial",
-        "seminar",
-        "campus",
-        "homeroom"
-      ]
+    "doNotResuggestAcceptedWhileGoalExists": true,
+    "resuggestAcceptedAfterDays": 90,
+    "minDaysSinceFirstUse": 2,
+    "minGoalsBeforeGapRules": 3,
+    "quietHours": {
+      "start": "21:00",
+      "end": "07:00"
     },
-    "work": {
-      "label": "Work",
-      "lifeImprovement": false,
-      "keywords": [
-        "work",
-        "shift",
-        "job",
-        "internship",
-        "paycheck",
-        "boss",
-        "workplace",
-        "at work"
-      ]
-    },
-    "relax": {
-      "label": "Relax",
-      "lifeImprovement": true,
-      "keywords": [
-        "relax",
-        "unwind",
-        "break",
-        "hobby",
-        "phone away"
-      ]
-    },
-    "sleep": {
-      "label": "Sleep",
-      "lifeImprovement": true,
-      "keywords": [
-        "sleep",
-        "bedtime",
-        "wind down",
-        "lights out",
-        "in bed",
-        "screens off"
-      ]
-    },
-    "productivity": {
-      "label": "Productivity",
-      "lifeImprovement": true,
-      "keywords": [
-        "priorities",
-        "plan my day",
-        "plan the week",
-        "pomodoro",
-        "deep work",
-        "two minute",
-        "to do list",
-        "todo list"
-      ]
-    },
-    "money": {
-      "label": "Money",
-      "lifeImprovement": true,
-      "keywords": [
-        "budget",
-        "savings",
-        "save money",
-        "spending",
-        "spent",
-        "allowance",
-        "expense",
-        "unplanned purchase"
-      ]
-    },
-    "health": {
-      "label": "Health",
-      "lifeImprovement": true,
-      "keywords": [
-        "exercise",
-        "workout",
-        "walk",
-        "run",
-        "gym",
-        "water",
-        "hydrate",
-        "stretch",
-        "fruit",
-        "posture",
-        "vitamins"
-      ]
-    },
-    "social": {
-      "label": "Social",
-      "lifeImprovement": true,
-      "keywords": [
-        "friend",
-        "friends",
-        "family",
-        "hang out",
-        "catch up",
-        "text a friend",
-        "thank someone"
-      ]
-    },
-    "meals": {
-      "label": "Meals",
-      "lifeImprovement": true,
-      "keywords": [
-        "breakfast",
-        "lunch",
-        "dinner",
-        "meal",
-        "meals",
-        "cook"
-      ]
-    },
-    "chores": {
-      "label": "Chores",
-      "lifeImprovement": true,
-      "keywords": [
-        "laundry",
-        "dishes",
-        "tidy",
-        "vacuum",
-        "chore",
-        "chores"
-      ]
-    },
-    "mindfulness": {
-      "label": "Mindfulness",
-      "lifeImprovement": true,
-      "keywords": [
-        "meditate",
-        "meditation",
-        "journal",
-        "gratitude",
-        "slow breaths",
-        "mindful"
-      ]
-    }
+    "showOnlyAtAppOpen": true,
+    "avoidWhenAllTodayGoalsDone": false,
+    "skipIfOpenGoalsAtLeast": 12,
+    "ageSafeOnlyByDefault": true,
+    "fallbackWhenNoRuleFires": "random-category-easy",
+    "rulePickStrategy": "weighted-random-by-priority",
+    "difficultyPoints": "use the app's existing Easy/Medium/Hard points"
+  },
+  "matching": {
+    "normalize": [
+      "lowercase",
+      "strip emoji and punctuation except '-' and apostrophes in words",
+      "collapse whitespace",
+      "replace '&' with 'and'"
+    ],
+    "tokenMatch": "single-word synonyms match whole tokens, also after stripping a trailing 's', 'es', 'ing' or 'ed' from the token",
+    "phraseMatch": "multi-word synonyms match as whole-word substrings of the normalized goal name",
+    "shortWords": "synonyms of 3 letters or fewer (e.g. 'hw', 'pe', 'tv', 'sat', 'act') must match a whole token exactly, never a substring",
+    "multiConcept": "one goal can match several concepts (e.g. 'gym after work' -> fitness + work)",
+    "scope": "evaluate open goals plus goals completed in the last 7 days; include recurring goals once each"
+  },
+  "concepts": {
+    "school": [
+      "school",
+      "class",
+      "classes",
+      "lecture",
+      "lesson",
+      "college",
+      "uni",
+      "university",
+      "campus",
+      "bus to school",
+      "go to school",
+      "attend",
+      "teacher",
+      "tutor",
+      "seminar",
+      "lab"
+    ],
+    "exam": [
+      "exam",
+      "exams",
+      "test",
+      "tests",
+      "quiz",
+      "midterm",
+      "final",
+      "finals",
+      "sat",
+      "act",
+      "assessment",
+      "presentation",
+      "oral"
+    ],
+    "study": [
+      "study",
+      "studying",
+      "revise",
+      "revision",
+      "review",
+      "flashcards",
+      "flashcard",
+      "practice test",
+      "quizlet",
+      "anki",
+      "notes",
+      "read chapter",
+      "reading",
+      "prep",
+      "cram",
+      "memorize",
+      "memorise"
+    ],
+    "homework": [
+      "homework",
+      "hw",
+      "assignment",
+      "assignments",
+      "essay",
+      "project",
+      "worksheet",
+      "lab report",
+      "report",
+      "problem set",
+      "pset",
+      "coursework",
+      "due"
+    ],
+    "work": [
+      "work",
+      "job",
+      "shift",
+      "shifts",
+      "office",
+      "meeting",
+      "meetings",
+      "boss",
+      "client",
+      "clients",
+      "emails",
+      "email",
+      "overtime",
+      "deadline",
+      "deadlines",
+      "part-time",
+      "part time",
+      "babysit",
+      "babysitting",
+      "tutoring",
+      "delivery",
+      "workday",
+      "commute"
+    ],
+    "chores": [
+      "chores",
+      "clean",
+      "cleaning",
+      "laundry",
+      "dishes",
+      "vacuum",
+      "tidy",
+      "groceries",
+      "errands",
+      "cook dinner",
+      "take out trash",
+      "trash",
+      "mow"
+    ],
+    "rest": [
+      "rest",
+      "relax",
+      "relaxing",
+      "break",
+      "chill",
+      "nap",
+      "downtime",
+      "me time",
+      "free time",
+      "fun",
+      "hobby",
+      "hobbies",
+      "bath",
+      "movie",
+      "game night",
+      "day off",
+      "unwind",
+      "recharge",
+      "music"
+    ],
+    "sleep": [
+      "sleep",
+      "bed",
+      "bedtime",
+      "go to bed",
+      "lights out",
+      "wind down",
+      "nap",
+      "wake up",
+      "alarm",
+      "sleep in",
+      "rest early"
+    ],
+    "lateNight": [
+      "late",
+      "late night",
+      "midnight",
+      "all-nighter",
+      "all nighter",
+      "pull an all",
+      "overnight",
+      "night shift",
+      "2am",
+      "1am",
+      "3am",
+      "12am",
+      "11pm",
+      "stay up"
+    ],
+    "screens": [
+      "game",
+      "gaming",
+      "video games",
+      "xbox",
+      "playstation",
+      "ps5",
+      "nintendo",
+      "fortnite",
+      "minecraft",
+      "roblox",
+      "youtube",
+      "tiktok",
+      "instagram",
+      "snapchat",
+      "netflix",
+      "stream",
+      "streaming",
+      "scroll",
+      "phone",
+      "tv",
+      "twitch",
+      "discord"
+    ],
+    "spending": [
+      "shopping",
+      "shop",
+      "buy",
+      "purchase",
+      "amazon",
+      "mall",
+      "store",
+      "spend",
+      "spending",
+      "treat",
+      "takeout",
+      "delivery food",
+      "starbucks",
+      "coffee run"
+    ],
+    "income": [
+      "job",
+      "shift",
+      "paycheck",
+      "pay day",
+      "payday",
+      "salary",
+      "wage",
+      "allowance",
+      "babysit",
+      "babysitting",
+      "earn",
+      "side hustle",
+      "sell"
+    ],
+    "money": [
+      "budget",
+      "save",
+      "saving",
+      "savings",
+      "money",
+      "bank",
+      "piggy bank",
+      "bills",
+      "rent",
+      "pay bills",
+      "account",
+      "expenses"
+    ],
+    "fitness": [
+      "gym",
+      "run",
+      "running",
+      "jog",
+      "walk",
+      "walking",
+      "workout",
+      "exercise",
+      "sport",
+      "sports",
+      "soccer",
+      "basketball",
+      "hockey",
+      "football",
+      "swim",
+      "swimming",
+      "bike",
+      "biking",
+      "cycling",
+      "dance",
+      "yoga",
+      "stretch",
+      "push-ups",
+      "pushups",
+      "training",
+      "sports practice",
+      "pe",
+      "gym class",
+      "hike",
+      "skate",
+      "tennis",
+      "volleyball",
+      "baseball",
+      "martial arts",
+      "karate"
+    ],
+    "sportsTraining": [
+      "sports practice",
+      "team practice",
+      "match",
+      "training",
+      "tournament",
+      "swim meet",
+      "track meet",
+      "soccer",
+      "basketball",
+      "hockey",
+      "football",
+      "swim",
+      "track",
+      "volleyball",
+      "baseball"
+    ],
+    "hydration": [
+      "water",
+      "drink water",
+      "water bottle",
+      "hydrate",
+      "hydration"
+    ],
+    "healthHabits": [
+      "brush teeth",
+      "teeth",
+      "floss",
+      "water",
+      "fruit",
+      "vegetables",
+      "veggies",
+      "breakfast",
+      "lunch",
+      "dinner",
+      "vitamins",
+      "wash hands",
+      "shower",
+      "meal",
+      "eat"
+    ],
+    "caffeine": [
+      "coffee",
+      "energy drink",
+      "red bull",
+      "monster",
+      "espresso",
+      "latte",
+      "caffeine",
+      "soda",
+      "iced coffee"
+    ],
+    "food": [
+      "cook",
+      "cooking",
+      "meal prep",
+      "dinner",
+      "lunch",
+      "breakfast",
+      "groceries",
+      "recipe",
+      "bake",
+      "snack"
+    ],
+    "social": [
+      "friend",
+      "friends",
+      "family",
+      "mom",
+      "dad",
+      "mum",
+      "parents",
+      "grandma",
+      "grandpa",
+      "grandparents",
+      "sister",
+      "brother",
+      "sibling",
+      "call",
+      "hang out",
+      "hangout",
+      "party",
+      "visit",
+      "birthday",
+      "text",
+      "club",
+      "volunteer"
+    ],
+    "wellbeing": [
+      "journal",
+      "journaling",
+      "gratitude",
+      "meditate",
+      "meditation",
+      "mindful",
+      "mindfulness",
+      "breathe",
+      "breathing",
+      "therapy",
+      "counselor",
+      "counsellor",
+      "self care",
+      "self-care",
+      "walk outside",
+      "nature",
+      "pray",
+      "reflect"
+    ],
+    "stress": [
+      "stress",
+      "stressed",
+      "anxious",
+      "anxiety",
+      "overwhelmed",
+      "worried",
+      "worry",
+      "panic",
+      "burnout",
+      "burnt out",
+      "exhausted",
+      "tired",
+      "cram",
+      "deadline",
+      "busy",
+      "rush"
+    ],
+    "learning": [
+      "learn",
+      "learning",
+      "read",
+      "reading",
+      "book",
+      "language",
+      "duolingo",
+      "spanish",
+      "french",
+      "instrument",
+      "piano",
+      "guitar",
+      "violin",
+      "drums",
+      "code",
+      "coding",
+      "course",
+      "tutorial",
+      "art",
+      "draw",
+      "paint",
+      "write",
+      "writing",
+      "podcast",
+      "chess"
+    ],
+    "planning": [
+      "plan",
+      "planning",
+      "schedule",
+      "to-do",
+      "todo",
+      "list",
+      "organize",
+      "organise",
+      "calendar",
+      "agenda",
+      "prioritize",
+      "prioritise",
+      "break down",
+      "outline",
+      "prep"
+    ],
+    "bigTask": [
+      "project",
+      "essay",
+      "report",
+      "presentation",
+      "thesis",
+      "portfolio",
+      "application",
+      "science fair",
+      "research",
+      "paper"
+    ],
+    "routineAnchor": [
+      "wake up",
+      "breakfast",
+      "brush teeth",
+      "shower",
+      "get dressed",
+      "bus",
+      "commute",
+      "lunch",
+      "after school",
+      "dinner",
+      "bedtime",
+      "walk dog"
+    ]
+  },
+  "categoryCoverage": {
+    "study": [
+      "study"
+    ],
+    "sleep": [
+      "sleep"
+    ],
+    "productivity": [
+      "planning"
+    ],
+    "money": [
+      "money"
+    ],
+    "health": [
+      "healthHabits",
+      "hydration"
+    ],
+    "fitness": [
+      "fitness"
+    ],
+    "relationships": [
+      "social"
+    ],
+    "wellbeing": [
+      "wellbeing"
+    ],
+    "learning": [
+      "learning"
+    ],
+    "relax": [
+      "rest"
+    ]
   },
   "rules": [
     {
-      "id": "school-without-study",
-      "description": "School or class is on the list, and nothing looks like studying.",
-      "kind": "missing",
+      "id": "school-no-study",
+      "trigger": "missing",
+      "description": "Has school/class goals but nothing about studying or homework.",
       "when": {
-        "has": [
-          "school"
+        "anyOf": [
+          "school",
+          "exam"
         ],
-        "missing": [
-          "study"
+        "noneOf": [
+          "study",
+          "homework"
         ]
       },
       "suggest": [
         "study"
       ],
-      "weight": 8
+      "priority": 90,
+      "preferIds": [
+        "stu-05",
+        "stu-01",
+        "stu-09"
+      ]
     },
     {
-      "id": "no-sleep",
-      "description": "No sleep or bedtime goal yet.",
-      "kind": "missing",
+      "id": "exam-coming",
+      "trigger": "present",
+      "description": "Has an exam/test goal: suggest proven study methods and protecting sleep.",
       "when": {
-        "missing": [
+        "anyOf": [
+          "exam"
+        ],
+        "noneOf": [
+          "study"
+        ]
+      },
+      "suggest": [
+        "study",
+        "sleep"
+      ],
+      "priority": 88,
+      "preferIds": [
+        "stu-02",
+        "stu-03",
+        "slp-09"
+      ]
+    },
+    {
+      "id": "late-night",
+      "trigger": "present",
+      "description": "Goal names mention late night/staying up, or a goal is scheduled after 22:30.",
+      "when": {
+        "anyOf": [
+          "lateNight"
+        ],
+        "orGoalTimeAfter": "22:30"
+      },
+      "suggest": [
+        "sleep"
+      ],
+      "priority": 86,
+      "preferIds": [
+        "slp-01",
+        "slp-10",
+        "slp-09"
+      ]
+    },
+    {
+      "id": "work-heavy-no-rest",
+      "trigger": "tooMuch",
+      "description": "Lots of work/job/shift goals and nothing restful.",
+      "when": {
+        "anyOf": [
+          "work",
+          "chores"
+        ],
+        "minMatches": 3,
+        "minShare": 0.4,
+        "noneOf": [
+          "rest"
+        ]
+      },
+      "suggest": [
+        "relax",
+        "wellbeing"
+      ],
+      "priority": 85,
+      "preferIds": [
+        "rlx-01",
+        "rlx-10",
+        "wel-13"
+      ]
+    },
+    {
+      "id": "stress-words",
+      "trigger": "present",
+      "description": "Goal names mention stress, worry, being overwhelmed or rushed, with no wellbeing goal.",
+      "when": {
+        "anyOf": [
+          "stress"
+        ],
+        "noneOf": [
+          "wellbeing"
+        ]
+      },
+      "suggest": [
+        "wellbeing",
+        "relax"
+      ],
+      "priority": 84,
+      "preferIds": [
+        "wel-02",
+        "wel-03",
+        "wel-07"
+      ]
+    },
+    {
+      "id": "study-heavy-no-rest",
+      "trigger": "tooMuch",
+      "description": "Mostly school/study/homework goals and no rest or movement.",
+      "when": {
+        "anyOf": [
+          "school",
+          "study",
+          "homework",
+          "exam"
+        ],
+        "minMatches": 4,
+        "minShare": 0.5,
+        "noneOf": [
+          "rest",
+          "fitness"
+        ]
+      },
+      "suggest": [
+        "relax",
+        "fitness"
+      ],
+      "priority": 82,
+      "preferIds": [
+        "rlx-01",
+        "fit-01",
+        "fit-09"
+      ]
+    },
+    {
+      "id": "exam-no-sleep",
+      "trigger": "missing",
+      "description": "Has an exam/test goal and no sleep goal.",
+      "when": {
+        "anyOf": [
+          "exam"
+        ],
+        "noneOf": [
           "sleep"
         ]
       },
       "suggest": [
         "sleep"
       ],
-      "weight": 4
+      "priority": 80,
+      "preferIds": [
+        "slp-09",
+        "slp-01"
+      ]
     },
     {
-      "id": "no-health",
-      "description": "Nothing on the list looks after the body.",
-      "kind": "missing",
+      "id": "too-many-hard",
+      "trigger": "tooMuch",
+      "description": "8+ open goals for today, or 4+ Hard goals: help prioritise and rest.",
       "when": {
-        "missing": [
-          "health"
-        ]
+        "orMinGoals": 8,
+        "orMinHard": 4
       },
       "suggest": [
-        "health"
+        "productivity",
+        "relax"
       ],
-      "weight": 3
+      "priority": 78,
+      "preferIds": [
+        "pro-01",
+        "pro-07",
+        "rlx-01"
+      ]
     },
     {
-      "id": "no-social",
-      "description": "No friend, family, or other people goal.",
-      "kind": "missing",
+      "id": "income-no-money",
+      "trigger": "present",
+      "description": "Has a job, shift, allowance or payday goal but nothing about saving or budgeting.",
       "when": {
-        "missing": [
-          "social"
-        ]
-      },
-      "suggest": [
-        "social"
-      ],
-      "weight": 3
-    },
-    {
-      "id": "no-money",
-      "description": "No money, budget, or savings goal.",
-      "kind": "missing",
-      "when": {
-        "missing": [
+        "anyOf": [
+          "income"
+        ],
+        "noneOf": [
           "money"
         ]
       },
       "suggest": [
         "money"
       ],
-      "weight": 2
+      "priority": 75,
+      "preferIds": [
+        "mon-03",
+        "mon-05",
+        "mon-01"
+      ]
     },
     {
-      "id": "no-productivity",
-      "description": "No planning or focus goal.",
-      "kind": "missing",
+      "id": "big-task-no-plan",
+      "trigger": "missing",
+      "description": "Has a project/essay/presentation but no planning goal.",
       "when": {
-        "missing": [
-          "productivity"
+        "anyOf": [
+          "bigTask"
+        ],
+        "noneOf": [
+          "planning"
         ]
       },
       "suggest": [
         "productivity"
       ],
-      "weight": 3
+      "priority": 74,
+      "preferIds": [
+        "pro-03",
+        "pro-02",
+        "pro-10"
+      ]
     },
     {
-      "id": "busy-without-break",
-      "description": "School, work, or study is on the list, and nothing is a break.",
-      "kind": "missing",
+      "id": "spending-no-budget",
+      "trigger": "present",
+      "description": "Has shopping/buying goals but nothing about saving or budgeting.",
       "when": {
-        "hasAny": [
+        "anyOf": [
+          "spending"
+        ],
+        "noneOf": [
+          "money"
+        ]
+      },
+      "suggest": [
+        "money"
+      ],
+      "priority": 72,
+      "preferIds": [
+        "mon-02",
+        "mon-01",
+        "mon-12"
+      ]
+    },
+    {
+      "id": "screens-heavy",
+      "trigger": "tooMuch",
+      "description": "Several gaming/scrolling/streaming goals and no movement or sleep goal.",
+      "when": {
+        "anyOf": [
+          "screens"
+        ],
+        "minMatches": 2,
+        "noneOf": [
+          "fitness",
+          "sleep"
+        ]
+      },
+      "suggest": [
+        "sleep",
+        "fitness"
+      ],
+      "priority": 70,
+      "preferIds": [
+        "slp-03",
+        "fit-09",
+        "fit-01"
+      ]
+    },
+    {
+      "id": "sedentary-heavy",
+      "trigger": "tooMuch",
+      "description": "Most goals are desk/screen-based and none involve moving.",
+      "when": {
+        "anyOf": [
+          "study",
+          "homework",
           "work",
-          "school",
-          "study"
+          "screens"
         ],
-        "missing": [
-          "relax"
+        "minShare": 0.6,
+        "minMatches": 3,
+        "noneOf": [
+          "fitness"
         ]
       },
       "suggest": [
-        "relax"
+        "fitness"
       ],
-      "weight": 5
+      "priority": 65,
+      "preferIds": [
+        "fit-09",
+        "fit-01",
+        "fit-12"
+      ]
     },
     {
-      "id": "work-heavy",
-      "description": "Work is more than 40% of the list, or at least 3 work items.",
-      "kind": "too-much",
+      "id": "sports-no-recovery",
+      "trigger": "missing",
+      "description": "Has sports/training goals but no water or sleep goal.",
       "when": {
-        "category": "work",
-        "percent": 40,
-        "count": 3,
-        "minTasks": 4
-      },
-      "suggest": [
-        "relax"
-      ],
-      "weight": 9
-    },
-    {
-      "id": "study-heavy",
-      "description": "Study is more than half the list, or at least 4 study items.",
-      "kind": "too-much",
-      "when": {
-        "category": "study",
-        "percent": 50,
-        "count": 4,
-        "minTasks": 4
-      },
-      "suggest": [
-        "relax",
-        "social"
-      ],
-      "weight": 7
-    },
-    {
-      "id": "meals-during-busy",
-      "description": "School or work is on the list, and no meal goal.",
-      "kind": "missing",
-      "when": {
-        "hasAny": [
-          "school",
-          "work"
+        "anyOf": [
+          "sportsTraining"
         ],
-        "missing": [
-          "meals"
+        "noneOf": [
+          "hydration",
+          "sleep"
         ]
       },
       "suggest": [
-        "meals"
+        "health",
+        "sleep"
       ],
-      "weight": 4
+      "priority": 62,
+      "preferIds": [
+        "hea-13",
+        "hea-04",
+        "slp-09"
+      ]
+    },
+    {
+      "id": "caffeine",
+      "trigger": "present",
+      "description": "Mentions coffee/energy drinks/soda.",
+      "when": {
+        "anyOf": [
+          "caffeine"
+        ]
+      },
+      "suggest": [
+        "sleep",
+        "health"
+      ],
+      "priority": 60,
+      "preferIds": [
+        "slp-08",
+        "hea-05",
+        "hea-04"
+      ]
+    },
+    {
+      "id": "no-movement",
+      "trigger": "missing",
+      "description": "No physical activity goal in a list of 3+ goals.",
+      "when": {
+        "noneOf": [
+          "fitness"
+        ],
+        "minGoals": 3
+      },
+      "suggest": [
+        "fitness"
+      ],
+      "priority": 50,
+      "preferIds": [
+        "fit-01",
+        "fit-04",
+        "fit-07"
+      ]
+    },
+    {
+      "id": "food-no-veg",
+      "trigger": "missing",
+      "description": "Has cooking/meal goals but no fruit/veg/water habit.",
+      "when": {
+        "anyOf": [
+          "food"
+        ],
+        "noneOf": [
+          "healthHabits"
+        ]
+      },
+      "suggest": [
+        "health"
+      ],
+      "priority": 48,
+      "preferIds": [
+        "hea-07",
+        "hea-06",
+        "hea-12"
+      ]
+    },
+    {
+      "id": "no-social",
+      "trigger": "missing",
+      "description": "No goals involving friends/family in a list of 5+ goals.",
+      "when": {
+        "noneOf": [
+          "social"
+        ],
+        "minGoals": 5
+      },
+      "suggest": [
+        "relationships"
+      ],
+      "priority": 45,
+      "preferIds": [
+        "rel-02",
+        "rel-01",
+        "rel-05"
+      ]
+    },
+    {
+      "id": "no-sleep-goal",
+      "trigger": "missing",
+      "description": "No sleep-related goal at all (baseline).",
+      "when": {
+        "noneOf": [
+          "sleep"
+        ],
+        "minGoals": 3
+      },
+      "suggest": [
+        "sleep"
+      ],
+      "priority": 40,
+      "preferIds": [
+        "slp-01",
+        "slp-05",
+        "slp-03"
+      ]
+    },
+    {
+      "id": "learning-practice",
+      "trigger": "present",
+      "description": "Already learning a skill (instrument, language): suggest spaced, regular practice.",
+      "when": {
+        "anyOf": [
+          "learning"
+        ]
+      },
+      "suggest": [
+        "learning"
+      ],
+      "priority": 38,
+      "preferIds": [
+        "lrn-13",
+        "lrn-02",
+        "lrn-08"
+      ]
+    },
+    {
+      "id": "routine-anchor",
+      "trigger": "present",
+      "description": "Has a daily anchor (breakfast, bus, brushing teeth): good moment to stack a new habit onto it.",
+      "when": {
+        "anyOf": [
+          "routineAnchor"
+        ],
+        "minGoals": 3
+      },
+      "suggest": [
+        "productivity",
+        "health"
+      ],
+      "priority": 35,
+      "preferIds": [
+        "pro-05",
+        "hea-06",
+        "hea-01"
+      ]
+    },
+    {
+      "id": "no-learning",
+      "trigger": "missing",
+      "description": "No learning/hobby goal outside schoolwork in a list of 5+ goals.",
+      "when": {
+        "noneOf": [
+          "learning"
+        ],
+        "minGoals": 5
+      },
+      "suggest": [
+        "learning"
+      ],
+      "priority": 30,
+      "preferIds": [
+        "lrn-05",
+        "lrn-03",
+        "lrn-06"
+      ]
+    },
+    {
+      "id": "new-user",
+      "trigger": "missing",
+      "description": "Very short list (0–2 goals): offer a gentle, easy starter habit from any category.",
+      "when": {
+        "maxGoals": 2
+      },
+      "suggest": [
+        "sleep",
+        "health",
+        "fitness",
+        "wellbeing",
+        "relationships"
+      ],
+      "priority": 20,
+      "preferDifficulty": "easy"
     }
   ]
 }
