@@ -1,6 +1,6 @@
 /* Dayli service worker: offline shell, push, and notification actions. */
 
-const CACHE = 'dayli-v12';
+const CACHE = 'dayli-v13';
 
 const ASSETS = [
   './',

@@ -154,7 +154,7 @@ export function createPetStage(canvas) {
     const halfH = (fit.top - fit.bottom) / 2;
     const distV = halfH / Math.tan(fov / 2);
     const distH = (fit.wide / Math.max(0.45, aspect)) / Math.tan(fov / 2);
-    const dist = Math.max(distV, distH) * 1.08;
+    const dist = Math.max(distV, distH) * (fit.pad || 1.08);
     camera.fov = 30;
     camera.aspect = aspect;
     camera.position.set(0.38, mid + 0.04, dist);
@@ -179,7 +179,7 @@ export function createPetStage(canvas) {
     }
     holder.position.set(0, mode === 'levelup' ? Math.abs(Math.sin(state.modeT * 6)) * 0.06 : 0, 0);
     holder.rotation.set(0, 0, 0);
-    turntable.rotation.y = -0.42;
+    turntable.rotation.y = turn.yaw;
   }
 
   function present(pet) {
@@ -204,6 +204,142 @@ export function createPetStage(canvas) {
   const observer = new ResizeObserver(() => resize());
   observer.observe(canvas.parentElement || canvas);
 
+  // Resting three-quarter view. Drag, flick, and the spin button offset this.
+  const REST_YAW = -0.42;
+  const TAU = Math.PI * 2;
+  const RETURN_AFTER = 3;
+  const RETURN_DUR = 0.9;
+  const SPIN_DUR = 1.2;
+  const FRICTION = 1.65;
+  const MAX_VEL = 7.5;
+  const STOP_VEL = 0.12;
+  const turn = {
+    yaw: REST_YAW,
+    vel: 0,
+    dragging: false,
+    idle: 0,
+    lastMove: 0,
+    spunAt: 0,
+    spin: null,
+    back: null,
+  };
+
+  function prefersReduced() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function wrapPi(delta) {
+    let x = ((delta % TAU) + TAU) % TAU;
+    if (x > Math.PI) x -= TAU;
+    return x;
+  }
+
+  function smoothstep(p) {
+    const t = Math.min(1, Math.max(0, p));
+    return t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2;
+  }
+
+  function tickTurn(dt) {
+    if (turn.dragging) return;
+    if (turn.spin) {
+      turn.idle = 0;
+      turn.spin.t += dt;
+      const p = Math.min(1, turn.spin.t / turn.spin.dur);
+      turn.yaw = turn.spin.from + (turn.spin.to - turn.spin.from) * smoothstep(p);
+      turn.vel = 0;
+      if (p >= 1) {
+        turn.yaw = turn.spin.to;
+        turn.spin = null;
+      }
+      return;
+    }
+    if (!prefersReduced() && Math.abs(turn.vel) > STOP_VEL) {
+      turn.idle = 0;
+      turn.back = null;
+      turn.yaw += turn.vel * dt;
+      turn.vel *= Math.exp(-FRICTION * dt);
+      if (Math.abs(turn.vel) <= STOP_VEL) turn.vel = 0;
+      return;
+    }
+    turn.vel = 0;
+    if (turn.back) {
+      turn.back.t += dt;
+      const p = Math.min(1, turn.back.t / turn.back.dur);
+      turn.yaw = turn.back.from + turn.back.delta * smoothstep(p);
+      if (p >= 1) {
+        turn.yaw = turn.back.from + turn.back.delta;
+        turn.back = null;
+      }
+      return;
+    }
+    const delta = wrapPi(REST_YAW - turn.yaw);
+    if (Math.abs(delta) < 0.012) {
+      turn.yaw = REST_YAW;
+      return;
+    }
+    turn.idle += dt;
+    if (turn.idle < RETURN_AFTER) return;
+    turn.idle = 0;
+    if (prefersReduced()) {
+      turn.yaw = REST_YAW;
+      return;
+    }
+    turn.back = { from: turn.yaw, delta, t: 0, dur: RETURN_DUR };
+  }
+
+  function grab() {
+    turn.dragging = true;
+    turn.spin = null;
+    turn.back = null;
+    turn.vel = 0;
+    turn.idle = 0;
+    turn.lastMove = performance.now();
+  }
+
+  function nudge(delta) {
+    if (!delta) return;
+    const now = performance.now();
+    const dt = Math.min(0.05, Math.max(0.008, (now - turn.lastMove) / 1000));
+    turn.lastMove = now;
+    turn.dragging = true;
+    turn.spin = null;
+    turn.back = null;
+    turn.idle = 0;
+    turn.yaw += delta;
+    if (prefersReduced()) {
+      turn.vel = 0;
+      return;
+    }
+    const sample = delta / dt;
+    turn.vel = turn.vel * 0.35 + sample * 0.65;
+  }
+
+  function release(momentum) {
+    turn.dragging = false;
+    turn.idle = 0;
+    const since = performance.now() - turn.lastMove;
+    if (!momentum || prefersReduced() || since > 90) turn.vel = 0;
+    else turn.vel = Math.max(-MAX_VEL, Math.min(MAX_VEL, turn.vel));
+  }
+
+  function spinTurn() {
+    const now = performance.now();
+    if (now - turn.spunAt < 450) return;
+    turn.spunAt = now;
+    turn.spin = null;
+    turn.back = null;
+    turn.vel = 0;
+    turn.idle = 0;
+    turn.dragging = false;
+    if (prefersReduced()) {
+      const back = REST_YAW + Math.PI;
+      const facingBack = Math.abs(wrapPi(turn.yaw - back)) < 0.4;
+      turn.yaw = facingBack ? REST_YAW : back;
+      return;
+    }
+    turn.spin = { from: turn.yaw, to: turn.yaw + TAU, t: 0, dur: SPIN_DUR };
+  }
+
   let raf = 0;
   let last = performance.now();
   function frame(now) {
@@ -211,6 +347,7 @@ export function createPetStage(canvas) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     if (!state.active || !current) return;
+    tickTurn(dt);
     if (state.frozen) {
       applyPose(0);
       renderer.render(scene, camera);
@@ -303,6 +440,11 @@ export function createPetStage(canvas) {
     },
     resize,
     get mode() { return state.mode; },
+    get yaw() { return turn.yaw; },
+    grab,
+    nudge,
+    release,
+    spinTurn,
     destroy() {
       cancelAnimationFrame(raf);
       observer.disconnect();
