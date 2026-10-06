@@ -18,13 +18,13 @@ const FRONT = -0.625;
 // The brim is already built on the cube top (y = 1.431). A positive hat
 // lift opens a gap under the brim, so these stay at 0 and the brim rests
 // on the head. Penguin, chick and monkey shift back a hair so the hat
-// sits over the front tuft. The bunny hat is smaller and centred so it
-// shows between the ears from the front three-quarter view. The lion's
+// sits over the front tuft. The bunny hat sits on the front of the head,
+// in front of the ears, tipped forward. The lion's
 // brim sinks into the mane because the mane rises above the cube.
 export const PET_FIT = {
   dog: { hat: 0, face: 0.78, neck: 0.4, top: 1.62, wide: 0.82 },
   cat: { hat: 0, face: 0.72, neck: 0.38, top: 1.68, wide: 0.84 },
-  bunny: { hat: 0, face: 0.78, neck: 0.4, top: 2.12, wide: 0.9, hatZ: 0.02, hatScale: 0.78 },
+  bunny: { hat: -0.02, face: 0.78, neck: 0.4, top: 2.12, wide: 0.9, hatZ: 0.5, hatScale: 0.66, hatTilt: 0.38 },
   penguin: { hat: 0, face: 0.8, neck: 0.5, top: 1.7, wide: 1.15, hatZ: -0.03, winged: true },
   monkey: { hat: 0, face: 0.76, neck: 0.44, top: 1.7, wide: 1.2, hatZ: -0.03 },
   tiger: { hat: 0, face: 0.74, neck: 0.4, top: 1.64, wide: 0.9 },
@@ -467,9 +467,17 @@ export async function buildOutfit(anchors, outfit, animal) {
   if (!anchors) return;
   const fit = PET_FIT[animal] || PET_FIT.dog;
   const hatScale = fit.hatScale || 1;
-  // Scale around the flat top of the head, not the feet.
-  anchors.hat.position.set(0, (fit.hat || 0) + TOP * (1 - hatScale), fit.hatZ || 0);
+  const tilt = fit.hatTilt || 0;
+  const brimY = TOP + (fit.hat || 0);
+  const brimZ = fit.hatZ || 0;
+  // Scale and tilt around the brim, so a forward tip still meets the head.
+  anchors.hat.rotation.set(tilt, 0, 0);
   anchors.hat.scale.setScalar(hatScale);
+  anchors.hat.position.set(
+    0,
+    brimY - hatScale * TOP * Math.cos(tilt),
+    brimZ - hatScale * TOP * Math.sin(tilt),
+  );
   anchors.face.position.set(0, (fit.face || 0.78) - 0.78, fit.faceZ || 0);
   anchors.neck.position.set(0, (fit.neck || 0.4) - 0.4, 0);
   anchors.back.position.set(0, 0, fit.backZ || 0);
