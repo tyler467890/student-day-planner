@@ -35,7 +35,7 @@
               <rect x="94" y="4" width="12" height="34" rx="6" fill="#ffe08a" transform="rotate(315 100 100)"/>
             </g>
             <circle cx="100" cy="104" r="62" fill="#ffd23f"/>
-            <ellipse cx="78" cy="92" rx="22" ry="14" fill="#fff6c8" opacity="0.55"/>
+            <ellipse cx="78" cy="70" rx="14" ry="8" fill="#fff6c8" opacity="0.8"/>
             <circle cx="70" cy="116" r="9" fill="#ffb3c1" opacity="0.85"/>
             <circle cx="130" cy="116" r="9" fill="#ffb3c1" opacity="0.85"/>
             <ellipse class="eye" cx="78" cy="100" rx="7" ry="9" fill="#3a2a22"/>
@@ -101,21 +101,22 @@
           <p class="kicker">Sing-along for kids</p>
           <h1>Hello, Little Sun</h1>
           <p class="tagline">A one-minute hello song</p>
+          <button type="button" class="play-btn" id="play">
+            <span class="play-icon" aria-hidden="true"></span>
+            <span>Play video</span>
+          </button>
         </div>
 
         <div class="end-card" id="end-card" hidden>
-          <p class="kicker">The end</p>
-          <h2>Thanks for watching!</h2>
-          <button type="button" id="replay">Watch again</button>
+          <div class="end-panel">
+            <p class="kicker">The end</p>
+            <h2>Thanks for watching!</h2>
+            <button type="button" id="replay">Watch again</button>
+          </div>
         </div>
 
         <p class="count-pop" id="count-pop" aria-hidden="true"></p>
         <p class="caption" id="caption" aria-live="polite"></p>
-
-        <button type="button" class="play-btn" id="play">
-          <span class="play-icon" aria-hidden="true"></span>
-          <span>Play video</span>
-        </button>
 
         <div class="progress" aria-hidden="true">
           <div class="progress-bar" id="bar"></div>

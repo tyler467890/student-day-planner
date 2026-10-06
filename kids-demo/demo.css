@@ -217,6 +217,18 @@ body {
 
 .end-card[hidden] { display: none; }
 
+.end-panel {
+  max-width: 88%;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 28px;
+  padding: 22px 36px 26px;
+  box-shadow: 0 14px 36px rgba(40, 50, 80, 0.16);
+}
+
+.end-card h2 {
+  font-size: clamp(28px, 4vw, 46px);
+}
+
 .end-card button,
 .play-btn {
   font-family: inherit;
@@ -226,7 +238,7 @@ body {
 }
 
 .end-card button {
-  margin-top: 18px;
+  margin-top: 16px;
   background: var(--coral);
   color: white;
   font-size: 20px;
@@ -235,11 +247,7 @@ body {
 }
 
 .play-btn {
-  position: absolute;
-  left: 50%;
-  top: 58%;
-  z-index: 9;
-  transform: translate(-50%, -50%);
+  margin-top: 18px;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -247,7 +255,7 @@ body {
   color: var(--ink);
   font-size: clamp(18px, 2vw, 24px);
   border-radius: 999px;
-  padding: 14px 22px 14px 16px;
+  padding: 12px 20px 12px 12px;
   box-shadow: 0 10px 30px rgba(50, 40, 80, 0.2);
 }
 
