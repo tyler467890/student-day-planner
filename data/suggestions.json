@@ -1,278 +1,3196 @@
-{
-  "version": 1,
-  "suggestions": [
-    {
-      "id": "study-block",
-      "title": "Study for 25 minutes",
-      "category": "study",
-      "reason": "School is on your list, and a short study block keeps the classwork from piling up.",
-      "difficulty": "easy",
-      "suggestedTime": "16:30",
-      "repeat": "daily"
-    },
-    {
-      "id": "study-notes",
-      "title": "Review today's notes",
-      "category": "study",
-      "reason": "A few minutes with the notes from today makes the next class easier.",
-      "difficulty": "medium",
-      "suggestedTime": "17:00",
-      "repeat": "daily"
-    },
-    {
-      "id": "study-homework",
-      "title": "Start the next homework problem",
-      "category": "study",
-      "reason": "Starting the next problem is the hard part, so this one stays small.",
-      "difficulty": "easy",
-      "suggestedTime": "16:00",
-      "repeat": "daily"
-    },
-    {
-      "id": "study-flashcards",
-      "title": "Make 10 flashcards for the next exam",
-      "category": "study",
-      "reason": "Ten cards is enough to feel ready without taking the whole evening.",
-      "difficulty": "medium",
-      "suggestedTime": "19:00",
-      "repeat": "weekly"
-    },
-    {
-      "id": "study-chapter",
-      "title": "Read one textbook chapter",
-      "category": "study",
-      "reason": "One chapter is a clear finish line when a textbook feels endless.",
-      "difficulty": "medium",
-      "suggestedTime": "18:00",
-      "repeat": null
-    },
-    {
-      "id": "relax-hobby",
-      "title": "Spend 20 minutes on a hobby",
-      "category": "relax",
-      "reason": "Something you actually like belongs on the list too.",
-      "difficulty": "easy",
-      "repeat": "weekly"
-    },
-    {
-      "id": "relax-phone",
-      "title": "Put your phone in another room for 15 minutes",
-      "category": "relax",
-      "reason": "Fifteen quiet minutes gives your head a less crowded room.",
-      "difficulty": "easy",
-      "repeat": null
-    },
-    {
-      "id": "relax-song",
-      "title": "Listen to one song and do nothing else",
-      "category": "relax",
-      "reason": "One song, with nothing else going on, is enough to come up for air.",
-      "difficulty": "easy",
-      "repeat": null
-    },
-    {
-      "id": "relax-stretch",
-      "title": "Stretch for five minutes",
-      "category": "relax",
-      "reason": "Five minutes of stretching undoes a long sit.",
-      "difficulty": "easy",
-      "repeat": "daily"
-    },
-    {
-      "id": "relax-walk",
-      "title": "Take a 10 minute walk outside",
-      "category": "relax",
-      "reason": "When the list is heavy, a short walk is a real break.",
-      "difficulty": "easy",
-      "suggestedTime": "15:30",
-      "repeat": null
-    },
-    {
-      "id": "sleep-bedtime",
-      "title": "Pick a bedtime and start winding down",
-      "category": "sleep",
-      "reason": "A bedtime you actually start makes the next day less of a scramble.",
-      "difficulty": "easy",
-      "suggestedTime": "22:00",
-      "repeat": "daily"
-    },
-    {
-      "id": "sleep-screens",
-      "title": "Screens off 30 minutes before bed",
-      "category": "sleep",
-      "reason": "Screens off before bed makes it easier to fall asleep.",
-      "difficulty": "medium",
-      "suggestedTime": "21:30",
-      "repeat": "daily"
-    },
-    {
-      "id": "sleep-wake",
-      "title": "Set an alarm for the same wake time tomorrow",
-      "category": "sleep",
-      "reason": "The same wake time does more for your energy than a perfect night.",
-      "difficulty": "easy",
-      "suggestedTime": "07:30",
-      "repeat": "daily"
-    },
-    {
-      "id": "prod-top-three",
-      "title": "Write tomorrow's top three priorities",
-      "category": "productivity",
-      "reason": "Three priorities beat a long list you will not finish.",
-      "difficulty": "easy",
-      "suggestedTime": "21:00",
-      "repeat": "daily"
-    },
-    {
-      "id": "prod-two-minute",
-      "title": "Finish one two-minute task you have been avoiding",
-      "category": "productivity",
-      "reason": "A tiny task you have been avoiding is a quick win.",
-      "difficulty": "easy",
-      "repeat": null
-    },
-    {
-      "id": "prod-week",
-      "title": "Sketch a rough plan for the week",
-      "category": "productivity",
-      "reason": "A rough week plan keeps the days from blurring together.",
-      "difficulty": "medium",
-      "suggestedTime": "18:00",
-      "repeat": "weekly"
-    },
-    {
-      "id": "money-save",
-      "title": "Move a small amount into savings",
-      "category": "money",
-      "reason": "A small transfer into savings counts, even if it is tiny.",
-      "difficulty": "easy",
-      "repeat": "weekly"
-    },
-    {
-      "id": "money-skip",
-      "title": "Skip one unplanned purchase today",
-      "category": "money",
-      "reason": "Skipping one unplanned purchase is a real saving.",
-      "difficulty": "medium",
-      "repeat": null
-    },
-    {
-      "id": "money-spent",
-      "title": "Write down what you spent today",
-      "category": "money",
-      "reason": "Writing down what you spent makes the money picture honest.",
-      "difficulty": "easy",
-      "suggestedTime": "21:00",
-      "repeat": "daily"
-    },
-    {
-      "id": "health-fruit",
-      "title": "Eat one piece of fruit",
-      "category": "health",
-      "reason": "One piece of fruit is a simple way to look after yourself.",
-      "difficulty": "easy",
-      "repeat": "daily"
-    },
-    {
-      "id": "health-move",
-      "title": "Move your body for 15 minutes",
-      "category": "health",
-      "reason": "Fifteen minutes of moving counts, even if it is not a workout.",
-      "difficulty": "easy",
-      "suggestedTime": "17:30",
-      "repeat": "daily"
-    },
-    {
-      "id": "health-posture",
-      "title": "Reset your posture and unclench your shoulders",
-      "category": "health",
-      "reason": "Unclench your shoulders. Your body has been holding the day.",
-      "difficulty": "easy",
-      "repeat": null
-    },
-    {
-      "id": "health-water",
-      "title": "Drink a full glass of water",
-      "category": "health",
-      "reason": "One full glass of water is an easy health win.",
-      "difficulty": "easy",
-      "suggestedTime": "09:00",
-      "repeat": "daily"
-    },
-    {
-      "id": "meals-breakfast",
-      "title": "Eat breakfast before you start the day",
-      "category": "meals",
-      "reason": "Eating before the day starts keeps the morning from running you.",
-      "difficulty": "easy",
-      "suggestedTime": "08:00",
-      "repeat": "daily"
-    },
-    {
-      "id": "meals-lunch",
-      "title": "Sit down for a real lunch",
-      "category": "meals",
-      "reason": "A real lunch beats grazing over your work.",
-      "difficulty": "easy",
-      "suggestedTime": "12:15",
-      "repeat": "daily"
-    },
-    {
-      "id": "mind-breath",
-      "title": "Take three slow breaths",
-      "category": "mindfulness",
-      "reason": "Three slow breaths reset a loud hour.",
-      "difficulty": "easy",
-      "repeat": null
-    },
-    {
-      "id": "mind-journal",
-      "title": "Write one line about how today went",
-      "category": "mindfulness",
-      "reason": "One line about today is enough to put it down.",
-      "difficulty": "easy",
-      "suggestedTime": "21:15",
-      "repeat": "daily"
-    },
-    {
-      "id": "chores-laundry",
-      "title": "Start one load of laundry",
-      "category": "chores",
-      "reason": "Starting one load is the whole chore. Folding can wait.",
-      "difficulty": "medium",
-      "repeat": "weekly"
-    },
-    {
-      "id": "chores-tidy",
-      "title": "Tidy one surface for 10 minutes",
-      "category": "chores",
-      "reason": "Ten minutes on one surface is enough. Leave the rest.",
-      "difficulty": "easy",
-      "repeat": null
-    },
-    {
-      "id": "social-meal",
-      "title": "Plan one meal with someone this week",
-      "category": "social",
-      "reason": "One shared meal gives the week a person, not just tasks.",
-      "difficulty": "easy",
-      "repeat": "weekly"
-    },
-    {
-      "id": "social-text",
-      "title": "Send a message to a friend",
-      "category": "social",
-      "reason": "A short message is enough to stay connected.",
-      "difficulty": "easy",
-      "repeat": null
-    },
-    {
-      "id": "social-thanks",
-      "title": "Thank someone who helped you recently",
-      "category": "social",
-      "reason": "Thanking someone makes the help feel seen.",
-      "difficulty": "easy",
-      "repeat": null
+[
+  {
+    "id": "stu-01",
+    "title": "Quiz yourself for 10 minutes",
+    "category": "study",
+    "reason": "Testing yourself helps you remember more than just rereading notes.",
+    "difficulty": "easy",
+    "suggestedTime": "16:30",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "study",
+        "quiz",
+        "test",
+        "exam",
+        "notes",
+        "homework"
+      ],
+      "sources": [
+        "dunlosky-2013"
+      ],
+      "evidence": "direct"
     }
-  ]
-}
+  },
+  {
+    "id": "stu-02",
+    "title": "Do a practice test",
+    "category": "study",
+    "reason": "Practice tests are one of the best-proven ways to get ready for an exam.",
+    "difficulty": "medium",
+    "suggestedTime": "17:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "exam",
+        "test",
+        "quiz",
+        "midterm",
+        "final"
+      ],
+      "sources": [
+        "dunlosky-2013"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "stu-03",
+    "title": "Spread study over three days",
+    "category": "study",
+    "reason": "Short study sessions spread over several days stick better than one big cram.",
+    "difficulty": "hard",
+    "suggestedTime": "17:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "exam",
+        "test",
+        "cram",
+        "study"
+      ],
+      "sources": [
+        "dunlosky-2013"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "stu-04",
+    "title": "Make flashcards for one topic",
+    "category": "study",
+    "reason": "Flashcards turn studying into self-testing, which builds memory.",
+    "difficulty": "medium",
+    "suggestedTime": "16:30",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "study",
+        "vocab",
+        "flashcards",
+        "exam"
+      ],
+      "sources": [
+        "dunlosky-2013"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "stu-05",
+    "title": "Quiz yourself on today's class",
+    "category": "study",
+    "reason": "A quick quiz on the same day helps new lessons stick.",
+    "difficulty": "easy",
+    "suggestedTime": "16:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "class",
+        "school",
+        "lecture",
+        "notes"
+      ],
+      "sources": [
+        "dunlosky-2013"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "stu-06",
+    "title": "Explain a topic out loud",
+    "category": "study",
+    "reason": "Explaining ideas in your own words helps you understand them.",
+    "difficulty": "easy",
+    "suggestedTime": "17:30",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "study",
+        "class",
+        "science",
+        "history"
+      ],
+      "sources": [
+        "dunlosky-2013"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "stu-07",
+    "title": "Mix up practice problems",
+    "category": "study",
+    "reason": "Mixing different problem types helps you learn when to use each method.",
+    "difficulty": "medium",
+    "suggestedTime": "17:00",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "math",
+        "problems",
+        "physics",
+        "homework"
+      ],
+      "sources": [
+        "dunlosky-2013"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "stu-08",
+    "title": "Ask why for each fact",
+    "category": "study",
+    "reason": "Asking yourself why a fact is true makes it easier to remember.",
+    "difficulty": "easy",
+    "suggestedTime": "17:00",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "study",
+        "reading",
+        "science",
+        "notes"
+      ],
+      "sources": [
+        "dunlosky-2013"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "stu-09",
+    "title": "Plan when you'll study",
+    "category": "study",
+    "reason": "Deciding exactly when and where you'll study makes you more likely to do it.",
+    "difficulty": "easy",
+    "suggestedTime": "15:30",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "study",
+        "homework",
+        "exam",
+        "school"
+      ],
+      "sources": [
+        "gollwitzer-2006"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "stu-10",
+    "title": "Start homework right after snack",
+    "category": "study",
+    "reason": "Linking homework to the same daily cue helps it become a habit.",
+    "difficulty": "medium",
+    "suggestedTime": "16:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "homework",
+        "school",
+        "assignment"
+      ],
+      "sources": [
+        "gardner-2012",
+        "lally-2010"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "stu-11",
+    "title": "Revisit last week's notes",
+    "category": "study",
+    "reason": "Coming back to older material later is a proven way to remember it longer.",
+    "difficulty": "medium",
+    "suggestedTime": "18:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "notes",
+        "class",
+        "review",
+        "exam"
+      ],
+      "sources": [
+        "dunlosky-2013"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "stu-12",
+    "title": "Pack your school bag tonight",
+    "category": "study",
+    "reason": "Getting ready the night before makes busy mornings calmer.",
+    "difficulty": "easy",
+    "suggestedTime": "20:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "school",
+        "class",
+        "bag",
+        "morning"
+      ],
+      "sources": [
+        "gollwitzer-2006"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "stu-13",
+    "title": "Phone away while studying",
+    "category": "study",
+    "reason": "Keeping distractions out of reach makes it easier to stay focused.",
+    "difficulty": "medium",
+    "suggestedTime": "16:30",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "study",
+        "homework",
+        "phone",
+        "focus"
+      ],
+      "sources": [
+        "nih-habits",
+        "apa-social-media"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "stu-14",
+    "title": "Study with a classmate",
+    "category": "study",
+    "reason": "Testing each other gives you practice and keeps studying social.",
+    "difficulty": "medium",
+    "suggestedTime": "16:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "study",
+        "class",
+        "friend",
+        "exam"
+      ],
+      "sources": [
+        "dunlosky-2013",
+        "nhs-five-steps"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "slp-01",
+    "title": "Pick a set bedtime",
+    "category": "sleep",
+    "reason": "Going to bed at the same time each night helps your body clock.",
+    "difficulty": "easy",
+    "suggestedTime": "21:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "sleep",
+        "bedtime",
+        "bed",
+        "night"
+      ],
+      "sources": [
+        "cdc-sleep",
+        "aasm-sleep-habits"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "slp-02",
+    "title": "Same wake-up time daily",
+    "category": "sleep",
+    "reason": "Waking at the same time, even on weekends, builds healthy sleep.",
+    "difficulty": "medium",
+    "suggestedTime": "07:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "morning",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "wake",
+        "alarm",
+        "morning",
+        "weekend"
+      ],
+      "sources": [
+        "aasm-sleep-habits",
+        "cdc-sleep"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "slp-03",
+    "title": "Screens off before bed",
+    "category": "sleep",
+    "reason": "Turning devices off 30 minutes before bed can help you fall asleep.",
+    "difficulty": "medium",
+    "suggestedTime": "21:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "phone",
+        "screens",
+        "gaming",
+        "tiktok",
+        "youtube",
+        "bed"
+      ],
+      "sources": [
+        "cdc-sleep",
+        "aasm-sleep-habits"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "slp-04",
+    "title": "Phone out of bedroom tonight",
+    "category": "sleep",
+    "reason": "Tech use near bedtime is linked with poorer sleep, so give it a break.",
+    "difficulty": "hard",
+    "suggestedTime": "21:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "phone",
+        "scroll",
+        "bed",
+        "night"
+      ],
+      "sources": [
+        "apa-social-media",
+        "aasm-sleep-habits"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "slp-05",
+    "title": "Make a bedtime routine",
+    "category": "sleep",
+    "reason": "A calm, relaxing routine tells your body it's time to sleep.",
+    "difficulty": "easy",
+    "suggestedTime": "21:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "bedtime",
+        "sleep",
+        "routine",
+        "night"
+      ],
+      "sources": [
+        "aasm-sleep-habits",
+        "apa-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "slp-06",
+    "title": "Keep your room cool, quiet",
+    "category": "sleep",
+    "reason": "A quiet, cool, relaxing room is easier to sleep in.",
+    "difficulty": "easy",
+    "suggestedTime": "20:30",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "bedroom",
+        "sleep",
+        "room"
+      ],
+      "sources": [
+        "cdc-sleep",
+        "aasm-sleep-habits"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "slp-07",
+    "title": "Dim lights after dinner",
+    "category": "sleep",
+    "reason": "Less bright light in the evening helps you get sleepy.",
+    "difficulty": "easy",
+    "suggestedTime": "20:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "night",
+        "evening",
+        "lights",
+        "sleep"
+      ],
+      "sources": [
+        "aasm-sleep-habits"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "slp-08",
+    "title": "No caffeine after lunch",
+    "category": "sleep",
+    "reason": "Caffeine later in the day can make it harder to sleep.",
+    "difficulty": "medium",
+    "suggestedTime": "13:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": false,
+      "audience": "teen-adult",
+      "keywords": [
+        "coffee",
+        "energy drink",
+        "soda",
+        "caffeine",
+        "tea"
+      ],
+      "sources": [
+        "cdc-sleep",
+        "aasm-sleep-habits"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "slp-09",
+    "title": "Plan enough sleep tonight",
+    "category": "sleep",
+    "reason": "Kids 6–12 need 9–12 hours, teens 8–10, and adults 7 or more.",
+    "difficulty": "medium",
+    "suggestedTime": "21:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "sleep",
+        "tired",
+        "bedtime",
+        "late"
+      ],
+      "sources": [
+        "cdc-sleep"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "slp-10",
+    "title": "Set a bedtime reminder",
+    "category": "sleep",
+    "reason": "A reminder helps you start winding down on time.",
+    "difficulty": "easy",
+    "suggestedTime": "20:30",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "bedtime",
+        "alarm",
+        "late",
+        "sleep"
+      ],
+      "sources": [
+        "gollwitzer-2006",
+        "aasm-sleep-habits"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "slp-11",
+    "title": "Keep a sleep diary",
+    "category": "sleep",
+    "reason": "Writing down bed and wake times helps you spot sleep patterns.",
+    "difficulty": "medium",
+    "suggestedTime": "07:30",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "morning",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "sleep",
+        "tired",
+        "diary",
+        "wake"
+      ],
+      "sources": [
+        "cdc-sleep"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "slp-12",
+    "title": "Light snack, not big meal",
+    "category": "sleep",
+    "reason": "Big meals right before bed can make sleep harder.",
+    "difficulty": "easy",
+    "suggestedTime": "19:30",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "dinner",
+        "snack",
+        "late",
+        "night"
+      ],
+      "sources": [
+        "cdc-sleep",
+        "aasm-sleep-habits"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "slp-13",
+    "title": "Use bed just for sleep",
+    "category": "sleep",
+    "reason": "Keeping homework and games out of bed helps your brain link bed with sleep.",
+    "difficulty": "medium",
+    "suggestedTime": "21:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "bed",
+        "homework",
+        "gaming",
+        "phone"
+      ],
+      "sources": [
+        "aasm-sleep-habits"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "slp-14",
+    "title": "Get up if can't sleep",
+    "category": "sleep",
+    "reason": "If you're awake 20 minutes, a quiet, screen-free activity can help.",
+    "difficulty": "medium",
+    "suggestedTime": "22:00",
+    "meta": {
+      "timeOfDay": "night",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "sleep",
+        "insomnia",
+        "awake",
+        "night"
+      ],
+      "sources": [
+        "aasm-sleep-habits"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "pro-01",
+    "title": "Write tomorrow's top three",
+    "category": "productivity",
+    "reason": "Choosing what matters most helps you decide what can wait.",
+    "difficulty": "easy",
+    "suggestedTime": "20:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "plan",
+        "todo",
+        "busy",
+        "tasks",
+        "list"
+      ],
+      "sources": [
+        "nimh-self-care",
+        "nih-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "pro-02",
+    "title": "Make one if-then plan",
+    "category": "productivity",
+    "reason": "Plans like 'If it's 4pm, then I start my essay' make goals much more likely to happen.",
+    "difficulty": "easy",
+    "suggestedTime": "08:00",
+    "meta": {
+      "timeOfDay": "morning",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "plan",
+        "goal",
+        "procrastinate",
+        "start"
+      ],
+      "sources": [
+        "gollwitzer-2006"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "pro-03",
+    "title": "Break a big task down",
+    "category": "productivity",
+    "reason": "Small, manageable steps feel easier to start and finish.",
+    "difficulty": "easy",
+    "suggestedTime": "16:00",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "project",
+        "essay",
+        "assignment",
+        "big",
+        "report"
+      ],
+      "sources": [
+        "gardner-2012"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "pro-04",
+    "title": "Plan your week ahead",
+    "category": "productivity",
+    "reason": "Deciding when and where you'll do things helps you follow through.",
+    "difficulty": "medium",
+    "suggestedTime": "18:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "week",
+        "plan",
+        "schedule",
+        "busy"
+      ],
+      "sources": [
+        "gollwitzer-2006"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "pro-05",
+    "title": "Link a habit to routine",
+    "category": "productivity",
+    "reason": "Doing a new habit right after something you already do helps it stick.",
+    "difficulty": "easy",
+    "suggestedTime": "08:00",
+    "meta": {
+      "timeOfDay": "morning",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "habit",
+        "routine",
+        "morning",
+        "breakfast"
+      ],
+      "sources": [
+        "gardner-2012",
+        "lally-2010"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "pro-06",
+    "title": "Note three wins today",
+    "category": "productivity",
+    "reason": "Noticing what you got done builds confidence and lowers stress.",
+    "difficulty": "easy",
+    "suggestedTime": "20:30",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "done",
+        "busy",
+        "tired",
+        "stress"
+      ],
+      "sources": [
+        "nih-stress",
+        "nimh-self-care"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "pro-07",
+    "title": "Say no to one extra",
+    "category": "productivity",
+    "reason": "Turning down a task when you're overloaded protects your time and energy.",
+    "difficulty": "medium",
+    "suggestedTime": "12:00",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "busy",
+        "overloaded",
+        "extra",
+        "shift"
+      ],
+      "sources": [
+        "nimh-self-care",
+        "apa-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "pro-08",
+    "title": "Reward a small step",
+    "category": "productivity",
+    "reason": "Giving yourself a small, healthy treat for progress keeps you going.",
+    "difficulty": "easy",
+    "suggestedTime": "18:00",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "goal",
+        "habit",
+        "progress"
+      ],
+      "sources": [
+        "nih-habits"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "pro-09",
+    "title": "Phone in another room",
+    "category": "productivity",
+    "reason": "Keeping temptations out of reach makes focusing easier.",
+    "difficulty": "medium",
+    "suggestedTime": "15:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "phone",
+        "focus",
+        "distracted",
+        "work",
+        "study"
+      ],
+      "sources": [
+        "nih-habits"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "pro-10",
+    "title": "Start with just 5 minutes",
+    "category": "productivity",
+    "reason": "Tiny starts are easier, and small wins build confidence for bigger ones.",
+    "difficulty": "easy",
+    "suggestedTime": "16:00",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "procrastinate",
+        "start",
+        "project",
+        "chores"
+      ],
+      "sources": [
+        "gardner-2012"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "pro-11",
+    "title": "Do the hardest task first",
+    "category": "productivity",
+    "reason": "Planning when you'll tackle the toughest task helps you actually start it.",
+    "difficulty": "hard",
+    "suggestedTime": "09:00",
+    "meta": {
+      "timeOfDay": "morning",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "hard",
+        "project",
+        "essay",
+        "work"
+      ],
+      "sources": [
+        "gollwitzer-2006"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "pro-12",
+    "title": "Ask for help today",
+    "category": "productivity",
+    "reason": "Getting help or sharing the load is a proven way to lower stress.",
+    "difficulty": "medium",
+    "suggestedTime": "12:00",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "stuck",
+        "busy",
+        "project",
+        "work",
+        "homework"
+      ],
+      "sources": [
+        "apa-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "pro-13",
+    "title": "Track one habit daily",
+    "category": "productivity",
+    "reason": "A simple tick sheet helps you see a new habit getting easier.",
+    "difficulty": "easy",
+    "suggestedTime": "20:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "habit",
+        "streak",
+        "goal",
+        "track"
+      ],
+      "sources": [
+        "gardner-2012"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "mon-01",
+    "title": "Track spending for a week",
+    "category": "money",
+    "reason": "Seeing where your money goes is the first step to a budget.",
+    "difficulty": "medium",
+    "suggestedTime": "20:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "spending",
+        "shopping",
+        "money",
+        "buy"
+      ],
+      "sources": [
+        "cfpb-teen-saving",
+        "fcac-budget-planner"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "mon-02",
+    "title": "Ask: need or want?",
+    "category": "money",
+    "reason": "Covering needs before wants is a wise money habit.",
+    "difficulty": "easy",
+    "suggestedTime": "12:00",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "shopping",
+        "buy",
+        "spending",
+        "store",
+        "online"
+      ],
+      "sources": [
+        "cfpb-needs-wants"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "mon-03",
+    "title": "Set a savings goal",
+    "category": "money",
+    "reason": "Knowing exactly what you're saving for makes saving easier.",
+    "difficulty": "easy",
+    "suggestedTime": "18:00",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "save",
+        "saving",
+        "money",
+        "allowance",
+        "buy"
+      ],
+      "sources": [
+        "cfpb-money-as-you-grow"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "mon-04",
+    "title": "Make a simple budget",
+    "category": "money",
+    "reason": "A budget shows money coming in, going out, and what you can save.",
+    "difficulty": "medium",
+    "suggestedTime": "18:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": false,
+      "audience": "teen-adult",
+      "keywords": [
+        "budget",
+        "money",
+        "bills",
+        "job",
+        "paycheck"
+      ],
+      "sources": [
+        "fcac-budget-planner",
+        "cfpb-needs-wants"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "mon-05",
+    "title": "Save 10% of your pay",
+    "category": "money",
+    "reason": "Saving at least 10 percent of what you earn builds a safety cushion.",
+    "difficulty": "medium",
+    "suggestedTime": "18:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": false,
+      "audience": "teen-adult",
+      "keywords": [
+        "job",
+        "pay",
+        "paycheck",
+        "shift",
+        "work"
+      ],
+      "sources": [
+        "cfpb-teen-saving"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "mon-06",
+    "title": "Start an emergency fund",
+    "category": "money",
+    "reason": "Money set aside for surprises helps you avoid costly borrowing.",
+    "difficulty": "hard",
+    "suggestedTime": "18:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": false,
+      "audience": "teen-adult",
+      "keywords": [
+        "job",
+        "pay",
+        "savings",
+        "emergency"
+      ],
+      "sources": [
+        "cfpb-teen-saving"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "mon-07",
+    "title": "Put coins in a jar",
+    "category": "money",
+    "reason": "A savings jar makes progress toward your goal easy to see.",
+    "difficulty": "easy",
+    "suggestedTime": "19:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "allowance",
+        "save",
+        "coins",
+        "money"
+      ],
+      "sources": [
+        "cfpb-money-as-you-grow"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "mon-08",
+    "title": "Learn about compound interest",
+    "category": "money",
+    "reason": "Saving early lets your money grow on its own interest over time.",
+    "difficulty": "medium",
+    "suggestedTime": "17:00",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "save",
+        "savings",
+        "bank",
+        "money"
+      ],
+      "sources": [
+        "cfpb-teen-saving"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "mon-09",
+    "title": "Compare banks or credit unions",
+    "category": "money",
+    "reason": "Comparing places to keep money safe helps you pick what fits you.",
+    "difficulty": "medium",
+    "suggestedTime": "16:00",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": false,
+      "audience": "teen-adult",
+      "keywords": [
+        "bank",
+        "account",
+        "job",
+        "save"
+      ],
+      "sources": [
+        "cfpb-teen-saving"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "mon-10",
+    "title": "Talk money with family",
+    "category": "money",
+    "reason": "Money conversations at home help build good money skills early.",
+    "difficulty": "easy",
+    "suggestedTime": "18:30",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "family",
+        "money",
+        "allowance",
+        "budget"
+      ],
+      "sources": [
+        "cfpb-money-as-you-grow"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "mon-11",
+    "title": "Sort bills: fixed or changing",
+    "category": "money",
+    "reason": "Knowing which costs stay the same each month makes budgeting simpler.",
+    "difficulty": "medium",
+    "suggestedTime": "19:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": false,
+      "audience": "teen-adult",
+      "keywords": [
+        "bills",
+        "rent",
+        "phone bill",
+        "budget"
+      ],
+      "sources": [
+        "fcac-budget-planner",
+        "cfpb-needs-wants"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "mon-12",
+    "title": "Compare before you buy",
+    "category": "money",
+    "reason": "Comparing options helps you pick what meets your needs and budget.",
+    "difficulty": "easy",
+    "suggestedTime": "12:00",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "shopping",
+        "buy",
+        "phone",
+        "plan",
+        "online"
+      ],
+      "sources": [
+        "cfpb-needs-wants"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "mon-13",
+    "title": "Review this week's spending",
+    "category": "money",
+    "reason": "A weekly check helps you see if you're on track for your goal.",
+    "difficulty": "easy",
+    "suggestedTime": "18:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "spending",
+        "budget",
+        "money",
+        "week"
+      ],
+      "sources": [
+        "cfpb-teen-saving",
+        "fcac-budget-planner"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "hea-01",
+    "title": "Brush teeth two minutes",
+    "category": "health",
+    "reason": "Brushing twice a day for about 2 minutes keeps your mouth healthy.",
+    "difficulty": "easy",
+    "suggestedTime": "21:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "teeth",
+        "brush",
+        "bedtime",
+        "morning"
+      ],
+      "sources": [
+        "nhs-teeth"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "hea-02",
+    "title": "Brush right before bed",
+    "category": "health",
+    "reason": "Night-time brushing is especially important for your teeth.",
+    "difficulty": "easy",
+    "suggestedTime": "21:15",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "teeth",
+        "bedtime",
+        "night"
+      ],
+      "sources": [
+        "nhs-teeth"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "hea-03",
+    "title": "Floss before brushing",
+    "category": "health",
+    "reason": "Flossing removes plaque along the gum line that brushing can miss.",
+    "difficulty": "easy",
+    "suggestedTime": "21:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "teeth",
+        "floss",
+        "dentist"
+      ],
+      "sources": [
+        "nhs-teeth"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "hea-04",
+    "title": "Carry a water bottle",
+    "category": "health",
+    "reason": "Drinking regularly through the day keeps you hydrated.",
+    "difficulty": "easy",
+    "suggestedTime": "08:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "morning",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "water",
+        "school",
+        "work",
+        "gym",
+        "sports"
+      ],
+      "sources": [
+        "nhs-water"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "hea-05",
+    "title": "Swap soda for water",
+    "category": "health",
+    "reason": "Water is a healthy choice, and sugary drinks can harm your teeth.",
+    "difficulty": "medium",
+    "suggestedTime": "12:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "soda",
+        "pop",
+        "energy drink",
+        "juice",
+        "drink"
+      ],
+      "sources": [
+        "nhs-water"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "hea-06",
+    "title": "Add fruit to breakfast",
+    "category": "health",
+    "reason": "Fruit gives you vitamins and fibre, and every portion counts.",
+    "difficulty": "easy",
+    "suggestedTime": "07:30",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "morning",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "breakfast",
+        "morning",
+        "food",
+        "eat"
+      ],
+      "sources": [
+        "nhs-5-a-day",
+        "gardner-2012"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "hea-07",
+    "title": "Add a veggie to dinner",
+    "category": "health",
+    "reason": "Eating a variety of fruit and veg helps keep you healthy.",
+    "difficulty": "easy",
+    "suggestedTime": "18:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "dinner",
+        "cook",
+        "meal",
+        "food"
+      ],
+      "sources": [
+        "nhs-5-a-day"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "hea-08",
+    "title": "Eat a rainbow today",
+    "category": "health",
+    "reason": "Different colours of fruit and veg give different nutrients.",
+    "difficulty": "medium",
+    "suggestedTime": "12:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "food",
+        "lunch",
+        "meal",
+        "eat"
+      ],
+      "sources": [
+        "nhs-5-a-day",
+        "apa-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "hea-09",
+    "title": "Wash hands before eating",
+    "category": "health",
+    "reason": "Handwashing with soap is one of the best ways to stay healthy.",
+    "difficulty": "easy",
+    "suggestedTime": "12:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "lunch",
+        "eat",
+        "food",
+        "school",
+        "sick"
+      ],
+      "sources": [
+        "cdc-handwashing"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "hea-10",
+    "title": "Scrub hands for 20 seconds",
+    "category": "health",
+    "reason": "Humming Happy Birthday twice is a fun 20-second timer.",
+    "difficulty": "easy",
+    "suggestedTime": "12:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "hands",
+        "germs",
+        "sick",
+        "cold"
+      ],
+      "sources": [
+        "cdc-handwashing"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "hea-11",
+    "title": "Eat regular meals today",
+    "category": "health",
+    "reason": "Regular, balanced meals help your energy and focus.",
+    "difficulty": "medium",
+    "suggestedTime": "12:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "busy",
+        "skip",
+        "lunch",
+        "breakfast",
+        "work"
+      ],
+      "sources": [
+        "nimh-self-care",
+        "nih-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "hea-12",
+    "title": "Pack a fruit snack",
+    "category": "health",
+    "reason": "Having fruit with you makes the healthy choice the easy one.",
+    "difficulty": "easy",
+    "suggestedTime": "07:30",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "morning",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "snack",
+        "school",
+        "work",
+        "lunch"
+      ],
+      "sources": [
+        "nhs-5-a-day",
+        "nih-habits"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "hea-13",
+    "title": "Refill water after sport",
+    "category": "health",
+    "reason": "Extra fluids help replace what you lose when you sweat.",
+    "difficulty": "easy",
+    "suggestedTime": "17:00",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "sports",
+        "practice",
+        "gym",
+        "game",
+        "run"
+      ],
+      "sources": [
+        "nhs-water"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "fit-01",
+    "title": "Take a 10-minute walk",
+    "category": "fitness",
+    "reason": "Short bits of activity add up and are better than none.",
+    "difficulty": "easy",
+    "suggestedTime": "16:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "walk",
+        "outside",
+        "break",
+        "move"
+      ],
+      "sources": [
+        "cdc-activity-adults",
+        "nimh-self-care"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "fit-02",
+    "title": "Brisk 30-minute walk",
+    "category": "fitness",
+    "reason": "A brisk walk can lift your mood and lower stress.",
+    "difficulty": "medium",
+    "suggestedTime": "17:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "walk",
+        "stress",
+        "exercise"
+      ],
+      "sources": [
+        "apa-stress",
+        "nimh-self-care",
+        "cdc-activity-adults"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "fit-03",
+    "title": "Be active 60 minutes",
+    "category": "fitness",
+    "reason": "Kids and teens 6–17 need 60 minutes of activity every day.",
+    "difficulty": "hard",
+    "suggestedTime": "16:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "exercise",
+        "sports",
+        "play",
+        "active"
+      ],
+      "sources": [
+        "cdc-activity-kids"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "fit-04",
+    "title": "Jump or skip 5 minutes",
+    "category": "fitness",
+    "reason": "Jumping and running help build strong bones.",
+    "difficulty": "easy",
+    "suggestedTime": "16:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "jump",
+        "skip",
+        "rope",
+        "play"
+      ],
+      "sources": [
+        "cdc-activity-kids"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "fit-05",
+    "title": "Do push-ups or climbing",
+    "category": "fitness",
+    "reason": "Muscle-strengthening activities are recommended at least 3 days a week for kids.",
+    "difficulty": "medium",
+    "suggestedTime": "16:30",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "strength",
+        "push-ups",
+        "climb",
+        "workout"
+      ],
+      "sources": [
+        "cdc-activity-kids"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "fit-06",
+    "title": "Strength moves twice weekly",
+    "category": "fitness",
+    "reason": "Adults need muscle-strengthening activity at least 2 days a week.",
+    "difficulty": "medium",
+    "suggestedTime": "17:30",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": false,
+      "audience": "teen-adult",
+      "keywords": [
+        "gym",
+        "strength",
+        "workout",
+        "weights"
+      ],
+      "sources": [
+        "cdc-activity-adults"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "fit-07",
+    "title": "Dance to three songs",
+    "category": "fitness",
+    "reason": "Moving to music counts as activity and can boost your mood.",
+    "difficulty": "easy",
+    "suggestedTime": "17:00",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "music",
+        "dance",
+        "fun",
+        "break"
+      ],
+      "sources": [
+        "apa-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "fit-08",
+    "title": "Play an active game",
+    "category": "fitness",
+    "reason": "Games like tag get your heart beating faster and are fun.",
+    "difficulty": "medium",
+    "suggestedTime": "16:00",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "play",
+        "friends",
+        "recess",
+        "outside"
+      ],
+      "sources": [
+        "cdc-activity-kids"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "fit-09",
+    "title": "Stand up and move hourly",
+    "category": "fitness",
+    "reason": "Sitting less and moving more brings health benefits.",
+    "difficulty": "easy",
+    "suggestedTime": "10:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "desk",
+        "study",
+        "work",
+        "computer",
+        "gaming"
+      ],
+      "sources": [
+        "cdc-activity-adults"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "fit-10",
+    "title": "Walk or bike somewhere",
+    "category": "fitness",
+    "reason": "Walking to school or nearby places counts as moderate activity (when safe).",
+    "difficulty": "medium",
+    "suggestedTime": "08:00",
+    "meta": {
+      "timeOfDay": "morning",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "school",
+        "commute",
+        "bus",
+        "bike"
+      ],
+      "sources": [
+        "cdc-activity-kids"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "fit-11",
+    "title": "Try a new sport",
+    "category": "fitness",
+    "reason": "Finding an activity you enjoy makes it easier to keep moving.",
+    "difficulty": "hard",
+    "suggestedTime": "16:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "sports",
+        "team",
+        "club",
+        "bored"
+      ],
+      "sources": [
+        "nhs-five-steps",
+        "cdc-activity-kids"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "fit-12",
+    "title": "Stretch for 5 minutes",
+    "category": "fitness",
+    "reason": "Stretching helps release the muscle tension that stress causes.",
+    "difficulty": "easy",
+    "suggestedTime": "07:30",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "morning",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "stretch",
+        "tense",
+        "stress",
+        "morning"
+      ],
+      "sources": [
+        "apa-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "fit-13",
+    "title": "Run, bike or swim hard",
+    "category": "fitness",
+    "reason": "Vigorous activity at least 3 days a week helps kids and teens get fitter.",
+    "difficulty": "hard",
+    "suggestedTime": "16:30",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "run",
+        "bike",
+        "swim",
+        "sports",
+        "exercise"
+      ],
+      "sources": [
+        "cdc-activity-kids"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rel-01",
+    "title": "Eat dinner with family",
+    "category": "relationships",
+    "reason": "A regular family meal time builds belonging and support.",
+    "difficulty": "easy",
+    "suggestedTime": "18:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "family",
+        "dinner",
+        "home"
+      ],
+      "sources": [
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rel-02",
+    "title": "Message a friend you miss",
+    "category": "relationships",
+    "reason": "Reaching out keeps friendships strong and fights loneliness.",
+    "difficulty": "easy",
+    "suggestedTime": "19:00",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "friend",
+        "text",
+        "lonely",
+        "miss"
+      ],
+      "sources": [
+        "nhs-five-steps",
+        "nih-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rel-03",
+    "title": "Plan a day with friends",
+    "category": "relationships",
+    "reason": "Spending time with friends you haven't seen in a while lifts wellbeing.",
+    "difficulty": "medium",
+    "suggestedTime": "18:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "friends",
+        "weekend",
+        "hangout",
+        "plans"
+      ],
+      "sources": [
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rel-04",
+    "title": "Thank someone today",
+    "category": "relationships",
+    "reason": "Saying thank you is a simple act of kindness that feels good.",
+    "difficulty": "easy",
+    "suggestedTime": "12:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "teacher",
+        "parent",
+        "friend",
+        "coworker"
+      ],
+      "sources": [
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rel-05",
+    "title": "Ask someone how they are",
+    "category": "relationships",
+    "reason": "Really listening to the answer helps you connect.",
+    "difficulty": "easy",
+    "suggestedTime": "12:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "friend",
+        "family",
+        "classmate",
+        "coworker"
+      ],
+      "sources": [
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rel-06",
+    "title": "Help someone with something",
+    "category": "relationships",
+    "reason": "Giving help creates good feelings and a sense of purpose.",
+    "difficulty": "medium",
+    "suggestedTime": "16:00",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "help",
+        "chores",
+        "family",
+        "neighbour"
+      ],
+      "sources": [
+        "nhs-five-steps",
+        "apa-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rel-07",
+    "title": "Screen-free family game night",
+    "category": "relationships",
+    "reason": "Switching off the TV to play together builds closer bonds.",
+    "difficulty": "medium",
+    "suggestedTime": "19:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "family",
+        "game",
+        "tv",
+        "screens"
+      ],
+      "sources": [
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rel-08",
+    "title": "Video call far-away family",
+    "category": "relationships",
+    "reason": "Video chats help you stay close when you live apart.",
+    "difficulty": "easy",
+    "suggestedTime": "18:30",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "grandparents",
+        "family",
+        "call",
+        "away"
+      ],
+      "sources": [
+        "nhs-five-steps",
+        "nih-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rel-09",
+    "title": "Sit with someone new",
+    "category": "relationships",
+    "reason": "Having lunch with a classmate or colleague builds connection.",
+    "difficulty": "medium",
+    "suggestedTime": "12:00",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "lunch",
+        "school",
+        "work",
+        "new"
+      ],
+      "sources": [
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rel-10",
+    "title": "Visit someone who's lonely",
+    "category": "relationships",
+    "reason": "Spending time with someone who needs company helps you both.",
+    "difficulty": "medium",
+    "suggestedTime": "15:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "grandparent",
+        "visit",
+        "neighbour",
+        "family"
+      ],
+      "sources": [
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rel-11",
+    "title": "Volunteer for one hour",
+    "category": "relationships",
+    "reason": "Volunteering in your community can boost wellbeing and connection.",
+    "difficulty": "hard",
+    "suggestedTime": "10:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "morning",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "volunteer",
+        "community",
+        "club",
+        "service"
+      ],
+      "sources": [
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rel-12",
+    "title": "Talk, don't just text",
+    "category": "relationships",
+    "reason": "Real conversations build relationships better than messages alone.",
+    "difficulty": "easy",
+    "suggestedTime": "19:00",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "text",
+        "chat",
+        "friend",
+        "phone"
+      ],
+      "sources": [
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rel-13",
+    "title": "Share good news with someone",
+    "category": "relationships",
+    "reason": "Sharing positive moments is one way relationships boost wellbeing.",
+    "difficulty": "easy",
+    "suggestedTime": "18:00",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "win",
+        "good",
+        "friend",
+        "family"
+      ],
+      "sources": [
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "wel-01",
+    "title": "Write three good things",
+    "category": "wellbeing",
+    "reason": "Being specific about what you're grateful for supports mental health.",
+    "difficulty": "easy",
+    "suggestedTime": "20:30",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "gratitude",
+        "journal",
+        "night",
+        "mood"
+      ],
+      "sources": [
+        "nimh-self-care"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "wel-02",
+    "title": "Breathe slowly for 3 minutes",
+    "category": "wellbeing",
+    "reason": "Slow belly breathing can calm your body and mind.",
+    "difficulty": "easy",
+    "suggestedTime": "15:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "stress",
+        "anxious",
+        "nervous",
+        "exam",
+        "breathe"
+      ],
+      "sources": [
+        "nih-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "wel-03",
+    "title": "Try 5 minutes of mindfulness",
+    "category": "wellbeing",
+    "reason": "Short mindfulness practice can lower stress and worry.",
+    "difficulty": "easy",
+    "suggestedTime": "07:30",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "morning",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "mindful",
+        "meditate",
+        "stress",
+        "calm"
+      ],
+      "sources": [
+        "apa-stress",
+        "nih-stress",
+        "nhs-mindfulness"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "wel-04",
+    "title": "Name how you feel",
+    "category": "wellbeing",
+    "reason": "Silently naming a feeling, like 'this is worry', helps you step back from it.",
+    "difficulty": "easy",
+    "suggestedTime": "17:00",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "feelings",
+        "mood",
+        "stress",
+        "upset"
+      ],
+      "sources": [
+        "nhs-mindfulness"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "wel-05",
+    "title": "Notice five things around you",
+    "category": "wellbeing",
+    "reason": "Paying attention to the present moment can improve wellbeing.",
+    "difficulty": "easy",
+    "suggestedTime": "12:00",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "mindful",
+        "calm",
+        "walk",
+        "outside"
+      ],
+      "sources": [
+        "nhs-mindfulness",
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "wel-06",
+    "title": "Reframe one worry",
+    "category": "wellbeing",
+    "reason": "Looking at a problem a new way can lower stress.",
+    "difficulty": "medium",
+    "suggestedTime": "18:00",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "worry",
+        "stress",
+        "anxious",
+        "test"
+      ],
+      "sources": [
+        "apa-stress",
+        "nih-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "wel-07",
+    "title": "Be kind to yourself today",
+    "category": "wellbeing",
+    "reason": "Noting what you did, not what you missed, builds self-compassion.",
+    "difficulty": "easy",
+    "suggestedTime": "20:30",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "tired",
+        "failed",
+        "stress",
+        "bad day"
+      ],
+      "sources": [
+        "nih-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "wel-08",
+    "title": "Spend time in nature",
+    "category": "wellbeing",
+    "reason": "Time in green spaces, even a park, can improve your mood.",
+    "difficulty": "medium",
+    "suggestedTime": "16:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "outside",
+        "park",
+        "nature",
+        "walk"
+      ],
+      "sources": [
+        "apa-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "wel-09",
+    "title": "Talk to someone you trust",
+    "category": "wellbeing",
+    "reason": "Sharing how you feel with a trusted person is a healthy way to cope.",
+    "difficulty": "medium",
+    "suggestedTime": "18:00",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "stress",
+        "sad",
+        "worried",
+        "overwhelmed"
+      ],
+      "sources": [
+        "nimh-self-care",
+        "apa-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "wel-10",
+    "title": "Mindful walk to class",
+    "category": "wellbeing",
+    "reason": "A regular walk is a great time to notice the world around you.",
+    "difficulty": "easy",
+    "suggestedTime": "08:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "morning",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "walk",
+        "school",
+        "commute",
+        "class"
+      ],
+      "sources": [
+        "nhs-mindfulness"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "wel-11",
+    "title": "Limit comparison scrolling",
+    "category": "wellbeing",
+    "reason": "Comparing looks on social media is linked to feeling worse about yourself.",
+    "difficulty": "medium",
+    "suggestedTime": "19:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": false,
+      "audience": "teen-adult",
+      "keywords": [
+        "instagram",
+        "tiktok",
+        "social media",
+        "scroll"
+      ],
+      "sources": [
+        "apa-social-media"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "wel-12",
+    "title": "Follow accounts that support you",
+    "category": "wellbeing",
+    "reason": "Using social media for support and connection can be good for you.",
+    "difficulty": "easy",
+    "suggestedTime": "19:00",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": false,
+      "audience": "teen-adult",
+      "keywords": [
+        "social media",
+        "instagram",
+        "tiktok",
+        "online"
+      ],
+      "sources": [
+        "apa-social-media"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "wel-13",
+    "title": "Do one thing you enjoy",
+    "category": "wellbeing",
+    "reason": "Doing something you enjoy every day helps refill your energy.",
+    "difficulty": "easy",
+    "suggestedTime": "19:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "fun",
+        "hobby",
+        "busy",
+        "tired"
+      ],
+      "sources": [
+        "apa-stress",
+        "nih-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "lrn-01",
+    "title": "Learn a new recipe",
+    "category": "learning",
+    "reason": "Learning a new skill like cooking boosts confidence.",
+    "difficulty": "medium",
+    "suggestedTime": "17:30",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "cook",
+        "dinner",
+        "food",
+        "recipe"
+      ],
+      "sources": [
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "lrn-02",
+    "title": "Practise an instrument 15 minutes",
+    "category": "learning",
+    "reason": "Short, regular practice spread over days helps skills stick.",
+    "difficulty": "medium",
+    "suggestedTime": "17:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "music",
+        "piano",
+        "guitar",
+        "practice",
+        "lesson"
+      ],
+      "sources": [
+        "dunlosky-2013",
+        "nhs-five-steps"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "lrn-03",
+    "title": "Learn ten new words",
+    "category": "learning",
+    "reason": "Learning a language is a great way to build a sense of purpose.",
+    "difficulty": "easy",
+    "suggestedTime": "18:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "language",
+        "french",
+        "spanish",
+        "duolingo",
+        "vocab"
+      ],
+      "sources": [
+        "nhs-five-steps",
+        "dunlosky-2013"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "lrn-04",
+    "title": "Fix or build something",
+    "category": "learning",
+    "reason": "A small DIY project, like fixing a bike, is a satisfying new skill.",
+    "difficulty": "hard",
+    "suggestedTime": "14:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "fix",
+        "build",
+        "bike",
+        "diy",
+        "project"
+      ],
+      "sources": [
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "lrn-05",
+    "title": "Watch a how-to video",
+    "category": "learning",
+    "reason": "Free tutorials make it easy to start learning something new.",
+    "difficulty": "easy",
+    "suggestedTime": "16:00",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "learn",
+        "tutorial",
+        "skill",
+        "hobby"
+      ],
+      "sources": [
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "lrn-06",
+    "title": "Start a creative hobby",
+    "category": "learning",
+    "reason": "Hobbies like painting or writing can lift your mood and confidence.",
+    "difficulty": "medium",
+    "suggestedTime": "16:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "art",
+        "draw",
+        "paint",
+        "write",
+        "hobby"
+      ],
+      "sources": [
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "lrn-07",
+    "title": "Read for 20 minutes",
+    "category": "learning",
+    "reason": "Reading for fun is a pleasurable way to keep learning.",
+    "difficulty": "medium",
+    "suggestedTime": "20:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "read",
+        "book",
+        "library",
+        "bored"
+      ],
+      "sources": [
+        "apa-stress",
+        "nhs-five-steps"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "lrn-08",
+    "title": "Quiz yourself on a hobby",
+    "category": "learning",
+    "reason": "Testing yourself works for any skill, not just school subjects.",
+    "difficulty": "easy",
+    "suggestedTime": "17:00",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "learn",
+        "skill",
+        "language",
+        "practice"
+      ],
+      "sources": [
+        "dunlosky-2013"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "lrn-09",
+    "title": "Join a club or class",
+    "category": "learning",
+    "reason": "Classes outside school build skills and new friendships.",
+    "difficulty": "hard",
+    "suggestedTime": "16:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "club",
+        "class",
+        "team",
+        "course"
+      ],
+      "sources": [
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "lrn-10",
+    "title": "Teach someone a skill",
+    "category": "learning",
+    "reason": "Explaining something to others deepens your own understanding.",
+    "difficulty": "medium",
+    "suggestedTime": "17:00",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "teach",
+        "explain",
+        "friend",
+        "sibling"
+      ],
+      "sources": [
+        "dunlosky-2013",
+        "nhs-five-steps"
+      ],
+      "evidence": "supportive"
+    }
+  },
+  {
+    "id": "lrn-11",
+    "title": "Write a short story",
+    "category": "learning",
+    "reason": "Writing is a challenging hobby that builds creativity.",
+    "difficulty": "medium",
+    "suggestedTime": "19:00",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "write",
+        "story",
+        "journal",
+        "blog"
+      ],
+      "sources": [
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "lrn-12",
+    "title": "Take on a new responsibility",
+    "category": "learning",
+    "reason": "Trying a new role at school or work builds skills and purpose.",
+    "difficulty": "hard",
+    "suggestedTime": "12:00",
+    "meta": {
+      "timeOfDay": "anytime",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "work",
+        "school",
+        "club",
+        "job",
+        "leader"
+      ],
+      "sources": [
+        "nhs-five-steps"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "lrn-13",
+    "title": "Practise one skill daily",
+    "category": "learning",
+    "reason": "Practising the same skill at the same time each day helps it become a habit.",
+    "difficulty": "medium",
+    "suggestedTime": "17:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "practice",
+        "skill",
+        "habit",
+        "daily"
+      ],
+      "sources": [
+        "lally-2010",
+        "gardner-2012"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rlx-01",
+    "title": "Take a 15-minute break",
+    "category": "relax",
+    "reason": "Even when you're busy, keeping fun activities helps you handle stress.",
+    "difficulty": "easy",
+    "suggestedTime": "15:00",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "break",
+        "busy",
+        "work",
+        "study",
+        "shift"
+      ],
+      "sources": [
+        "apa-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rlx-02",
+    "title": "Listen to favourite music",
+    "category": "relax",
+    "reason": "Singing along to songs you love is a simple way to unwind.",
+    "difficulty": "easy",
+    "suggestedTime": "18:00",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "music",
+        "songs",
+        "relax",
+        "chill"
+      ],
+      "sources": [
+        "apa-stress",
+        "nimh-self-care"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rlx-03",
+    "title": "Watch something funny",
+    "category": "relax",
+    "reason": "Laughter and humour can benefit your mental and physical health.",
+    "difficulty": "easy",
+    "suggestedTime": "19:30",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "funny",
+        "comedy",
+        "show",
+        "movie",
+        "laugh"
+      ],
+      "sources": [
+        "apa-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rlx-04",
+    "title": "Have a warm bath",
+    "category": "relax",
+    "reason": "A warm bath helps loosen muscles that tense up with stress.",
+    "difficulty": "easy",
+    "suggestedTime": "20:00",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "bath",
+        "tired",
+        "sore",
+        "relax"
+      ],
+      "sources": [
+        "apa-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rlx-05",
+    "title": "Relax muscles head to toe",
+    "category": "relax",
+    "reason": "Tensing then relaxing each muscle group can reduce anxiety.",
+    "difficulty": "easy",
+    "suggestedTime": "21:00",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "tense",
+        "stress",
+        "sleep",
+        "relax"
+      ],
+      "sources": [
+        "apa-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rlx-06",
+    "title": "Read just for fun",
+    "category": "relax",
+    "reason": "Reading something you enjoy is a healthy way to recharge.",
+    "difficulty": "easy",
+    "suggestedTime": "20:00",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "read",
+        "book",
+        "relax",
+        "chill"
+      ],
+      "sources": [
+        "apa-stress",
+        "nimh-self-care"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rlx-07",
+    "title": "Do a low-stress hobby",
+    "category": "relax",
+    "reason": "Low-stress hobbies like drawing or crafts help you unwind.",
+    "difficulty": "medium",
+    "suggestedTime": "17:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "hobby",
+        "art",
+        "draw",
+        "craft",
+        "lego"
+      ],
+      "sources": [
+        "nimh-self-care",
+        "nih-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rlx-08",
+    "title": "Sit outside for 10 minutes",
+    "category": "relax",
+    "reason": "Noticing nature, even a city park, can calm your mind.",
+    "difficulty": "easy",
+    "suggestedTime": "16:00",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "outside",
+        "park",
+        "fresh air",
+        "nature"
+      ],
+      "sources": [
+        "apa-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rlx-09",
+    "title": "Try gentle yoga",
+    "category": "relax",
+    "reason": "Yoga and stretching can ease stress and help a busy mind.",
+    "difficulty": "medium",
+    "suggestedTime": "18:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "yoga",
+        "stretch",
+        "calm",
+        "stress"
+      ],
+      "sources": [
+        "nih-stress",
+        "nhs-mindfulness"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rlx-10",
+    "title": "Plan a rest evening",
+    "category": "relax",
+    "reason": "Scheduling regular relaxing time is part of good self-care.",
+    "difficulty": "medium",
+    "suggestedTime": "19:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "busy",
+        "work",
+        "shift",
+        "rest",
+        "weekend"
+      ],
+      "sources": [
+        "nimh-self-care"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rlx-11",
+    "title": "Screen-free wind-down time",
+    "category": "relax",
+    "reason": "Putting down screens helps calm your mind before bed.",
+    "difficulty": "medium",
+    "suggestedTime": "20:30",
+    "repeat": "daily",
+    "meta": {
+      "timeOfDay": "evening",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "phone",
+        "screens",
+        "scroll",
+        "night"
+      ],
+      "sources": [
+        "apa-stress",
+        "aasm-sleep-habits"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rlx-12",
+    "title": "Have fun with friends",
+    "category": "relax",
+    "reason": "Fun with friends is a proven stress reliever.",
+    "difficulty": "medium",
+    "suggestedTime": "17:00",
+    "repeat": "weekly",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "friends",
+        "fun",
+        "weekend",
+        "hangout"
+      ],
+      "sources": [
+        "nih-stress"
+      ],
+      "evidence": "direct"
+    }
+  },
+  {
+    "id": "rlx-13",
+    "title": "Make art for fun",
+    "category": "relax",
+    "reason": "Making art just for enjoyment can help relieve stress.",
+    "difficulty": "easy",
+    "suggestedTime": "17:00",
+    "meta": {
+      "timeOfDay": "afternoon",
+      "ageSafe": true,
+      "audience": "all",
+      "keywords": [
+        "art",
+        "draw",
+        "paint",
+        "color"
+      ],
+      "sources": [
+        "nih-stress"
+      ],
+      "evidence": "direct"
+    }
+  }
+]

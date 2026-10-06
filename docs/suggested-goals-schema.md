@@ -2,161 +2,202 @@
 
 The suggestion engine reads two local files:
 
-- `data/suggestions.json` — the cards it can offer
-- `data/gap-rules.json` — how it reads the user's list, and which categories to prefer
+- `data/suggestions.json` — the cards it can offer (a JSON array)
+- `data/gap-rules.json` — frequency settings, synonym concepts, category coverage, and the gap rules
 
-Ship them as a pair. If either file is missing, is not JSON, or fails the checks below, the engine ignores both and uses the built-in seed in `js/suggest.js`. A bad file never takes the app down.
+Ship them as a pair. If either file is missing, is not JSON, or fails the checks below, the engine ignores both and uses the built-in seed in `js/suggest.js`. A bad file never takes the app down. The engine does not fetch anything else.
 
-Drop-in replacements can use the same shapes. Extra fields are ignored. The engine does not fetch anything else.
+`window.DayliSuggest` (from `js/suggest.js`) is the UI contract:
 
-The JSON blocks in this doc are the shape, not a whole file. The full seed set is `data/suggestions.json` and `data/gap-rules.json`.
+```js
+loadLibrary(): Promise<void>
+getSuggestion({ tasks, now, settings, random }): Suggestion | null
+markShown(id, now?)
+markAccepted(id, taskId, now?)
+markDismissed(id, { forever, now })
+isSuggestedTask(taskId): boolean
+markSuggestedCompleted(taskId): boolean
+canNotify(now): boolean
+
+Suggestion = {
+  id, title, category, reason,
+  difficulty: 'easy' | 'medium' | 'hard',
+  suggestedTime?: 'HH:MM',
+  repeat: 'daily' | 'weekly' | null,
+  quiet: boolean
+}
+```
+
+`settings.suggestFrequency` is `off`, `rare`, `normal` (default), or `often`. `settings.installedOn` is `YYYY-MM-DD` from the app. `settings.suggestIncludeOlder === true` opts into the teen/adult cards. `random()`, when passed, is a function returning a number in `[0, 1)`. Without it, the daily gate is a stable hash so asking again the same day does not flip the answer.
+
+`quiet` is true during quiet hours. The card is still returned so the app can show it. `canNotify(now)` is false in that window, and the UI should not raise a notification.
 
 ## How a list is read
 
-Goal text is normalised before matching: lowercase, punctuation stripped, whitespace collapsed. `Go to school!!!` and `go to school` are the same. `Read-chapter, 4` becomes `read chapter 4`.
+This matches `build/simulate.py` in the data pack (that folder is not shipped).
 
-A keyword hits when it appears as a whole word or a whole phrase. `class` matches `math class` and does not match `classic`. `read chapter` matches `read chapter 4`. Synonyms are just more keywords on that category.
+1. Normalise the goal text: lowercase, turn `&` into `and`, strip emoji and punctuation but keep `-`, `'`, and `:`, then collapse spaces. `Go to school!!!` becomes `go to school`. `Read-chapter, 4` becomes `read-chapter 4`. `Today's homework?` becomes `today's homework`.
+2. Split on spaces. Also stem each token by dropping one trailing `ing`, `es`, `ed`, or `s` when the word is longer than the suffix plus 2. `studying` becomes `study`. `shifts` becomes `shift`.
+3. A single-word synonym hits a whole token, or that token's stem when the synonym is 4 letters or longer. `work` does not match `homework` or `workout`. `class` does not match `classic`.
+4. Synonyms of 3 letters or fewer (`hw`, `pe`, `tv`, `sat`) must equal a whole token.
+5. Multi-word or hyphenated synonyms (`go to bed`, `all-nighter`, `energy drink`) match as whole-word substrings.
+6. One goal can hit several concepts. `Gym after work` is fitness and work.
+7. Scope is open goals plus goals completed in the last 7 days. A recurring goal counts once (same task id). A task counts as closed when it has `done`, `completed`, `skipped`, `completedOn`, `completedAt`, or a status of `done`, `completed`, or `skipped`. Text comes from the title, note, and a specific `categoryId` (`goals` is ignored, so a class category still counts as school).
+8. Before offering a category, skip it when any in-scope goal matches that category's `categoryCoverage` concepts. Someone with a bedtime goal is not offered another sleep card. Also skip a card whose title matches a goal title, a card that was dismissed, and a card the user already accepted while that task is still on the list.
 
-A task counts toward every category whose keywords hit its title, note, or a specific `categoryId` (the generic id `goals` is ignored).
-
-A suggestion is skipped when it already looks listed:
-
-- any current task falls in the suggestion's category
-- the normalised titles match, or one contains the other (the shorter one at least 12 characters)
-- a keyword that appears in the suggestion title also appears in a task
-- the user already accepted that suggestion and that task is still on the list
-
-Life-improvement categories (`lifeImprovement: true`) are the fallback. They keep a weight of 1 even when no rule points at them. Other categories are offered only when a rule points at them.
+A goal scheduled after `orGoalTimeAfter` (24-hour `HH:MM`, compared as text) satisfies that rule's `anyOf` even when the words do not hit. `23:30` is after `22:30`.
 
 ## data/suggestions.json
 
+The file is a plain JSON array. There is no wrapper object.
+
 ```json
 {
-  "version": 1,
-  "suggestions": [
-    {
-      "id": "study-block",
-      "title": "Study for 25 minutes",
-      "category": "study",
-      "reason": "School is on your list, and a short study block keeps the classwork from piling up.",
-      "difficulty": "easy",
-      "suggestedTime": "16:30",
-      "repeat": "daily"
-    }
-  ]
+  "id": "slp-03",
+  "title": "Screens off before bed",
+  "category": "sleep",
+  "reason": "Turning devices off 30 minutes before bed can help you fall asleep.",
+  "difficulty": "medium",
+  "suggestedTime": "21:00",
+  "repeat": "daily",
+  "meta": {
+    "timeOfDay": "evening",
+    "ageSafe": true,
+    "audience": "all",
+    "keywords": ["phone", "screens"],
+    "sources": ["cdc-sleep"],
+    "evidence": "direct"
+  }
 }
 ```
 
 | Field | Required | Values |
 | --- | --- | --- |
-| `version` | no | integer ≥ 1 |
-| `suggestions` | yes | non-empty array, unique `id`s |
-| `id` | yes | non-empty string |
+| `id` | yes | non-empty string, unique. Prefixes: `stu`, `slp`, `pro`, `mon`, `hea`, `fit`, `rel`, `wel`, `lrn`, `rlx`. |
 | `title` | yes | non-empty string, shown as the goal |
-| `category` | yes | must be a category id in `gap-rules.json` |
-| `reason` | yes | one sentence the card can show. Write it so it is still true when the rules that point at this category match. Fallback cards should make sense on their own. |
+| `category` | yes | one of the 10 categories below, and a key in `categoryCoverage` |
+| `reason` | yes | one sentence the card can show |
 | `difficulty` | yes | `easy`, `medium`, or `hard` |
-| `suggestedTime` | no | `HH:MM` in 24-hour time, such as `07:30` or `16:30` |
-| `repeat` | no | `daily`, `weekly`, or `null` |
+| `suggestedTime` | no | `HH:MM` in 24-hour time. This is the goal's time, not when the card may appear. |
+| `repeat` | no | `daily`, `weekly`, or omit / `null` for a one-off |
+| `meta` | no | extra data. The engine reads `meta.ageSafe` and ignores the rest. |
+
+The shipped library has 132 cards: study 14, sleep 14, productivity 13, money 13, health 13, fitness 13, relationships 13, wellbeing 13, learning 13, relax 13.
+
+`meta.ageSafe === false` marks a teen or adult card. There are 9: `slp-08`, `mon-04`, `mon-05`, `mon-06`, `mon-09`, `mon-11`, `fit-06`, `wel-11`, `wel-12` (caffeine cutoff, budget and pay, banks, bills, adult strength training, social media). Missing `meta.ageSafe` is treated as safe, which is how the built-in seed behaves. By default only safe cards are offered. They are included only when `settings.suggestIncludeOlder === true`.
 
 ## data/gap-rules.json
 
 ```json
 {
   "version": 1,
-  "categories": {
-    "study": {
-      "label": "Study",
-      "lifeImprovement": false,
-      "keywords": ["study", "homework", "revise", "revision", "exam", "read chapter"]
-    },
-    "school": {
-      "label": "School",
-      "lifeImprovement": false,
-      "keywords": ["school", "class", "lecture"]
-    },
-    "relax": {
-      "label": "Relax",
-      "lifeImprovement": true,
-      "keywords": ["relax", "unwind", "break", "hobby"]
-    }
-  },
+  "settings": {},
+  "matching": {},
+  "concepts": { "school": ["school", "class", "lecture"] },
+  "categoryCoverage": { "sleep": ["sleep"], "health": ["healthHabits", "hydration"] },
   "rules": [
     {
-      "id": "school-without-study",
-      "description": "School or class is on the list, and nothing looks like studying.",
-      "kind": "missing",
-      "when": { "has": ["school"], "missing": ["study"] },
+      "id": "school-no-study",
+      "trigger": "missing",
+      "description": "Has school or class goals but nothing about studying or homework.",
+      "when": { "anyOf": ["school", "exam"], "noneOf": ["study", "homework"] },
       "suggest": ["study"],
-      "weight": 8
-    },
-    {
-      "id": "work-heavy",
-      "description": "Work is more than 40% of the list, or at least 3 work items.",
-      "kind": "too-much",
-      "when": { "category": "work", "percent": 40, "count": 3, "minTasks": 4 },
-      "suggest": ["relax"],
-      "weight": 9
+      "priority": 90,
+      "preferIds": ["stu-05", "stu-01", "stu-09"],
+      "preferDifficulty": "easy"
     }
   ]
 }
 ```
 
-### Categories
+`version` is optional and, when present, is an integer ≥ 1. `matching` is notes for humans. The engine does not read it.
 
-| Field | Required | Values |
-| --- | --- | --- |
-| `version` | no | integer ≥ 1 |
-| `categories` | yes | object with at least one id |
-| category id | yes | no spaces. Suggestions and rules use this id. |
-| `label` | no | short name. Defaults to the id. |
-| `lifeImprovement` | no | `true` or `false`. Default `false`. `true` means this category can be offered as a general life goal (sleep, productivity, money, health, social, and so on) even when no gap rule names it. |
-| `keywords` | yes | non-empty array of phrases. These are the synonyms. |
+### Concepts and coverage
+
+`concepts` is an object of synonym lists (26 in the shipped file). `categoryCoverage` maps each suggestion category to the concepts that mean the user already has that kind of goal:
+
+| Category | Covered by |
+| --- | --- |
+| study | study |
+| sleep | sleep |
+| productivity | planning |
+| money | money |
+| health | healthHabits, hydration |
+| fitness | fitness |
+| relationships | social |
+| wellbeing | wellbeing |
+| learning | learning |
+| relax | rest |
 
 ### Rules
 
-`rules` is an array (it may be empty). Each rule needs a unique `id`, a `kind`, a `when` object, a non-empty `suggest` list, and a positive `weight` (default 1). `description` is optional and is not shown to the student.
+`rules` is a non-empty array. Each rule needs a unique `id`, `trigger` (`missing`, `tooMuch`, or `present`), a `when` object, a non-empty `suggest` list of category ids, and a positive `priority`. `description` is optional and is not shown on the card. `preferIds` is an optional ordered list of suggestion ids in those categories. `preferDifficulty` is optional (`easy`, `medium`, or `hard`).
 
-`suggest` is a list of category ids, or `{ "category", "weight" }` objects when one rule should prefer one category over another. Every id must exist in `categories`.
+Every `when` key that is present must pass.
 
-Weights add up. A matching rule adds its weight to each category it suggests. Life-improvement categories also get +1. The engine then picks at random, biased toward the higher weight. It never picks a suggestion that already looks listed, was dismissed forever, or is inside a 7-day snooze.
-
-#### `kind: "missing"`
-
-Use this when the list has one kind of goal and lacks another. `has school` but no `study`. Or there is simply no sleep goal.
-
-| `when` field | Meaning |
+| Key | Passes when |
 | --- | --- |
-| `has` | every listed category is present. Omit it, or use `[]`, when there is no prerequisite. |
-| `hasAny` | at least one listed category is present. Omit it when unused. |
-| `missing` | required. Every listed category is absent. |
+| `anyOf` | at least one goal matches one of the concepts, or `orGoalTimeAfter` saves it |
+| `noneOf` | no goal matches any of the concepts |
+| `minMatches` | at least this many goals match `anyOf` |
+| `minShare` | (goals matching `anyOf`) ÷ (all in-scope goals) is at least this fraction (`0.4` means 40%) |
+| `minGoals` / `maxGoals` | size of the in-scope list |
+| `orGoalTimeAfter` | `anyOf` also passes when a goal's `time` is after this `HH:MM` |
+| `orMinGoals` and `orMinHard` | the list is at least `orMinGoals` long, or at least `orMinHard` goals are `hard` |
 
-`has` and `hasAny` are AND and OR. Both can be set. The rule matches only when all of them hold.
+The shipped file has 23 rules, highest priority first. A few of the gates: school or an exam with no study (`school-no-study`, 90), three or more work or chore goals that are at least 40% of the list and no rest (`work-heavy-no-rest`, 85), a goal after 22:30 (`late-night`, 86), and 0–2 goals (`new-user`, 20, easy cards from sleep, health, fitness, wellbeing, relationships).
 
-#### `kind: "too-much"`
+### Picking a card
 
-Use this when one category crowds the list. More than N% **or** at least K items. Either threshold is enough.
+1. Keep the rules whose `when` passes and that still have a category that is not covered, not snoozed, and has an unseen card.
+2. Pick one of those rules at random, weighted by `priority`. The shipped `rulePickStrategy` is `weighted-random-by-priority`.
+3. Walk that rule's `preferIds` in order. Skip ids that are dismissed, accepted, not age-safe, or in a covered or snoozed category.
+4. Otherwise pick a random unseen card from the rule's categories, preferring `preferDifficulty` when the rule sets it, otherwise easy. If none of that difficulty are left, any difficulty in those categories is fine.
+5. If no rule is usable and `fallbackWhenNoRuleFires` is `random-category-easy`, pick an easy unseen card from a category that is not covered or snoozed. If nothing is left, return `null`.
 
-| `when` field | Meaning |
+## Settings and how often a card appears
+
+`settings` in `gap-rules.json` is the behaviour for `suggestFrequency: "normal"`. The engine reads these numbers from the file. The built-in seed uses the same numbers only when a fallback library has no `settings` block.
+
+Shipped values:
+
+| Field | Normal behaviour |
 | --- | --- |
-| `category` | required category id |
-| `percent` | matches when that category is **more than** this percent of the tasks passed in |
-| `count` | matches when that category has **at least** this many tasks |
-| `minTasks` | percent is ignored until the list is at least this long. Default `4`, so one or two items cannot count as "100% work". Set `0` to let percent apply to any list. |
+| `maxPerDay` | 1 per local calendar day |
+| `maxPerWeek` | 2 in a rolling 7 days |
+| `showChanceWhenEligible` | 0.3 on the first look of an eligible day |
+| `minDaysBetweenSuggestions` | 3 days (72 hours) since the last card |
+| `cooldownAfterDismissDays` | 7 days after "not now" |
+| `cooldownAfterAcceptDays` | 3 days after an accept, for every card |
+| `neverRepeatDismissedIds` | a forever dismissal never returns |
+| `categorySnoozeAfterDismissals` | 3 dismissals of one category inside 30 days snoozes that category for 30 days from the third dismissal |
+| `doNotResuggestAcceptedWhileGoalExists` | do not offer an accepted id while its task is still on the list |
+| `resuggestAcceptedAfterDays` | 90 days after the accept, once that task is gone |
+| `minDaysSinceFirstUse` | no cards on the install day or the next day. Needs `settings.installedOn`. If that date is missing, this gate stays open. |
+| `skipIfOpenGoalsAtLeast` | no cards when 12 or more goals are still open. Completed goals do not count. The same recurring id counts once. |
+| `quietHours` | `21:00`–`07:00`. 21:00 is quiet. 07:00 is not. |
+| `ageSafeOnlyByDefault` | true |
+| `showOnlyAtAppOpen` | the UI should ask on app open. The engine cannot see that, so it answers whenever it is asked. |
+| `avoidWhenAllTodayGoalsDone` | false in the shipped file. When true, a list whose every goal is already closed returns `null`. |
+| `minGoalsBeforeGapRules` | 3. The broad "nothing here yet" rules already set their own `minGoals`. The engine does not apply this a second time, so one school goal can still suggest study. |
 
-At least one of `percent` or `count` is required.
+`rare` is about half as often: half the show chance (0.15), twice the gap (6 days), and half the weekly cap (1). The daily cap stays 1.
 
-## Frequency
+`often` is about twice as often, and still at most one a day: show chance 0.6, gap 1.5 days, weekly cap 4, daily cap 1.
 
-This is not in the JSON. The UI passes `settings.suggestFrequency`:
+`off` returns `null`.
 
-| Value | Cap | Extra roll |
-| --- | --- | --- |
-| `off` | never | |
-| `rare` | at most once every 3 days (72 hours) | about 1 in 3 eligible windows |
-| `normal` | at most one per local calendar day. Default. | about half of eligible days |
-| `often` | at most two per local day, at least 4 hours apart | about 7 in 10 eligible slots |
+Dismiss, accept, category snooze, the first two days, the open-goal cap, and quiet hours are not scaled.
 
-The roll is stable for a given day and slot, so asking again a minute later does not change the answer. `off`, cooldown, a failed roll, or nothing left that fits all return `null`.
+A show that is exactly 7 days old drops out of the weekly window. A gap of exactly `minDaysBetweenSuggestions` is allowed. "Not now" can return exactly `cooldownAfterDismissDays` later. Forever means never, even after that.
 
-Dismiss forever and that id never returns. Dismiss without `forever` (not now) snoozes that id for 7 days. Shown, accepted, and dismissed ids are stored with timestamps on the device.
+Quiet hours do not suppress the return value. The suggestion includes `quiet: true`, and `canNotify(now)` is false, from 21:00 inclusive until 07:00 exclusive. Wind-down cards keep their evening `suggestedTime`; that is the goal's time, not the offer time.
+
+## Older library shape
+
+The seed in `js/suggest.js`, and any file pair that still uses it, is accepted as a fallback. `suggestions.json` is `{ "version", "suggestions": [...] }`. `gap-rules.json` has `categories` (keywords and `lifeImprovement`) and rules with `kind` `missing` or `too-much` and `weight`.
+
+- `missing` uses `when.has` (all of these), `when.hasAny` (at least one), and `when.missing` (none of these).
+- `too-much` matches when the category has at least `count` goals, **or** more than `percent` of the list once the list is at least `minTasks` long (default 4).
+
+Those files are compiled into the same picker. `weight` becomes `priority`. If they omit `settings`, the shipped normal numbers above are used. A file that looks like the new format but does not validate is not read as the old format; both files fall back to the seed.
