@@ -20,15 +20,15 @@
  * without it the engine rolls a stable per-day number so polling does not
  * eventually force a card. Pass random from tests when the roll must be fixed.
  *
- * History is IndexedDB store "suggestions", record id "state", via js/db.js.
- * It is not part of replaceAll, so ordinary planner saves do not wipe it.
+ * History is the settings-store row id "suggestions", via js/db.js.
+ * replaceAll keeps that row, so ordinary planner saves do not wipe it.
  * The only reads are the two local JSON files under data/.
  */
 
 import { getAll, put } from './db.js';
 
-const STATE_ID = 'state';
-const STORE = 'suggestions';
+const STATE_ID = 'suggestions';
+const STORE = 'settings';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
 const SNOOZE_MS = 7 * DAY_MS;
