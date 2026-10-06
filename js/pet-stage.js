@@ -11,7 +11,7 @@ import {
 } from 'three';
 import { GLTFLoader } from '../vendor/examples/jsm/loaders/GLTFLoader.js';
 import { prepareCube, poseClip } from './cube-pet.js';
-import { bindLoader, buildOutfit, frameFor, preloadAccessories, tickAccessories } from './accessories.js';
+import { bindLoader, buildOutfit, frameFor, preloadAccessories, tickAccessories, tuckTail } from './accessories.js';
 
 const DURATION = {
   wave: 1.55,
@@ -158,7 +158,7 @@ export function createPetStage(canvas) {
     const dist = Math.max(distV, distH) * 1.08;
     camera.fov = 30;
     camera.aspect = aspect;
-    const front = state.view === 'front' || state.view === 'eyes';
+    const front = state.view === 'front' || state.view === 'eyes' || state.view === 'back';
     const lookY = state.view === 'eyes' ? mid + 0.16 : mid - 0.02;
     camera.position.set(front ? 0 : 0.38, lookY + (front ? 0 : 0.06), state.view === 'eyes' ? dist * 0.62 : dist);
     camera.lookAt(0, lookY, 0);
@@ -170,6 +170,7 @@ export function createPetStage(canvas) {
     const pet = current;
     pet.root.scale.set(1, 1, 1);
     poseClip(pet, state.mode, dt, state.frozen ? state.modeT : null, state.poseToken);
+    tuckTail(pet, state.outfit);
     tickAccessories(pet.anchors?.root, state.time);
     const mode = state.mode;
     zzz.visible = mode === 'sleepy';
@@ -191,7 +192,7 @@ export function createPetStage(canvas) {
       const eased = p < 0.5 ? 2 * p * p : 1 - ((-2 * p + 2) ** 2) / 2;
       spin = eased * Math.PI * 2;
     }
-    const yaw = state.view === 'front' || state.view === 'eyes' ? 0 : -0.42;
+    const yaw = state.view === 'back' ? Math.PI : (state.view === 'front' || state.view === 'eyes' ? 0 : -0.42);
     turntable.rotation.y = yaw + spin;
   }
 

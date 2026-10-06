@@ -11,6 +11,7 @@ import {
 } from 'three';
 import { itemById } from './shop.js';
 import { HEAD_TOP, PET_FIT, anchorFromFit, mergeFit } from './pet-fit.js';
+import { clearGlbItems, fitFor as v2FitFor, loadFits as loadV2Fits, placeItemGlb } from './glb-items.js';
 
 const BODY_Y = 0.18125;
 const TOP = HEAD_TOP;
@@ -623,6 +624,30 @@ function rainbow(parent) {
   });
 }
 
+/** Back items cover the rump. Shorten that pet's tail so it stays under them. */
+const BACK_COVERS = new Set(['backpack', 'cape', 'wings', 'golden_wings', 'jetpack']);
+const TAIL_TUCK = {
+  fox: { scale: 0.18, pull: 0.2 },
+  lion: { scale: 0.25, pull: 0.14 },
+  cat: { scale: 0.3, pull: 0.12 },
+  tiger: { scale: 0.3, pull: 0.12 },
+  monkey: { scale: 0.3, pull: 0.12 },
+};
+
+/**
+ * The clips animate the tail's scale, so this runs after the mixer.
+ * Pets whose tail is part of the body mesh (dog) have no tail node.
+ */
+export function tuckTail(pet, outfit) {
+  const tail = pet?.nodes?.tail;
+  const base = tail?.userData?.bind?.s;
+  if (!tail || !base) return;
+  const tuck = BACK_COVERS.has(outfit?.back) ? (TAIL_TUCK[pet.animal] || { scale: 0.3, pull: 0.12 }) : null;
+  if (!tuck) return;
+  tail.scale.set(base.x * tuck.scale, base.y * tuck.scale, base.z * tuck.scale);
+  tail.position.z += tuck.pull;
+}
+
 const BUILDERS = {
   party_hat: async (p) => partyHat(p),
   beanie: async (p) => beanie(p),
@@ -688,7 +713,11 @@ function seat(group, pose) {
 
 export async function buildOutfit(anchors, outfit, animal) {
   if (!anchors) return;
-  const [map, fits] = await Promise.all([loadOverrides(), loadFits()]);
+  const [map, fits, v2fits] = await Promise.all([
+    loadOverrides(),
+    loadFits(),
+    loadV2Fits().catch(() => null),
+  ]);
   const fit = mergeFit(animal, fits);
   seat(anchors.hat, anchorFromFit(fit, 'hat'));
   seat(anchors.face, anchorFromFit(fit, 'face'));
@@ -696,6 +725,7 @@ export async function buildOutfit(anchors, outfit, animal) {
   seat(anchors.body, anchorFromFit(fit, 'body'));
   seat(anchors.back, anchorFromFit(fit, 'back'));
   seat(anchors.effect, anchorFromFit(fit, 'effect'));
+  clearGlbItems(anchors);
   for (const group of [anchors.hat, anchors.face, anchors.neck, anchors.body, anchors.back, anchors.effect]) {
     emptyGroup(group);
   }
@@ -706,6 +736,8 @@ export async function buildOutfit(anchors, outfit, animal) {
     if (!id) continue;
     const custom = customSpec(map[id]);
     const build = BUILDERS[id];
+    // The designer's sweater is being redone. Keep the striped sweater builder.
+    const v2 = id !== 'sweater' ? v2FitFor(v2fits, id, animal) : null;
     jobs.push((async () => {
       if (custom) {
         try {
@@ -714,6 +746,10 @@ export async function buildOutfit(anchors, outfit, animal) {
         } catch (err) {
           console.error(err);
         }
+      }
+      if (v2) {
+        await placeItemGlb(anchors, id, animal, loadScene);
+        return;
       }
       if (!build) return;
       await build(anchors[slot], ctx);
@@ -747,15 +783,26 @@ export function tickAccessories(root, time) {
 export function frameFor(animal, outfit) {
   const fit = mergeFit(animal, fitMap || {});
   let top = fit.top;
-  for (const id of Object.values(outfit || {})) {
+  let wide = fit.wide || 0.9;
+  const worn = new Set(Object.values(outfit || {}));
+  for (const id of worn) {
     const item = itemById(id);
     if (!item?.rise) continue;
     top = Math.max(top, TOP + item.rise + (fit.hat || 0));
   }
-  return { bottom: -0.04, top: top + 0.14, wide: fit.wide || 0.9 };
+  // Rainbow reaches about x ±1.17 and y 1.60. Wings reach about x ±0.92.
+  if (worn.has('rainbow_aura')) {
+    wide = Math.max(wide, 1.36);
+    top = Math.max(top, 1.74);
+  }
+  if (worn.has('wings') || worn.has('golden_wings')) {
+    wide = Math.max(wide, 1.14);
+  }
+  return { bottom: -0.04, top: top + 0.14, wide };
 }
 
 export function preloadAccessories() {
+  loadV2Fits().catch(() => null);
   if (!loader) return Promise.resolve();
   return Promise.all(Object.values(GLB).map((url) => loadScene(url).catch(() => null)));
 }

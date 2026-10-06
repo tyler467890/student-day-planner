@@ -12,9 +12,10 @@
  * in front of the ears, tipped forward. The lion's brim sinks into the
  * mane because the mane rises above the cube.
  *
- * A polished GLB dropped in items/overrides.json is parented to the same
- * slot anchor, so it inherits this fit. Build hat files with the brim
- * near y = 1.431. Per-pet nudges belong in items/fits.json, not here.
+ * A single GLB in items/overrides.json is parented to the slot anchor and
+ * inherits this fit. The v2 set in items/v2/ is placed in pet model space
+ * from its own fits file, which already includes these hat seats.
+ * Per-pet nudges for the built-in meshes belong in items/fits.json.
  */
 
 export const HEAD_TOP = 1.431;

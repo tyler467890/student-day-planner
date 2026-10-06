@@ -1,0 +1,4505 @@
+{
+  "version": 1,
+  "app": "Dayli v1.3.2",
+  "units": "Kenney Cube Pets units (body cube = 1.25)",
+  "space": "three.js pet model space = the accessory_root group (body child, offset -0.18125). +Y up, pet faces +Z. Equivalent to the GLB scene space of models/<pet>.glb at rest.",
+  "apply": "obj.position.fromArray(position); obj.rotation.set(...rotation) (radians, XYZ); obj.scale.setScalar(scale); add obj to anchors.root (identity), NOT to the app's per-pet-offset anchors.",
+  "attachPoints": {
+    "hat": "GLB origin = centre of the flat head top (0, 1.431, 0)",
+    "face": "GLB origin = eye line on the lens/face plane, centred between the eyes",
+    "neck": "GLB origin = cube centre line at neck height",
+    "body": "GLB origin = centre of the cube underside (0, 0.181, 0)",
+    "back": "GLB origin = centre of the back face (0, 0.806, -0.625)",
+    "effect": "GLB origin = pet origin (ground)"
+  },
+  "hatSource": "Hat transforms reproduce buildOutfit() hat anchor maths from js/accessories.js PET_FIT (hat, hatZ, hatScale, hatTilt) unchanged, except the lion (hatAdjust).",
+  "hatAdjust": {
+    "lion": {
+      "dy": 0.13,
+      "tilt": -0.06,
+      "scale": 1.04,
+      "why": "lifted onto the mane: +dy on Y, front tipped up by tilt (rad), scaled",
+      "perItem": {
+        "flower_crown": {
+          "dy": 0.06,
+          "tilt": -0.2,
+          "scale": 1.04
+        },
+        "flame_band": {
+          "dy": 0.06,
+          "tilt": -0.2,
+          "scale": 1.04
+        }
+      }
+    }
+  },
+  "petFitApp": {
+    "dog": {
+      "hat": 0,
+      "face": 0.78,
+      "neck": 0.4
+    },
+    "cat": {
+      "hat": 0,
+      "face": 0.72,
+      "neck": 0.38
+    },
+    "bunny": {
+      "hat": -0.02,
+      "face": 0.78,
+      "neck": 0.4,
+      "hatZ": 0.5,
+      "hatScale": 0.66,
+      "hatTilt": 0.38
+    },
+    "penguin": {
+      "hat": 0,
+      "face": 0.8,
+      "neck": 0.5,
+      "hatZ": -0.03,
+      "winged": true
+    },
+    "monkey": {
+      "hat": 0,
+      "face": 0.76,
+      "neck": 0.44,
+      "hatZ": -0.03
+    },
+    "tiger": {
+      "hat": 0,
+      "face": 0.74,
+      "neck": 0.4
+    },
+    "pig": {
+      "hat": 0,
+      "face": 0.8,
+      "neck": 0.44
+    },
+    "lion": {
+      "hat": 0,
+      "face": 0.76,
+      "neck": 0.42
+    },
+    "panda": {
+      "hat": 0,
+      "face": 0.74,
+      "neck": 0.4
+    },
+    "fox": {
+      "hat": 0,
+      "face": 0.74,
+      "neck": 0.4
+    },
+    "koala": {
+      "hat": 0,
+      "face": 0.72,
+      "neck": 0.38
+    },
+    "chick": {
+      "hat": 0,
+      "face": 0.8,
+      "neck": 0.5,
+      "hatZ": -0.03,
+      "winged": true
+    }
+  },
+  "neckAdjust": {
+    "penguin": 0.46,
+    "chick": 0.46,
+    "monkey": 0.41
+  },
+  "eyeAdjust": {
+    "dog": 0.934,
+    "cat": 0.881,
+    "bunny": 0.934,
+    "penguin": 0.921,
+    "monkey": 0.894,
+    "tiger": 0.984,
+    "pig": 0.932,
+    "lion": 0.963,
+    "panda": 0.91,
+    "fox": 0.934,
+    "koala": 0.904,
+    "chick": 0.921
+  },
+  "items": {
+    "party_hat": {
+      "slot": "hat",
+      "default": {
+        "file": "party_hat.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            1.411,
+            0.5
+          ],
+          "rotation": [
+            0.38,
+            0,
+            0
+          ],
+          "scale": 0.66
+        },
+        "penguin": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            1.561,
+            0
+          ],
+          "rotation": [
+            -0.06,
+            0,
+            0
+          ],
+          "scale": 1.04
+        },
+        "panda": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "beanie": {
+      "slot": "hat",
+      "default": {
+        "file": "beanie.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            1.411,
+            0.5
+          ],
+          "rotation": [
+            0.38,
+            0,
+            0
+          ],
+          "scale": 0.66
+        },
+        "penguin": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            1.561,
+            0
+          ],
+          "rotation": [
+            -0.06,
+            0,
+            0
+          ],
+          "scale": 1.04
+        },
+        "panda": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "cap": {
+      "slot": "hat",
+      "default": {
+        "file": "cap.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            1.411,
+            0.5
+          ],
+          "rotation": [
+            0.38,
+            0,
+            0
+          ],
+          "scale": 0.66
+        },
+        "penguin": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            1.561,
+            0
+          ],
+          "rotation": [
+            -0.06,
+            0,
+            0
+          ],
+          "scale": 1.04
+        },
+        "panda": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "flower_crown": {
+      "slot": "hat",
+      "default": {
+        "file": "flower_crown.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            1.411,
+            0.5
+          ],
+          "rotation": [
+            0.38,
+            0,
+            0
+          ],
+          "scale": 0.66
+        },
+        "penguin": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            1.491,
+            0
+          ],
+          "rotation": [
+            -0.2,
+            0,
+            0
+          ],
+          "scale": 1.04
+        },
+        "panda": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "top_hat": {
+      "slot": "hat",
+      "default": {
+        "file": null
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            1.411,
+            0.5
+          ],
+          "rotation": [
+            0.38,
+            0,
+            0
+          ],
+          "scale": 0.66
+        },
+        "penguin": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            1.561,
+            0
+          ],
+          "rotation": [
+            -0.06,
+            0,
+            0
+          ],
+          "scale": 1.04
+        },
+        "panda": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      },
+      "note": "Kenney snowman-hat, unchanged: no GLB here; keep the app's topHat() builder and apply this transform to the hat anchor."
+    },
+    "grad_cap": {
+      "slot": "hat",
+      "default": {
+        "file": "grad_cap.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            1.411,
+            0.5
+          ],
+          "rotation": [
+            0.38,
+            0,
+            0
+          ],
+          "scale": 0.66
+        },
+        "penguin": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            1.561,
+            0
+          ],
+          "rotation": [
+            -0.06,
+            0,
+            0
+          ],
+          "scale": 1.04
+        },
+        "panda": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "wizard_hat": {
+      "slot": "hat",
+      "default": {
+        "file": "wizard_hat.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            1.411,
+            0.5
+          ],
+          "rotation": [
+            0.38,
+            0,
+            0
+          ],
+          "scale": 0.66
+        },
+        "penguin": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            1.561,
+            0
+          ],
+          "rotation": [
+            -0.06,
+            0,
+            0
+          ],
+          "scale": 1.04
+        },
+        "panda": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "flame_band": {
+      "slot": "hat",
+      "default": {
+        "file": "flame_band.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            1.411,
+            0.5
+          ],
+          "rotation": [
+            0.38,
+            0,
+            0
+          ],
+          "scale": 0.66
+        },
+        "penguin": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            1.491,
+            0
+          ],
+          "rotation": [
+            -0.2,
+            0,
+            0
+          ],
+          "scale": 1.04
+        },
+        "panda": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "sprout": {
+      "slot": "hat",
+      "default": {
+        "file": "sprout.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            1.411,
+            0.5
+          ],
+          "rotation": [
+            0.38,
+            0,
+            0
+          ],
+          "scale": 0.66
+        },
+        "penguin": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            1.561,
+            0
+          ],
+          "rotation": [
+            -0.06,
+            0,
+            0
+          ],
+          "scale": 1.04
+        },
+        "panda": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "crown": {
+      "slot": "hat",
+      "default": {
+        "file": "crown.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            1.411,
+            0.5
+          ],
+          "rotation": [
+            0.38,
+            0,
+            0
+          ],
+          "scale": 0.66
+        },
+        "penguin": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            1.561,
+            0
+          ],
+          "rotation": [
+            -0.06,
+            0,
+            0
+          ],
+          "scale": 1.04
+        },
+        "panda": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            1.431,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            1.431,
+            -0.03
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "round_glasses": {
+      "slot": "face",
+      "default": {},
+      "pets": {
+        "dog": {
+          "file": "round_glasses-dog.glb",
+          "position": [
+            0,
+            0.934,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.095,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "cat": {
+          "file": "round_glasses-cat.glb",
+          "position": [
+            0,
+            0.881,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "bunny": {
+          "file": "round_glasses-bunny.glb",
+          "position": [
+            0,
+            0.934,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "penguin": {
+          "file": "round_glasses-penguin.glb",
+          "position": [
+            0,
+            0.921,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "monkey": {
+          "file": "round_glasses-monkey.glb",
+          "position": [
+            0,
+            0.894,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "tiger": {
+          "file": "round_glasses-tiger.glb",
+          "position": [
+            0,
+            0.984,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "pig": {
+          "file": "round_glasses-pig.glb",
+          "position": [
+            0,
+            0.932,
+            0.85
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "lion": {
+          "file": "round_glasses-lion.glb",
+          "position": [
+            0,
+            0.963,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "panda": {
+          "file": "round_glasses-panda.glb",
+          "position": [
+            0,
+            0.91,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.103,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "fox": {
+          "file": "round_glasses-fox.glb",
+          "position": [
+            0,
+            0.934,
+            0.702
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.228,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "koala": {
+          "file": "round_glasses-koala.glb",
+          "position": [
+            0,
+            0.904,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.085,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "chick": {
+          "file": "round_glasses-chick.glb",
+          "position": [
+            0,
+            0.921,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        }
+      }
+    },
+    "sunglasses": {
+      "slot": "face",
+      "default": {},
+      "pets": {
+        "dog": {
+          "file": "sunglasses-dog.glb",
+          "position": [
+            0,
+            0.934,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.095,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "cat": {
+          "file": "sunglasses-cat.glb",
+          "position": [
+            0,
+            0.881,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "bunny": {
+          "file": "sunglasses-bunny.glb",
+          "position": [
+            0,
+            0.934,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "penguin": {
+          "file": "sunglasses-penguin.glb",
+          "position": [
+            0,
+            0.921,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "monkey": {
+          "file": "sunglasses-monkey.glb",
+          "position": [
+            0,
+            0.894,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "tiger": {
+          "file": "sunglasses-tiger.glb",
+          "position": [
+            0,
+            0.984,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "pig": {
+          "file": "sunglasses-pig.glb",
+          "position": [
+            0,
+            0.932,
+            0.85
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "lion": {
+          "file": "sunglasses-lion.glb",
+          "position": [
+            0,
+            0.963,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "panda": {
+          "file": "sunglasses-panda.glb",
+          "position": [
+            0,
+            0.91,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.103,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "fox": {
+          "file": "sunglasses-fox.glb",
+          "position": [
+            0,
+            0.934,
+            0.702
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.228,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "koala": {
+          "file": "sunglasses-koala.glb",
+          "position": [
+            0,
+            0.904,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.085,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "chick": {
+          "file": "sunglasses-chick.glb",
+          "position": [
+            0,
+            0.921,
+            0.66
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        }
+      }
+    },
+    "hero_mask": {
+      "slot": "face",
+      "default": {},
+      "pets": {
+        "dog": {
+          "file": "hero_mask-dog.glb",
+          "position": [
+            0,
+            0.934,
+            0.65
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.1,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "cat": {
+          "file": "hero_mask-cat.glb",
+          "position": [
+            0,
+            0.881,
+            0.65
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "bunny": {
+          "file": "hero_mask-bunny.glb",
+          "position": [
+            0,
+            0.934,
+            0.65
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "penguin": {
+          "file": "hero_mask-penguin.glb",
+          "position": [
+            0,
+            0.921,
+            0.65
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "monkey": {
+          "file": "hero_mask-monkey.glb",
+          "position": [
+            0,
+            0.894,
+            0.65
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "tiger": {
+          "file": "hero_mask-tiger.glb",
+          "position": [
+            0,
+            0.984,
+            0.65
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "pig": {
+          "file": "hero_mask-pig.glb",
+          "position": [
+            0,
+            0.932,
+            0.84
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "lion": {
+          "file": "hero_mask-lion.glb",
+          "position": [
+            0,
+            0.963,
+            0.65
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "panda": {
+          "file": "hero_mask-panda.glb",
+          "position": [
+            0,
+            0.91,
+            0.65
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.108,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "fox": {
+          "file": "hero_mask-fox.glb",
+          "position": [
+            0,
+            0.934,
+            0.692
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.233,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "koala": {
+          "file": "hero_mask-koala.glb",
+          "position": [
+            0,
+            0.904,
+            0.65
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.09,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        },
+        "chick": {
+          "file": "hero_mask-chick.glb",
+          "position": [
+            0,
+            0.921,
+            0.65
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1,
+          "bridgeForward": 0.0,
+          "checked": "front view, centred on pupils (renders/check_face_all_pets.png)"
+        }
+      }
+    },
+    "heart_cheeks": {
+      "slot": "face",
+      "default": {
+        "file": "heart_cheeks.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            0.934,
+            0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            0.881,
+            0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            0.934,
+            0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "penguin": {
+          "position": [
+            0,
+            0.921,
+            0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            0.894,
+            0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            0.984,
+            0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            0.932,
+            0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            0.963,
+            0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "panda": {
+          "position": [
+            0,
+            0.91,
+            0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            0.934,
+            0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            0.904,
+            0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            0.921,
+            0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "scarf": {
+      "slot": "neck",
+      "default": {
+        "file": "scarf.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            0.38,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "penguin": {
+          "position": [
+            0,
+            0.46,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            0.41,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            0.44,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            0.42,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "panda": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            0.38,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            0.46,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "bow_tie": {
+      "slot": "neck",
+      "default": {
+        "file": "bow_tie.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            0.38,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "penguin": {
+          "position": [
+            0,
+            0.46,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            0.41,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            0.44,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            0.42,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "panda": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            0.38,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            0.46,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "bell_collar": {
+      "slot": "neck",
+      "default": {
+        "file": "bell_collar.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            0.38,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "penguin": {
+          "position": [
+            0,
+            0.46,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            0.41,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            0.44,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            0.42,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "panda": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            0.38,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            0.46,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "star_medal": {
+      "slot": "neck",
+      "default": {
+        "file": "star_medal.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            0.38,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "penguin": {
+          "position": [
+            0,
+            0.46,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            0.41,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            0.44,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            0.42,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "panda": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            0.4,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            0.38,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            0.46,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "tutu": {
+      "slot": "body",
+      "default": {
+        "file": "tutu.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            0.181,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            0.181,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            0.181,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "penguin": {
+          "position": [
+            0,
+            0.181,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            0.181,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            0.181,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            0.181,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            0.181,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "panda": {
+          "position": [
+            0,
+            0.181,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            0.181,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            0.181,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            0.181,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "backpack": {
+      "slot": "back",
+      "default": {},
+      "pets": {
+        "dog": {
+          "file": "backpack.glb",
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "file": "backpack.glb",
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "file": "backpack.glb",
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "penguin": {
+          "file": "backpack-winged.glb",
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "file": "backpack-monkey.glb",
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "file": "backpack.glb",
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "file": "backpack.glb",
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "file": "backpack-lion.glb",
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "panda": {
+          "file": "backpack.glb",
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "file": "backpack.glb",
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "file": "backpack.glb",
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "file": "backpack-winged.glb",
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "cape": {
+      "slot": "back",
+      "default": {
+        "file": "cape.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "penguin": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "panda": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "wings": {
+      "slot": "back",
+      "default": {
+        "file": "wings.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "penguin": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "panda": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "golden_wings": {
+      "slot": "back",
+      "default": {
+        "file": "golden_wings.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "penguin": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "panda": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "jetpack": {
+      "slot": "back",
+      "default": {
+        "file": "jetpack.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "penguin": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "panda": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            0.806,
+            -0.625
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "rainbow_aura": {
+      "slot": "effect",
+      "default": {
+        "file": "rainbow_aura.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "penguin": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "panda": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    },
+    "snowfall": {
+      "slot": "effect",
+      "default": {
+        "file": "snowfall.glb"
+      },
+      "pets": {
+        "dog": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "cat": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "bunny": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "penguin": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "monkey": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "tiger": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "pig": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "lion": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "panda": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "fox": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "koala": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        },
+        "chick": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": 1
+        }
+      }
+    }
+  },
+  "note": "Sweater GLBs are not shipped. Dayli keeps the striped sweater builder."
+}

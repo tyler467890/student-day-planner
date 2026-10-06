@@ -44,6 +44,8 @@
     const params = new URLSearchParams(location.search);
     const set = params.get('set') || 'featured';
     const view = params.get('view') || '';
+    const pose = params.get('pose') || 'static';
+    const poseT = Number(params.get('t') || 0);
     const items = GROUPS[set] || set.split(',').filter((id) => ITEMS.some((item) => item.id === id));
     const byId = new Map(ITEMS.map((item) => [item.id, item]));
 
@@ -88,7 +90,7 @@
             outfit: { [item.slot]: item.id },
             view: view || undefined,
           });
-          stage.poseAt('static', 0);
+          stage.poseAt(pose, Number.isFinite(poseT) ? poseT : 0);
           await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
           paintCell(PETS[row], item, col, row);
         }
