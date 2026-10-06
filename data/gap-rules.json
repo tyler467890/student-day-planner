@@ -1,0 +1,326 @@
+{
+  "version": 1,
+  "categories": {
+    "study": {
+      "label": "Study",
+      "lifeImprovement": false,
+      "keywords": [
+        "study",
+        "studying",
+        "homework",
+        "revise",
+        "revision",
+        "exam",
+        "exams",
+        "quiz",
+        "assignment",
+        "essay",
+        "read chapter",
+        "flashcards",
+        "coursework"
+      ]
+    },
+    "school": {
+      "label": "School",
+      "lifeImprovement": false,
+      "keywords": [
+        "school",
+        "class",
+        "lecture",
+        "lesson",
+        "tutorial",
+        "seminar",
+        "campus",
+        "homeroom"
+      ]
+    },
+    "work": {
+      "label": "Work",
+      "lifeImprovement": false,
+      "keywords": [
+        "work",
+        "shift",
+        "job",
+        "internship",
+        "paycheck",
+        "boss",
+        "workplace",
+        "at work"
+      ]
+    },
+    "relax": {
+      "label": "Relax",
+      "lifeImprovement": true,
+      "keywords": [
+        "relax",
+        "unwind",
+        "break",
+        "hobby",
+        "phone away"
+      ]
+    },
+    "sleep": {
+      "label": "Sleep",
+      "lifeImprovement": true,
+      "keywords": [
+        "sleep",
+        "bedtime",
+        "wind down",
+        "lights out",
+        "in bed",
+        "screens off"
+      ]
+    },
+    "productivity": {
+      "label": "Productivity",
+      "lifeImprovement": true,
+      "keywords": [
+        "priorities",
+        "plan my day",
+        "plan the week",
+        "pomodoro",
+        "deep work",
+        "two minute",
+        "to do list",
+        "todo list"
+      ]
+    },
+    "money": {
+      "label": "Money",
+      "lifeImprovement": true,
+      "keywords": [
+        "budget",
+        "savings",
+        "save money",
+        "spending",
+        "spent",
+        "allowance",
+        "expense",
+        "unplanned purchase"
+      ]
+    },
+    "health": {
+      "label": "Health",
+      "lifeImprovement": true,
+      "keywords": [
+        "exercise",
+        "workout",
+        "walk",
+        "run",
+        "gym",
+        "water",
+        "hydrate",
+        "stretch",
+        "fruit",
+        "posture",
+        "vitamins"
+      ]
+    },
+    "social": {
+      "label": "Social",
+      "lifeImprovement": true,
+      "keywords": [
+        "friend",
+        "friends",
+        "family",
+        "hang out",
+        "catch up",
+        "text a friend",
+        "thank someone"
+      ]
+    },
+    "meals": {
+      "label": "Meals",
+      "lifeImprovement": true,
+      "keywords": [
+        "breakfast",
+        "lunch",
+        "dinner",
+        "meal",
+        "meals",
+        "cook"
+      ]
+    },
+    "chores": {
+      "label": "Chores",
+      "lifeImprovement": true,
+      "keywords": [
+        "laundry",
+        "dishes",
+        "tidy",
+        "vacuum",
+        "chore",
+        "chores"
+      ]
+    },
+    "mindfulness": {
+      "label": "Mindfulness",
+      "lifeImprovement": true,
+      "keywords": [
+        "meditate",
+        "meditation",
+        "journal",
+        "gratitude",
+        "slow breaths",
+        "mindful"
+      ]
+    }
+  },
+  "rules": [
+    {
+      "id": "school-without-study",
+      "description": "School or class is on the list, and nothing looks like studying.",
+      "kind": "missing",
+      "when": {
+        "has": [
+          "school"
+        ],
+        "missing": [
+          "study"
+        ]
+      },
+      "suggest": [
+        "study"
+      ],
+      "weight": 8
+    },
+    {
+      "id": "no-sleep",
+      "description": "No sleep or bedtime goal yet.",
+      "kind": "missing",
+      "when": {
+        "missing": [
+          "sleep"
+        ]
+      },
+      "suggest": [
+        "sleep"
+      ],
+      "weight": 4
+    },
+    {
+      "id": "no-health",
+      "description": "Nothing on the list looks after the body.",
+      "kind": "missing",
+      "when": {
+        "missing": [
+          "health"
+        ]
+      },
+      "suggest": [
+        "health"
+      ],
+      "weight": 3
+    },
+    {
+      "id": "no-social",
+      "description": "No friend, family, or other people goal.",
+      "kind": "missing",
+      "when": {
+        "missing": [
+          "social"
+        ]
+      },
+      "suggest": [
+        "social"
+      ],
+      "weight": 3
+    },
+    {
+      "id": "no-money",
+      "description": "No money, budget, or savings goal.",
+      "kind": "missing",
+      "when": {
+        "missing": [
+          "money"
+        ]
+      },
+      "suggest": [
+        "money"
+      ],
+      "weight": 2
+    },
+    {
+      "id": "no-productivity",
+      "description": "No planning or focus goal.",
+      "kind": "missing",
+      "when": {
+        "missing": [
+          "productivity"
+        ]
+      },
+      "suggest": [
+        "productivity"
+      ],
+      "weight": 3
+    },
+    {
+      "id": "busy-without-break",
+      "description": "School, work, or study is on the list, and nothing is a break.",
+      "kind": "missing",
+      "when": {
+        "hasAny": [
+          "work",
+          "school",
+          "study"
+        ],
+        "missing": [
+          "relax"
+        ]
+      },
+      "suggest": [
+        "relax"
+      ],
+      "weight": 5
+    },
+    {
+      "id": "work-heavy",
+      "description": "Work is more than 40% of the list, or at least 3 work items.",
+      "kind": "too-much",
+      "when": {
+        "category": "work",
+        "percent": 40,
+        "count": 3,
+        "minTasks": 4
+      },
+      "suggest": [
+        "relax"
+      ],
+      "weight": 9
+    },
+    {
+      "id": "study-heavy",
+      "description": "Study is more than half the list, or at least 4 study items.",
+      "kind": "too-much",
+      "when": {
+        "category": "study",
+        "percent": 50,
+        "count": 4,
+        "minTasks": 4
+      },
+      "suggest": [
+        "relax",
+        "social"
+      ],
+      "weight": 7
+    },
+    {
+      "id": "meals-during-busy",
+      "description": "School or work is on the list, and no meal goal.",
+      "kind": "missing",
+      "when": {
+        "hasAny": [
+          "school",
+          "work"
+        ],
+        "missing": [
+          "meals"
+        ]
+      },
+      "suggest": [
+        "meals"
+      ],
+      "weight": 4
+    }
+  ]
+}

@@ -3,15 +3,17 @@
  */
 
 const DB_NAME = 'dayli';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORES = ['tasks', 'overrides', 'completions', 'bonuses', 'settings', 'reminders', 'background'];
+// Suggestion history. Kept out of STORES so replaceAll (every planner save) does not wipe it.
+const SIDE_STORES = ['suggestions'];
 
 function openDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
-      for (const name of STORES) {
+      for (const name of [...STORES, ...SIDE_STORES]) {
         if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, { keyPath: 'id' });
       }
     };
