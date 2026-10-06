@@ -517,15 +517,42 @@ export function tickAccessories(root, time) {
   });
 }
 
+// Radius from the spin axis. A full turn shows the widest side of these,
+// so the camera has to fit that reach at every angle.
+const TURN_REACH = {
+  backpack: 1.16,
+  cape: 1.22,
+  wings: 1.4,
+  golden_wings: 1.4,
+  jetpack: 1.28,
+  rainbow_aura: 1.36,
+  hearts: 1.22,
+  sparkles: 1.2,
+  snowfall: 1.24,
+};
+
 export function frameFor(animal, outfit) {
   const fit = PET_FIT[animal] || PET_FIT.dog;
   let top = fit.top;
+  let wide = fit.wide || 0.9;
+  let bulky = false;
   for (const id of Object.values(outfit || {})) {
     const item = itemById(id);
-    if (!item?.rise) continue;
-    top = Math.max(top, TOP + item.rise + (fit.hat || 0));
+    if (!item) continue;
+    if (item.rise) top = Math.max(top, TOP + item.rise + (fit.hat || 0));
+    const reach = TURN_REACH[item.id];
+    if (reach) {
+      bulky = true;
+      wide = Math.max(wide, reach);
+    }
   }
-  return { bottom: -0.04, top: top + 0.14, wide: fit.wide || 0.9 };
+  const breathe = bulky ? 0.1 : 0;
+  return {
+    bottom: -0.04 - breathe,
+    top: top + 0.14 + breathe,
+    wide,
+    pad: bulky ? 1.18 : 1.08,
+  };
 }
 
 export function preloadAccessories() {

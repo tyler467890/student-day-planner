@@ -1015,6 +1015,111 @@ function paintPetFallback() {
   btn.setAttribute('aria-label', 'Your pet');
 }
 
+let suppressPetClick = false;
+let petTapTimer = 0;
+let lastPetTap = 0;
+
+function shopLikeScreen() {
+  return S.screen === 'shop' || S.screen === 'closet';
+}
+
+function onPetActivate(event) {
+  if (petTapTimer) {
+    clearTimeout(petTapTimer);
+    petTapTimer = 0;
+  }
+  petStage?.poke();
+  if (!S.settings.setupComplete || S.screen === 'pet') return;
+  if (shopLikeScreen() && !reducedMotion()) {
+    const now = performance.now();
+    if ((event?.detail || 0) >= 2 || now - lastPetTap < 420) {
+      lastPetTap = 0;
+      petStage?.spinTurn();
+      return;
+    }
+    lastPetTap = now;
+    petTapTimer = setTimeout(() => {
+      petTapTimer = 0;
+      if (!shopLikeScreen()) return;
+      openPetScreen('today');
+    }, 450);
+    return;
+  }
+  openPetScreen('today');
+}
+
+function bindPetTurn(holder, btn) {
+  const threshold = 12;
+  let active = null;
+  btn.addEventListener('click', (event) => {
+    if (!suppressPetClick) return;
+    suppressPetClick = false;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  }, true);
+  btn.addEventListener('dblclick', (event) => {
+    if (!shopLikeScreen() || reducedMotion()) return;
+    event.preventDefault();
+    if (petTapTimer) {
+      clearTimeout(petTapTimer);
+      petTapTimer = 0;
+    }
+    lastPetTap = 0;
+    petStage?.spinTurn();
+  });
+  holder.addEventListener('pointerdown', (event) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    if (petTapTimer) {
+      clearTimeout(petTapTimer);
+      petTapTimer = 0;
+    }
+    active = { id: event.pointerId, x: event.clientX, y: event.clientY, drag: false };
+    petStage?.grab();
+  });
+  holder.addEventListener('pointermove', (event) => {
+    if (!active || event.pointerId !== active.id) return;
+    const dx = event.clientX - active.x;
+    const dy = event.clientY - active.y;
+    if (!active.drag) {
+      if (Math.abs(dx) < threshold && Math.abs(dy) < threshold) return;
+      if (Math.abs(dx) <= Math.abs(dy)) {
+        active = null;
+        petStage?.release(false);
+        return;
+      }
+      active.drag = true;
+      active.x = event.clientX;
+      active.y = event.clientY;
+      try { holder.setPointerCapture(event.pointerId); } catch { /* pointer already up */ }
+      // Count the movement that crossed the threshold, so the pet doesn't lag the finger.
+      petStage?.nudge(-dx * 0.014);
+      event.preventDefault();
+      return;
+    }
+    const step = event.clientX - active.x;
+    active.x = event.clientX;
+    active.y = event.clientY;
+    // Negative so the pet follows the finger around its vertical axis.
+    petStage?.nudge(-step * 0.014);
+    event.preventDefault();
+  }, { passive: false });
+  const finish = (event) => {
+    if (!active || event.pointerId !== active.id) return;
+    const dragged = active.drag;
+    active = null;
+    if (dragged) {
+      suppressPetClick = true;
+      setTimeout(() => { suppressPetClick = false; }, 400);
+      petStage?.release(true);
+      return;
+    }
+    petStage?.release(false);
+  };
+  holder.addEventListener('pointerup', finish);
+  holder.addEventListener('pointercancel', finish);
+  holder.addEventListener('lostpointercapture', finish);
+}
+
 function ensurePetHolder() {
   if (petHolder) return petHolder;
   petHolder = h('div', { id: 'pet-hero', class: 'pet-hero', dataset: { state: 'loading' } });
@@ -1026,14 +1131,23 @@ function ensurePetHolder() {
     type: 'button',
     class: 'pet-open',
     'aria-label': 'Your pet',
-    onclick: () => {
-      petStage?.poke();
-      if (!S.settings.setupComplete || S.screen === 'pet') return;
-      openPetScreen('today');
-    },
+    onclick: onPetActivate,
   });
   petHolder.append(canvas, fallback, btn);
+  bindPetTurn(petHolder, btn);
   return petHolder;
+}
+
+function petSpinButton() {
+  return h('button', {
+    type: 'button',
+    class: 'pet-spin',
+    'aria-label': 'Spin',
+    onclick: (event) => {
+      event.stopPropagation();
+      petStage?.spinTurn();
+    },
+  }, 'Spin');
 }
 
 let petApply = Promise.resolve();
@@ -1312,6 +1426,7 @@ function renderShop() {
   const stage = h('div', { class: 'shop-stage' });
   if (shopTry) stage.append(h('span', { class: 'shop-tag', text: 'Trying on' }));
   mountPet(stage);
+  stage.append(petSpinButton());
   page.append(stage);
   page.append(h('div', { class: 'shop-tabs', role: 'tablist', 'aria-label': 'Slots' },
     SLOT_TABS.map(([id, label]) => h('button', {
@@ -1416,6 +1531,7 @@ function renderCloset() {
     coinPill(true)));
   const stage = h('div', { class: 'shop-stage closet-stage' });
   mountPet(stage);
+  stage.append(petSpinButton());
   page.append(stage);
   const slotNames = { hat: 'Hat', face: 'Face', neck: 'Neck', body: 'Body', back: 'Back', effect: 'Effect' };
   const slots = h('div', { class: 'slot-row' });
@@ -3806,6 +3922,7 @@ async function boot() {
     }),
     checkReminders: () => { checkDue(); },
     petMode: () => petStage?.mode || null,
+    petYaw: () => petStage?.yaw ?? null,
     posePet: (mode, t) => petStage?.poseAt(mode, t),
     buildUpcoming: () => upcomingReminders({
       tasks: S.tasks,
