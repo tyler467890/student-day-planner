@@ -19,6 +19,10 @@ test('v2 fits keep the 1.3.2 hat seats and skip the designer sweater', () => {
   assert.equal(party.pets.penguin.position[2], -0.03);
   assert.equal(party.pets.chick.position[2], -0.03);
   assert.equal(party.pets.monkey.position[2], -0.03);
+  // Lion hats sit on the mane: lifted, tipped up, and a hair larger than 1.3.2.
+  assert.deepEqual(party.pets.lion.position, [0, 1.561, 0]);
+  assert.deepEqual(party.pets.lion.rotation, [-0.06, 0, 0]);
+  assert.equal(party.pets.lion.scale, 1.04);
   assert.equal(fits.items.top_hat.default.file, null);
   for (const name of shipped) assert.equal(name.startsWith('sweater'), false);
 });

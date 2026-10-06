@@ -40,6 +40,7 @@
       body: ITEMS.filter((item) => item.slot === 'body').map((item) => item.id),
       back: ITEMS.filter((item) => item.slot === 'back').map((item) => item.id),
       effect: ITEMS.filter((item) => item.slot === 'effect').map((item) => item.id),
+      all: ITEMS.map((item) => item.id),
     };
     const params = new URLSearchParams(location.search);
     const set = params.get('set') || 'featured';
