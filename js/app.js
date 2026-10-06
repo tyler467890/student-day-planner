@@ -10,9 +10,14 @@ import * as push from './push.js';
 import { celebrationChoices, pickCelebration } from './celebrations.js';
 import { playCelebrationAudio, playChime } from './sounds.js';
 import {
-  SLOT_TABS, buy, coinsShort, deleteLook, grantQualified, itemById, itemsInSlot,
+  SLOT_TABS, SUGGESTION_COIN_BONUS, buy, coinsShort, deleteLook, grantQualified, itemById, itemsInSlot,
   previewOutfit, resetOutfit, saveLook, applyLook, thumbUrl, walletBalance, wear, removeWorn,
 } from './shop.js';
+import {
+  applySuggestionBonus, buildSuggestionTask, displaySuggestionTime, isHm, noticePlan,
+  normalizeSuggestFrequency, resolveSuggestEngine, sanitizeSuggestCard, shouldAskSuggestion,
+  suggestionFromEngine, suggestionGesture, suggestionNoticeCopy, suggestPace,
+} from './suggestions.js';
 
 const {
   POINTS, DAY_COMPLETE_BONUS, THEMES, ACCENTS, WEEKDAY_LABELS,
@@ -43,6 +48,7 @@ let photoUrl = null;
 let undoTimer = null;
 let undoFn = null;
 let toastText = '';
+let toastNote = '';
 let banner = null;
 let dayCard = null;
 let levelPop = null;
@@ -68,6 +74,11 @@ let wheelBitmap = null;
 let wheelBitmapDpr = 0;
 let categoryForm = null;
 let openCatColour = null;
+let suggestTimeOpen = false;
+let suggestAskedAt = 0;
+let suggestBusy = false;
+let suggestEnginePromise = null;
+let lastSuggestGesture = null;
 const highWater = { level: 1, celebrated: 1, shown: {} };
 
 const appEl = () => document.getElementById('app');
@@ -185,7 +196,11 @@ function isDone(inst) {
 }
 
 function mergeSettings(saved) {
-  return migrateSettings(saved);
+  const settings = migrateSettings(saved);
+  settings.suggestFrequency = normalizeSuggestFrequency(settings.suggestFrequency);
+  settings.suggestPace = suggestPace(settings);
+  settings.suggestCard = sanitizeSuggestCard(settings.suggestCard);
+  return settings;
 }
 
 function photoArg() {
@@ -279,14 +294,16 @@ function restore(snap) {
   S.settings.dayCompleteShown = { ...(S.settings.dayCompleteShown || {}), ...highWater.shown };
 }
 
-function showUndo(text, fn) {
+function showUndo(text, fn, note = '') {
   if (undoTimer) clearTimeout(undoTimer);
   undoFn = fn;
   toastText = text;
+  toastNote = note;
   renderToast();
   undoTimer = setTimeout(() => {
     undoFn = null;
     toastText = '';
+    toastNote = '';
     renderToast();
   }, 5000);
 }
@@ -377,6 +394,7 @@ async function completeInstance(inst, { fromUndo = false } = {}) {
     difficulty: inst.difficulty,
     completedAt: currentDate().toISOString(),
   });
+  const suggestBonus = await grantSuggestionBonus(inst.taskId, completedOn);
   const day = syncDayBonuses(inst.date);
   const level = syncLevel();
   const streak = streakInfo();
@@ -392,6 +410,7 @@ async function completeInstance(inst, { fromUndo = false } = {}) {
     playComplete(inst, points, moment);
     if (moment.leveled && celebrationMode() === 'full') reactPet('levelup');
     else reactPet(petReactionKind(inst, moment));
+    const bonusNote = suggestBonus ? `+${SUGGESTION_COIN_BONUS} bonus for trying a suggestion` : '';
     showUndo(`Done! +${points}`, async () => {
       restore(snap);
       petPending = null;
@@ -399,7 +418,7 @@ async function completeInstance(inst, { fromUndo = false } = {}) {
       render();
       petStage?.calm();
       syncPush();
-    });
+    }, bonusNote);
   }
   syncPush();
 }
@@ -819,29 +838,299 @@ function checkDue() {
   if (delivered) persistAll();
 }
 
-async function systemNotify(record) {
+async function systemNotify(record, options = {}) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   if (!('serviceWorker' in navigator)) return;
   try {
     const reg = await navigator.serviceWorker.ready;
     if (!reg?.showNotification) return;
-    await reg.showNotification(record.title, {
+    const note = {
       body: record.body || '',
-      tag: record.id,
-      data: {
+      tag: record.tag || record.id,
+      data: options.data || {
         taskId: record.taskId,
         date: record.date,
         title: record.title,
         body: record.body,
         id: record.id,
       },
-      actions: [
+    };
+    if (options.actions !== false) {
+      note.actions = [
         { action: 'done', title: 'Done' },
         { action: 'snooze', title: 'Snooze' },
-      ],
-    });
+      ];
+    }
+    await reg.showNotification(record.title, note);
   } catch { /* banner still shows */ }
   if (S.settings.sound) playTone(440, 0.18);
+}
+
+function loadSuggestEngine() {
+  if (!suggestEnginePromise) {
+    suggestEnginePromise = (async () => {
+      const preset = window.DayliSuggest;
+      if (preset && typeof preset.getSuggestion === 'function') {
+        try {
+          if (typeof preset.loadLibrary === 'function') await preset.loadLibrary();
+        } catch { /* the engine can still answer */ }
+        return preset;
+      }
+      return resolveSuggestEngine(() => import('./suggest.js'));
+    })().catch(() => null);
+  }
+  return suggestEnginePromise;
+}
+
+function notificationPermission() {
+  return typeof Notification !== 'undefined' ? Notification.permission : 'unsupported';
+}
+
+async function grantSuggestionBonus(taskId, date) {
+  try {
+    const engine = await loadSuggestEngine();
+    if (typeof engine?.markSuggestedCompleted !== 'function') return false;
+    let first = false;
+    try { first = Boolean(engine.markSuggestedCompleted(taskId)); } catch { return false; }
+    if (!first) return false;
+    const next = applySuggestionBonus({ bonuses: S.bonuses, taskId, firstTime: true, date });
+    if (!next.applied) return false;
+    S.bonuses = next.bonuses;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function sendSuggestionNotice(card) {
+  const copy = suggestionNoticeCopy(card, S.settings);
+  await systemNotify({
+    id: `suggest:${card.id}`,
+    tag: `suggest:${card.id}`,
+    title: copy.title,
+    body: copy.body,
+  }, {
+    actions: false,
+    data: {
+      kind: 'suggest',
+      suggestId: card.id,
+      id: card.id,
+      title: copy.title,
+      body: copy.body,
+      date: plannerToday(),
+    },
+  });
+}
+
+function settleSuggestionCard(card) {
+  if (!card || card.shown) return;
+  card.shown = true;
+  lastSuggestGesture = suggestionGesture({
+    reducedMotion: reducedMotion(),
+    celebrations: S.settings.celebrations,
+  });
+  if (lastSuggestGesture) reactPet(lastSuggestGesture);
+  loadSuggestEngine().then((engine) => {
+    try { engine?.markShown?.(card.id); } catch { /* ignore */ }
+  }).catch(() => {});
+  const plan = noticePlan({
+    now: currentDate(),
+    settings: S.settings,
+    permission: notificationPermission(),
+    alreadyNotified: false,
+  });
+  if (plan === 'send') {
+    card.notice = 'sent';
+    void sendSuggestionNotice(card);
+  } else if (plan === 'later') {
+    card.notice = 'later';
+  } else {
+    card.notice = 'skipped';
+  }
+  announce(card.reason ? `${card.title}. ${card.reason}` : card.title);
+  void persistAll();
+}
+
+async function flushLaterNotice(card) {
+  if (!card || card.notice !== 'later') return;
+  const plan = noticePlan({
+    now: currentDate(),
+    settings: S.settings,
+    permission: notificationPermission(),
+    alreadyNotified: false,
+  });
+  if (plan === 'send') {
+    card.notice = 'sent';
+    await sendSuggestionNotice(card);
+    await persistAll();
+  } else if (plan === 'skip') {
+    card.notice = 'skipped';
+    await persistAll();
+  }
+}
+
+async function maybeOfferSuggestion(reason) {
+  if (suggestBusy) return;
+  suggestBusy = true;
+  try {
+    if (!S.settings?.setupComplete) return;
+    if (normalizeSuggestFrequency(S.settings.suggestFrequency) === 'off') {
+      if (S.settings.suggestCard) {
+        S.settings.suggestCard = null;
+        suggestTimeOpen = false;
+        await persistAll();
+        if ((!S.screen || S.screen === 'today') && !sheetOpen) render();
+      }
+      return;
+    }
+    const existing = sanitizeSuggestCard(S.settings.suggestCard);
+    if (existing) {
+      S.settings.suggestCard = existing;
+      if (existing.notice === 'later') await flushLaterNotice(existing);
+      return;
+    }
+    const nowMs = currentMs();
+    if (!shouldAskSuggestion({ reason, lastAskedAt: suggestAskedAt, now: nowMs, hasCard: false })) return;
+    suggestAskedAt = nowMs;
+    const engine = await loadSuggestEngine();
+    if (typeof engine?.getSuggestion !== 'function') return;
+    let raw = null;
+    try {
+      raw = engine.getSuggestion({
+        tasks: S.tasks,
+        now: currentDate(),
+        settings: S.settings,
+      });
+    } catch {
+      return;
+    }
+    const card = suggestionFromEngine(raw);
+    if (!card) return;
+    S.settings.suggestCard = card;
+    await persistAll();
+    if ((!S.screen || S.screen === 'today') && !sheetOpen) render();
+  } catch {
+    /* a missing engine stays quiet */
+  } finally {
+    suggestBusy = false;
+  }
+}
+
+async function acceptSuggestion() {
+  const openTime = document.querySelector('.suggest-bubble input[type="time"]');
+  if (openTime && isHm(openTime.value) && S.settings.suggestCard) {
+    S.settings.suggestCard.time = openTime.value;
+  }
+  const card = sanitizeSuggestCard(S.settings.suggestCard);
+  if (!card) return;
+  const fields = buildSuggestionTask(card, {
+    now: currentDate(),
+    date: plannerToday(),
+    categories: S.settings.categories,
+    defaultLead: S.settings.defaultLead,
+  });
+  const id = crypto.randomUUID();
+  S.tasks.push({
+    id,
+    ...fields,
+    createdAt: currentDate().toISOString(),
+    updatedAt: currentDate().toISOString(),
+  });
+  try {
+    const engine = await loadSuggestEngine();
+    engine?.markAccepted?.(card.id, id);
+  } catch { /* the task is already on the list */ }
+  S.settings.suggestCard = null;
+  suggestTimeOpen = false;
+  await persistAll();
+  refreshReminderRecords();
+  await persistAll();
+  render();
+  syncPush();
+}
+
+async function dismissSuggestion(forever) {
+  const card = S.settings.suggestCard;
+  if (!card) return;
+  try {
+    const engine = await loadSuggestEngine();
+    engine?.markDismissed?.(card.id, { forever: Boolean(forever) });
+  } catch { /* hiding the card is enough */ }
+  S.settings.suggestCard = null;
+  suggestTimeOpen = false;
+  suggestAskedAt = currentMs();
+  await persistAll();
+  render();
+}
+
+async function openSuggestionTime() {
+  const card = S.settings.suggestCard;
+  if (!card) return;
+  if (!isHm(card.time)) {
+    card.time = displaySuggestionTime(card, currentDate()) || '16:00';
+    await persistAll();
+  }
+  suggestTimeOpen = true;
+  render();
+}
+
+function renderSuggestBubble() {
+  const card = sanitizeSuggestCard(S.settings.suggestCard);
+  if (!card) return null;
+  S.settings.suggestCard = card;
+  const shown = displaySuggestionTime(card, currentDate());
+  const timeLabel = shown ? formatTime(shown, S.settings.clock24) : 'Add a time';
+  const timeRow = suggestTimeOpen
+    ? h('input', {
+      type: 'time',
+      class: 'text-input suggest-time',
+      'aria-label': 'Time',
+      value: isHm(card.time) ? card.time : (shown || '16:00'),
+    })
+    : null;
+  if (timeRow) {
+    timeRow.addEventListener('change', async () => {
+      if (!isHm(timeRow.value) || !S.settings.suggestCard) return;
+      S.settings.suggestCard.time = timeRow.value;
+      await persistAll();
+      render();
+    });
+  }
+  const bubble = h('section', {
+    class: 'suggest-bubble',
+    role: 'region',
+    'aria-label': 'Suggested goal',
+    dataset: { suggestId: card.id },
+  },
+  h('p', { class: 'suggest-title', text: card.title }),
+  card.reason ? h('p', { class: 'suggest-reason', text: card.reason }) : null,
+  h('div', { class: 'suggest-actions' },
+    h('button', {
+      type: 'button',
+      class: 'btn small primary',
+      'aria-label': 'Add suggested goal',
+      onclick: () => { void acceptSuggestion(); },
+    }, 'Add'),
+    h('button', {
+      type: 'button',
+      class: 'text-btn suggest-time-btn',
+      'aria-label': `Change time, ${timeLabel}`,
+      onclick: () => { void openSuggestionTime(); },
+    }, timeLabel)),
+  timeRow,
+  h('div', { class: 'suggest-actions suggest-dismiss' },
+    h('button', {
+      type: 'button',
+      class: 'text-btn',
+      onclick: () => { void dismissSuggestion(false); },
+    }, 'Not now'),
+    h('button', {
+      type: 'button',
+      class: 'text-btn',
+      onclick: () => { void dismissSuggestion(true); },
+    }, "Don't suggest this")));
+  settleSuggestionCard(card);
+  return bubble;
 }
 
 function showBanner(record) {
@@ -1848,6 +2137,7 @@ function renderSetup4() {
         S.screen = 'today';
         await persistAll();
         render();
+        void maybeOfferSuggestion('open');
       },
     }, 'This is my pet'),
   );
@@ -1907,6 +2197,11 @@ function renderToday() {
   shell.append(header);
   const petSlot = h('div', { class: 'pet-slot' });
   mountPet(petSlot);
+  const bubble = viewingToday ? renderSuggestBubble() : null;
+  if (bubble) {
+    petSlot.classList.add('has-suggest');
+    petSlot.append(bubble);
+  }
   shell.append(petSlot);
 
   if (viewingToday && S.settings.installSkipped && deviceKind() === 'ios' && !isStandalone()) {
@@ -2891,6 +3186,7 @@ function renderCustomize() {
 
   page.append(renderCategories());
   page.append(renderReminderSettings());
+  page.append(renderSuggestSettings());
   page.append(renderDataSettings());
   page.append(h('section', {},
     h('h2', { text: 'About' }),
@@ -3057,6 +3353,57 @@ function renderReminderSettings() {
     h('label', { class: 'check-row' }, morning, 'Morning check-in'),
     morningTime,
     h('button', { type: 'button', class: 'btn ghost', onclick: testReminder }, 'Test reminder'));
+}
+
+function renderSuggestSettings() {
+  const s = S.settings;
+  const on = normalizeSuggestFrequency(s.suggestFrequency) !== 'off';
+  const pace = suggestPace(s);
+  const box = h('input', { type: 'checkbox', 'aria-label': 'Suggest goals' });
+  box.checked = on;
+  box.addEventListener('change', async () => {
+    if (box.checked) s.suggestFrequency = suggestPace(s);
+    else {
+      s.suggestPace = suggestPace(s);
+      s.suggestFrequency = 'off';
+      s.suggestCard = null;
+      suggestTimeOpen = false;
+    }
+    await persistAll();
+    render();
+    if (box.checked) void maybeOfferSuggestion('open');
+  });
+  const choices = [
+    ['rare', 'Rarely'],
+    ['normal', 'Normal'],
+    ['often', 'Often'],
+  ];
+  return h('section', { class: 'suggest-settings' },
+    h('h2', { text: 'Suggested goals' }),
+    h('label', { class: 'check-row' }, box, 'Suggest goals'),
+    h('div', {
+      class: 'chips',
+      role: 'radiogroup',
+      'aria-label': 'How often',
+    }, choices.map(([id, label]) => h('button', {
+      type: 'button',
+      class: `chip${pace === id ? ' is-selected' : ''}`,
+      role: 'radio',
+      'aria-checked': pace === id ? 'true' : 'false',
+      onclick: async () => {
+        s.suggestPace = id;
+        s.suggestFrequency = id;
+        await persistAll();
+        render();
+        void maybeOfferSuggestion('open');
+      },
+    }, label))),
+    h('p', {
+      class: 'fine',
+      text: on
+        ? 'Your pet offers one small goal at a time.'
+        : 'Off. Your pet stays quiet.',
+    }));
 }
 
 function testReminder() {
@@ -3260,6 +3607,8 @@ function renderHelp() {
       h('p', { text: 'Finish at least one task and the day counts. The day ends at midnight. You get one rest day each week. A second missed day that week starts the streak over, quietly. Your best streak stays.' }),
       h('h2', { text: 'Repeating' }),
       h('p', { text: 'Pick Every day, Weekdays, Weekends, or your own days. Checking one off finishes that day only. Describe my week turns a sentence into repeating goals, and nothing is saved until you tap Add these.' }),
+      h('h2', { text: 'Suggested goals' }),
+      h('p', { text: 'Every so often your pet suggests one goal. Add puts it on today. Not now hides it. Don\'t suggest this skips that idea. Finishing one the first time adds 2 bonus coins.' }),
       h('h2', { text: 'Backup' }),
       h('p', { text: 'Customize, then Back up now, saves a file on your device. Restore brings it back. A Home Screen install is the safest place to keep your planner on iPhone.' })));
 }
@@ -3275,13 +3624,16 @@ function renderToast() {
     overlayEl().append(toast);
   }
   toast.replaceChildren(
-    h('span', { text: toastText }),
+    h('span', { class: 'toast-copy' },
+      h('span', { text: toastText }),
+      toastNote ? h('span', { class: 'toast-note suggest-bonus-note', text: toastNote }) : null),
     h('button', {
       type: 'button',
       onclick: async () => {
         const fn = undoFn;
         undoFn = null;
         toastText = '';
+        toastNote = '';
         clearTimeout(undoTimer);
         renderToast();
         if (fn) await fn();
@@ -3816,6 +4168,13 @@ async function handleLaunchParams() {
   const action = params.get('action');
   const taskId = params.get('task');
   const date = params.get('date');
+  if (params.get('suggest')) {
+    history.replaceState({}, '', location.pathname);
+    S.screen = 'today';
+    viewDate = null;
+    render();
+    return;
+  }
   if (!action) return;
   history.replaceState({}, '', location.pathname);
   if (action === 'done' && taskId && date) {
@@ -3885,10 +4244,16 @@ async function boot() {
   render();
   await handleLaunchParams();
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') checkDue();
+    if (document.visibilityState === 'visible') {
+      checkDue();
+      void maybeOfferSuggestion('resume');
+    }
     render();
   });
-  setInterval(checkDue, 30_000);
+  setInterval(() => {
+    checkDue();
+    void maybeOfferSuggestion('tick');
+  }, 30_000);
   document.addEventListener('pointerdown', () => petStage?.poke());
   window.addEventListener('beforeinstallprompt', (event) => {
     event.preventDefault();
@@ -3900,12 +4265,19 @@ async function boot() {
     navigator.serviceWorker.addEventListener('message', (event) => {
       if (event.data?.type !== 'notification') return;
       const url = new URL(location.href);
-      url.searchParams.set('action', event.data.action || 'open');
-      if (event.data.data?.taskId) url.searchParams.set('task', event.data.data.taskId);
-      if (event.data.data?.date) url.searchParams.set('date', event.data.data.date);
+      const data = event.data.data || {};
+      if (data.kind === 'suggest' || data.suggestId) {
+        url.searchParams.set('action', 'open');
+        url.searchParams.set('suggest', data.suggestId || data.id || '1');
+      } else {
+        url.searchParams.set('action', event.data.action || 'open');
+        if (data.taskId) url.searchParams.set('task', data.taskId);
+        if (data.date) url.searchParams.set('date', data.date);
+      }
       location.assign(url.href);
     });
   }
+  void maybeOfferSuggestion('open');
   window.__dayli = {
     model,
     push,
@@ -3920,7 +4292,11 @@ async function boot() {
       plannerToday: plannerToday(),
       background: S.background ? { width: S.background.width, height: S.background.height, brightness: S.background.brightness } : null,
     }),
-    checkReminders: () => { checkDue(); },
+    checkReminders: () => {
+      checkDue();
+      void maybeOfferSuggestion('resume');
+    },
+    lastSuggestGesture: () => lastSuggestGesture,
     petMode: () => petStage?.mode || null,
     petYaw: () => petStage?.yaw ?? null,
     posePet: (mode, t) => petStage?.poseAt(mode, t),

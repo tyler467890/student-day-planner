@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "python3 -m http.server 4173 --bind 127.0.0.1",
-    "test": "node --test tests/model.test.js tests/shop.test.js tests/week-parser.test.js tests/push-server.test.js tests/etsy.test.js tests/suggest.test.js",
+    "test": "node --test tests/model.test.js tests/shop.test.js tests/week-parser.test.js tests/push-server.test.js tests/etsy.test.js tests/suggest.test.js tests/suggestions.test.js",
     "test:ui": "playwright test"
   },
   "devDependencies": {

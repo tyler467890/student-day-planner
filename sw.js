@@ -1,6 +1,6 @@
 /* Dayli service worker: offline shell, push, and notification actions. */
 
-const CACHE = 'dayli-v14';
+const CACHE = 'dayli-v15';
 
 const ASSETS = [
   './',
@@ -20,6 +20,7 @@ const ASSETS = [
   './js/sounds.js',
   './js/shop.js',
   './js/suggest.js',
+  './js/suggestions.js',
   './js/accessories.js',
   './data/suggestions.json',
   './data/gap-rules.json',
@@ -158,9 +159,15 @@ self.addEventListener('notificationclick', (event) => {
   const data = event.notification.data || {};
   const action = event.action || 'open';
   const url = new URL('./', self.registration.scope);
-  url.searchParams.set('action', action === 'done' || action === 'snooze' ? action : 'open');
-  if (data.taskId) url.searchParams.set('task', data.taskId);
-  if (data.date) url.searchParams.set('date', data.date);
+  const suggestId = data.suggestId || (data.kind === 'suggest' ? (data.id || '1') : '');
+  if (suggestId) {
+    url.searchParams.set('action', 'open');
+    url.searchParams.set('suggest', suggestId);
+  } else {
+    url.searchParams.set('action', action === 'done' || action === 'snooze' ? action : 'open');
+    if (data.taskId) url.searchParams.set('task', data.taskId);
+    if (data.date) url.searchParams.set('date', data.date);
+  }
   event.waitUntil((async () => {
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const client of all) {

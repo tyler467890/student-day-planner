@@ -5,6 +5,9 @@
 
 export const POINTS_PER_COIN = 5;
 
+/** Coins for the first completion of a suggested goal. Not points, so levels stay put. */
+export const SUGGESTION_COIN_BONUS = 2;
+
 export const SLOTS = ['hat', 'face', 'neck', 'body', 'back', 'effect'];
 
 export const SLOT_TABS = [
@@ -67,10 +70,20 @@ export function coinsFromPoints(points) {
   return Math.trunc(n / POINTS_PER_COIN);
 }
 
+/** A bonus with its own `coins` count is spent as coins. Other bonuses stay points ÷ the rate. */
+export function coinsFromBonus(row) {
+  if (!row || typeof row !== 'object') return 0;
+  if (Object.prototype.hasOwnProperty.call(row, 'coins') && row.coins != null && row.coins !== '') {
+    const n = Math.round(Number(row.coins));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }
+  return coinsFromPoints(row.points);
+}
+
 export function earnedCoins(completions, bonuses) {
   let total = 0;
   for (const row of completions || []) total += coinsFromPoints(row.points);
-  for (const row of bonuses || []) total += coinsFromPoints(row.points);
+  for (const row of bonuses || []) total += coinsFromBonus(row);
   return total;
 }
 

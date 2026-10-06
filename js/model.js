@@ -302,6 +302,9 @@ export function defaultSettings() {
     categories: defaultCategories(),
     pet: defaultPet(),
     wardrobe: defaultWardrobe(),
+    suggestFrequency: 'normal',
+    suggestPace: 'normal',
+    suggestCard: null,
     schemaVersion: 4,
   };
 }
