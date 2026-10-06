@@ -184,8 +184,8 @@ function shell(parent, loc, radiusTop, radiusBottom, height, color, opts = {}) {
 }
 
 /**
- * Ribbon wrapped around Y. `flat` stretches the tube vertically so the
- * band reads as cloth (tall and paper-thin) rather than a rope.
+ * Ring wrapped around Y. `flat` near 1 keeps a rounded knit.
+ * Higher values flatten the band into a ribbon.
  */
 function band(parent, loc, radius, tube, color, opts = {}) {
   const geo = new TorusGeometry(
@@ -335,8 +335,8 @@ function partyHat(parent) {
 
 function beanie(parent) {
   dome(parent, [0, 0, TOP - 0.02], 0.64, '#4fb3ff', { squash: 0.62, phi: Math.PI * 0.52 });
-  band(parent, [0, 0, TOP + 0.02], 0.64, 0.028, '#ffffff', { flat: 1.8 });
-  ball(parent, [0, 0, TOP + 0.42], 0.1, '#ffffff');
+  band(parent, [0, 0, TOP + 0.04], 0.64, 0.042, '#ffffff', { flat: 1.45 });
+  ball(parent, [0, 0, TOP + 0.44], 0.11, '#ffffff');
 }
 
 function cap(parent) {
@@ -375,7 +375,7 @@ async function wizardHat(parent) {
 }
 
 function flameBand(parent) {
-  band(parent, [0, 0, TOP + 0.02], 0.64, 0.018, '#ff6b35', { flat: 2.4 });
+  band(parent, [0, 0, TOP + 0.04], 0.64, 0.03, '#ff6b35', { flat: 1.8 });
   [[-0.24, 0.32], [0, 0.46], [0.24, 0.32]].forEach(([x, h], i) => {
     const flame = pyramid(parent, [x, -0.5, TOP + 0.08 + h / 2], 0.08, h, '#ffb627', { emit: 0.35, sides: 18 });
     flame.userData.fx = 'flame';
@@ -394,7 +394,7 @@ function sprout(parent) {
 async function crown(parent) {
   const gold = '#ffc83d';
   const metal = { metal: 0.55, rough: 0.35 };
-  band(parent, [0, 0, TOP + 0.16], 0.6, 0.026, gold, { flat: 3.6, ...metal });
+  band(parent, [0, 0, TOP + 0.16], 0.6, 0.042, gold, { flat: 2.4, ...metal });
   for (let i = 0; i < 5; i += 1) {
     const a = (i / 5) * Math.PI * 2;
     pyramid(
@@ -409,25 +409,39 @@ async function crown(parent) {
   await placeGlb(parent, GLB.jewel, [0, -0.62, TOP + 0.16], 0.55);
 }
 
-async function glasses(parent, sun) {
-  await placeGlb(parent, sun ? GLB.sunglasses : GLB.glasses, [0, -0.48, 0.78], 3.4);
+const GLASS_LENS_Z = 0.0918;
+const GLASS_LENS_Y = 0.052;
+const GLASS_WIDTH = 0.33;
+
+async function glasses(parent, sun, fit = {}) {
+  const sep = fit.eyeSep || 0.36;
+  const eyeH = fit.eyeH || 0.2;
+  const eyeY = fit.eyeY ?? 0.89;
+  const eyeZ = fit.eyeZ ?? 0.635;
+  const targetW = Math.min(1.05, Math.max(0.52, sep + 0.18));
+  const targetH = Math.min(0.32, Math.max(0.15, eyeH));
+  const scale = Math.min(2.8, Math.max(targetW / GLASS_WIDTH, targetH / 0.096));
+  const depth = GLASS_LENS_Z * scale - (eyeZ + 0.02);
+  const up = eyeY - GLASS_LENS_Y * scale;
+  await placeGlb(parent, sun ? GLB.sunglasses : GLB.glasses, [0, depth, up], scale);
 }
 
 function bowTie(parent) {
-  const z = 0.44;
-  const y = FRONT - 0.01;
-  puff(parent, [-0.15, y, z], 0.15, [1.25, 0.7, 0.2], '#ff4f79', { tilt: 0.42 });
-  puff(parent, [0.15, y, z], 0.15, [1.25, 0.7, 0.2], '#ff4f79', { tilt: -0.42 });
-  puff(parent, [0, y, z], 0.048, [0.7, 0.85, 0.4], '#e03a63');
+  const z = 0.46;
+  const y = FRONT + 0.02;
+  puff(parent, [-0.16, y, z], 0.16, [1.25, 0.72, 0.42], '#ff4f79', { tilt: 0.4 });
+  puff(parent, [0.16, y, z], 0.16, [1.25, 0.72, 0.42], '#ff4f79', { tilt: -0.4 });
+  puff(parent, [0, y - 0.01, z], 0.055, [0.75, 0.9, 0.55], '#e03a63');
 }
 
 function scarf(parent) {
-  band(parent, [0, 0, 0.48], 0.55, 0.014, '#ff6b6b', { flat: 3.6 });
-  band(parent, [0, 0, 0.43], 0.556, 0.009, '#ffffff', { flat: 1.15 });
-  box(parent, [0.09, -0.56, 0.2], [0.14, 0.014, 0.44], '#ff6b6b');
-  box(parent, [-0.05, -0.54, 0.18], [0.14, 0.014, 0.36], '#ff6b6b');
-  box(parent, [0.09, -0.56, -0.01], [0.14, 0.016, 0.026], '#ffffff');
-  box(parent, [-0.05, -0.54, 0.01], [0.14, 0.016, 0.022], '#ffffff');
+  // Knit wrap: a rounded band on the neck, plus two hanging ends with fringe.
+  band(parent, [0, 0, 0.48], 0.66, 0.055, '#e23b4a', { flat: 1.12 });
+  band(parent, [0, 0, 0.44], 0.68, 0.018, '#ffffff', { flat: 1.05 });
+  box(parent, [0.1, -0.64, 0.16], [0.2, 0.08, 0.52], '#e23b4a');
+  box(parent, [-0.08, -0.62, 0.12], [0.18, 0.075, 0.44], '#e23b4a');
+  box(parent, [0.1, -0.64, -0.09], [0.2, 0.084, 0.055], '#ffffff');
+  box(parent, [-0.08, -0.62, -0.09], [0.18, 0.08, 0.05], '#ffffff');
 }
 
 function backpack(parent, winged) {
@@ -463,60 +477,81 @@ async function sparkles(parent) {
   }
 }
 
-function tutu(parent, winged) {
-  const y = 0.3;
-  const layers = [
-    { rt: 0.5, rb: 0.86, h: 0.05, c: '#ff7eb6', dy: 0 },
-    { rt: 0.52, rb: 0.96, h: 0.036, c: '#ffd0e4', dy: -0.018 },
-  ];
-  for (const layer of layers) {
-    if (winged) {
-      const arc = 1.15;
-      shell(parent, [0, 0, y + layer.dy], layer.rt, layer.rb, layer.h, layer.c, {
-        thetaStart: -arc / 2, thetaLength: arc, sides: 20,
-      });
-      shell(parent, [0, 0, y + layer.dy], layer.rt, layer.rb, layer.h, layer.c, {
-        thetaStart: Math.PI - arc / 2, thetaLength: arc, sides: 20,
-      });
-    } else {
-      shell(parent, [0, 0, y + layer.dy], layer.rt, layer.rb, layer.h, layer.c, { sides: 36 });
-    }
-  }
-}
-
-function heroMask(parent) {
+function cloth(parent, y, radiusTop, radiusBottom, height, color, winged) {
   const arc = 1.35;
-  shell(parent, [0, 0.04, 0.78], 0.66, 0.66, 0.18, '#2d2f48', {
-    thetaStart: -arc / 2,
-    thetaLength: arc,
-    sides: 24,
-  });
-  puff(parent, [-0.22, FRONT, 0.78], 0.1, [1.15, 0.62, 0.28], '#ffe08a');
-  puff(parent, [0.22, FRONT, 0.78], 0.1, [1.15, 0.62, 0.28], '#ffe08a');
+  if (winged) {
+    shell(parent, [0, 0, y], radiusTop, radiusBottom, height, color, {
+      thetaStart: -arc / 2, thetaLength: arc, sides: 22,
+    });
+    shell(parent, [0, 0, y], radiusTop, radiusBottom, height, color, {
+      thetaStart: Math.PI - arc / 2, thetaLength: arc, sides: 22,
+    });
+  } else {
+    shell(parent, [0, 0, y], radiusTop, radiusBottom, height, color, { sides: 36 });
+  }
 }
 
-function sweater(parent, winged) {
-  const color = '#6d4aff';
+function tutu(parent, winged) {
+  const layers = [
+    { y: 0.4, rt: 0.56, rb: 0.78, h: 0.16, c: '#ff7eb6' },
+    { y: 0.36, rt: 0.58, rb: 0.92, h: 0.13, c: '#ff9ec8' },
+    { y: 0.32, rt: 0.6, rb: 1.02, h: 0.1, c: '#ffd0e4' },
+  ];
+  for (const layer of layers) cloth(parent, layer.y, layer.rt, layer.rb, layer.h, layer.c, winged);
+  band(parent, [0, 0, 0.47], 0.58, 0.028, '#e85a9a', { flat: 1.4 });
+}
+
+function heroMask(parent, fit = {}) {
+  const eyeY = fit.eyeY ?? 0.89;
+  const eyeZ = fit.eyeZ ?? 0.635;
+  const sep = fit.eyeSep || 0.36;
+  const radius = 1.15;
+  const frontZ = eyeZ + 0.03;
+  shell(parent, [0, -(frontZ - radius), eyeY], radius, radius, 0.2, '#2d2f48', {
+    thetaStart: -0.52,
+    thetaLength: 1.04,
+    sides: 28,
+  });
+  puff(parent, [-sep / 2, -frontZ, eyeY], 0.07, [1.15, 0.72, 0.28], '#ffe08a');
+  puff(parent, [sep / 2, -frontZ, eyeY], 0.07, [1.15, 0.72, 0.28], '#ffe08a');
+}
+
+async function sweater(parent, winged) {
+  const wool = '#6d4aff';
+  const rib = '#3a249e';
   const stripe = '#ffffff';
-  const y = 0.58;
-  const arc = 1.3;
-  const panels = winged
-    ? [{ thetaStart: -arc / 2, thetaLength: arc }, { thetaStart: Math.PI - arc / 2, thetaLength: arc }]
-    : [{ thetaStart: 0, thetaLength: Math.PI * 2 }];
-  for (const panel of panels) {
-    shell(parent, [0, 0, y], 0.66, 0.7, 0.46, color, { ...panel, sides: winged ? 20 : 32 });
-    shell(parent, [0, 0, y + 0.15], 0.68, 0.72, 0.05, stripe, { ...panel, sides: winged ? 20 : 32 });
+  // Wool shell over the cube. Stripes and the hem sit just outside it so they read.
+  cloth(parent, 0.56, 0.7, 0.76, 0.6, wool, winged);
+  cloth(parent, 0.42, 0.8, 0.83, 0.06, stripe, winged);
+  cloth(parent, 0.56, 0.785, 0.81, 0.055, stripe, winged);
+  cloth(parent, 0.7, 0.76, 0.785, 0.05, stripe, winged);
+  cloth(parent, 0.3, 0.8, 0.84, 0.1, rib, winged);
+  cloth(parent, 0.3, 0.84, 0.87, 0.032, wool, winged);
+  band(parent, [0, 0, 0.88], 0.68, 0.036, rib, { flat: 1.25 });
+  if (!winged) {
+    [-1, 1].forEach((sign) => {
+      const lean = sign * -0.5;
+      const sleeve = tube(parent, [sign * 0.7, 0.02, 0.62], 0.14, 0.38, wool, { sides: 18 });
+      sleeve.rotation.z = lean;
+      const stripeBand = tube(parent, [sign * 0.74, 0.02, 0.66], 0.145, 0.05, stripe, { sides: 16 });
+      stripeBand.rotation.z = lean;
+      const cuff = tube(parent, [sign * 0.86, 0.03, 0.4], 0.12, 0.09, rib, { sides: 16 });
+      cuff.rotation.z = lean;
+    });
   }
+  await placeGlb(parent, GLB.heart, [0.02, -0.88, 0.58], 0.48);
 }
 
 function cape(parent) {
-  const arc = Math.PI * 0.9;
-  shell(parent, [0, 0.1, 0.58], 0.56, 0.82, 0.9, '#c23b4a', {
-    thetaStart: Math.PI - arc / 2,
-    thetaLength: arc,
-    sides: 28,
+  const arc = Math.PI * 0.95;
+  shell(parent, [0, 0.06, 0.52], 0.64, 0.8, 0.98, '#c23b4a', {
+    thetaStart: Math.PI - arc / 2, thetaLength: arc, sides: 28,
   });
-  band(parent, [0, 0.04, 1.0], 0.58, 0.014, '#ffd23f', { flat: 2.2, arc: Math.PI * 0.8, aim: 'back' });
+  shell(parent, [0, 0.03, 0.52], 0.6, 0.75, 0.94, '#9e2e3c', {
+    thetaStart: Math.PI - arc / 2, thetaLength: arc, sides: 28,
+  });
+  band(parent, [0, 0.02, 0.98], 0.6, 0.038, '#ffd23f', { flat: 1.4, arc: Math.PI * 0.85, aim: 'back' });
+  ball(parent, [0, 0.12, 1.0], 0.04, '#ffe58a', { metal: 0.45 });
 }
 
 async function snowfall(parent) {
@@ -554,21 +589,24 @@ function jetpack(parent) {
   });
 }
 
-async function heartCheeks(parent) {
-  await placeGlb(parent, GLB.heart, [-0.32, -0.5, 0.62], 0.32);
-  await placeGlb(parent, GLB.heart, [0.32, -0.5, 0.62], 0.32);
+async function heartCheeks(parent, fit = {}) {
+  const eyeY = (fit.eyeY ?? 0.89) - 0.16;
+  const eyeZ = (fit.eyeZ ?? 0.635) + 0.015;
+  const x = Math.max(0.22, (fit.eyeSep || 0.36) * 0.72);
+  await placeGlb(parent, GLB.heart, [-x, -eyeZ, eyeY], 0.28);
+  await placeGlb(parent, GLB.heart, [x, -eyeZ, eyeY], 0.28);
 }
 
 function bellCollar(parent) {
-  band(parent, [0, 0, 0.42], 0.62, 0.02, '#ffd23f', { flat: 1.5, metal: 0.45, rough: 0.35 });
-  ball(parent, [0, FRONT - 0.02, 0.32], 0.08, '#ffe58a', { metal: 0.35 });
+  band(parent, [0, 0, 0.42], 0.6, 0.03, '#ffd23f', { flat: 1.2, metal: 0.45, rough: 0.35 });
+  ball(parent, [0, FRONT + 0.02, 0.3], 0.09, '#ffe58a', { metal: 0.35 });
 }
 
 async function starMedal(parent) {
-  box(parent, [0, FRONT - 0.02, 0.72], [0.11, 0.016, 0.4], '#e23b4a');
-  box(parent, [-0.09, FRONT, 0.94], [0.09, 0.014, 0.18], '#e23b4a', { rot: [0, 0, 32] });
-  box(parent, [0.09, FRONT, 0.94], [0.09, 0.014, 0.18], '#e23b4a', { rot: [0, 0, -32] });
-  await placeGlb(parent, GLB.star, [0, FRONT - 0.06, 0.42], 0.55);
+  box(parent, [0, FRONT + 0.02, 0.58], [0.13, 0.03, 0.42], '#e23b4a');
+  box(parent, [-0.1, FRONT + 0.04, 0.82], [0.11, 0.028, 0.18], '#e23b4a', { rot: [0, 0, 28] });
+  box(parent, [0.1, FRONT + 0.04, 0.82], [0.11, 0.028, 0.18], '#e23b4a', { rot: [0, 0, -28] });
+  await placeGlb(parent, GLB.star, [0, FRONT - 0.02, 0.36], 0.55);
 }
 
 function rainbow(parent) {
@@ -596,10 +634,10 @@ const BUILDERS = {
   flame_band: async (p) => flameBand(p),
   sprout: async (p) => sprout(p),
   crown: async (p) => crown(p),
-  round_glasses: async (p) => glasses(p, false),
-  sunglasses: async (p) => glasses(p, true),
-  heart_cheeks: async (p) => heartCheeks(p),
-  hero_mask: async (p) => heroMask(p),
+  round_glasses: async (p, ctx) => glasses(p, false, ctx.fit),
+  sunglasses: async (p, ctx) => glasses(p, true, ctx.fit),
+  heart_cheeks: async (p, ctx) => heartCheeks(p, ctx.fit),
+  hero_mask: async (p, ctx) => heroMask(p, ctx.fit),
   bow_tie: async (p) => bowTie(p),
   scarf: async (p) => scarf(p),
   bell_collar: async (p) => bellCollar(p),

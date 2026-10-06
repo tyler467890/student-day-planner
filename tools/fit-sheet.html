@@ -43,6 +43,7 @@
     };
     const params = new URLSearchParams(location.search);
     const set = params.get('set') || 'featured';
+    const view = params.get('view') || '';
     const items = GROUPS[set] || set.split(',').filter((id) => ITEMS.some((item) => item.id === id));
     const byId = new Map(ITEMS.map((item) => [item.id, item]));
 
@@ -85,6 +86,7 @@
           await stage.setPet({
             animal: PETS[row],
             outfit: { [item.slot]: item.id },
+            view: view || undefined,
           });
           stage.poseAt('static', 0);
           await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));

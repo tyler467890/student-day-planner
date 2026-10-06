@@ -113,6 +113,7 @@ export function createPetStage(canvas) {
     active: false,
     poseToken: 0,
     frozen: false,
+    view: 'quarter',
   };
 
   let current = null;
@@ -157,8 +158,10 @@ export function createPetStage(canvas) {
     const dist = Math.max(distV, distH) * 1.08;
     camera.fov = 30;
     camera.aspect = aspect;
-    camera.position.set(0.38, mid + 0.04, dist);
-    camera.lookAt(0, mid - 0.02, 0);
+    const front = state.view === 'front' || state.view === 'eyes';
+    const lookY = state.view === 'eyes' ? mid + 0.16 : mid - 0.02;
+    camera.position.set(front ? 0 : 0.38, lookY + (front ? 0 : 0.06), state.view === 'eyes' ? dist * 0.62 : dist);
+    camera.lookAt(0, lookY, 0);
     camera.updateProjectionMatrix();
   }
 
@@ -188,7 +191,8 @@ export function createPetStage(canvas) {
       const eased = p < 0.5 ? 2 * p * p : 1 - ((-2 * p + 2) ** 2) / 2;
       spin = eased * Math.PI * 2;
     }
-    turntable.rotation.y = -0.42 + spin;
+    const yaw = state.view === 'front' || state.view === 'eyes' ? 0 : -0.42;
+    turntable.rotation.y = yaw + spin;
   }
 
   function present(pet) {
@@ -251,6 +255,7 @@ export function createPetStage(canvas) {
   function setPet(config) {
     const next = config || {};
     state.outfit = next.outfit || {};
+    if (next.view) state.view = next.view;
     const animal = next.animal || 'penguin';
     const mine = ++serial;
     state.animal = animal;
