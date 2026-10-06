@@ -33,7 +33,7 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html manifest.webmanifest sw.js robots.txt _site/
-          cp -r css js fonts icons pets-preview sounds items _site/
+          cp -r css js fonts icons pets-preview sounds items data _site/
           cp -aL models _site/models
           cp -aL vendor _site/vendor
 

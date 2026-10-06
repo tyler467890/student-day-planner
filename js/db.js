@@ -5,6 +5,8 @@
 const DB_NAME = 'dayli';
 const DB_VERSION = 1;
 const STORES = ['tasks', 'overrides', 'completions', 'bonuses', 'settings', 'reminders', 'background'];
+// Suggestion history shares the settings store (id: 'suggestions'). Planner saves must keep it.
+const SUGGESTION_ROW_ID = 'suggestions';
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -76,12 +78,22 @@ export async function clearStore(storeName) {
 
 export async function replaceAll(data) {
   const db = await getDB();
+  const keptSuggestion = await new Promise((resolve, reject) => {
+    const read = db.transaction('settings', 'readonly');
+    const req = read.objectStore('settings').get(SUGGESTION_ROW_ID);
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
   const tx = db.transaction(STORES, 'readwrite');
   for (const name of STORES) {
     const store = tx.objectStore(name);
     store.clear();
     const rows = data[name] || [];
-    for (const row of rows) store.put(row);
+    for (const row of rows) {
+      if (name === 'settings' && row && row.id === SUGGESTION_ROW_ID) continue;
+      store.put(row);
+    }
+    if (name === 'settings' && keptSuggestion) store.put(keptSuggestion);
   }
   await txDone(tx);
 }

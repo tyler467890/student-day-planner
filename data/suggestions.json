@@ -1,0 +1,278 @@
+{
+  "version": 1,
+  "suggestions": [
+    {
+      "id": "study-block",
+      "title": "Study for 25 minutes",
+      "category": "study",
+      "reason": "School is on your list, and a short study block keeps the classwork from piling up.",
+      "difficulty": "easy",
+      "suggestedTime": "16:30",
+      "repeat": "daily"
+    },
+    {
+      "id": "study-notes",
+      "title": "Review today's notes",
+      "category": "study",
+      "reason": "A few minutes with the notes from today makes the next class easier.",
+      "difficulty": "medium",
+      "suggestedTime": "17:00",
+      "repeat": "daily"
+    },
+    {
+      "id": "study-homework",
+      "title": "Start the next homework problem",
+      "category": "study",
+      "reason": "Starting the next problem is the hard part, so this one stays small.",
+      "difficulty": "easy",
+      "suggestedTime": "16:00",
+      "repeat": "daily"
+    },
+    {
+      "id": "study-flashcards",
+      "title": "Make 10 flashcards for the next exam",
+      "category": "study",
+      "reason": "Ten cards is enough to feel ready without taking the whole evening.",
+      "difficulty": "medium",
+      "suggestedTime": "19:00",
+      "repeat": "weekly"
+    },
+    {
+      "id": "study-chapter",
+      "title": "Read one textbook chapter",
+      "category": "study",
+      "reason": "One chapter is a clear finish line when a textbook feels endless.",
+      "difficulty": "medium",
+      "suggestedTime": "18:00",
+      "repeat": null
+    },
+    {
+      "id": "relax-hobby",
+      "title": "Spend 20 minutes on a hobby",
+      "category": "relax",
+      "reason": "Something you actually like belongs on the list too.",
+      "difficulty": "easy",
+      "repeat": "weekly"
+    },
+    {
+      "id": "relax-phone",
+      "title": "Put your phone in another room for 15 minutes",
+      "category": "relax",
+      "reason": "Fifteen quiet minutes gives your head a less crowded room.",
+      "difficulty": "easy",
+      "repeat": null
+    },
+    {
+      "id": "relax-song",
+      "title": "Listen to one song and do nothing else",
+      "category": "relax",
+      "reason": "One song, with nothing else going on, is enough to come up for air.",
+      "difficulty": "easy",
+      "repeat": null
+    },
+    {
+      "id": "relax-stretch",
+      "title": "Stretch for five minutes",
+      "category": "relax",
+      "reason": "Five minutes of stretching undoes a long sit.",
+      "difficulty": "easy",
+      "repeat": "daily"
+    },
+    {
+      "id": "relax-walk",
+      "title": "Take a 10 minute walk outside",
+      "category": "relax",
+      "reason": "When the list is heavy, a short walk is a real break.",
+      "difficulty": "easy",
+      "suggestedTime": "15:30",
+      "repeat": null
+    },
+    {
+      "id": "sleep-bedtime",
+      "title": "Pick a bedtime and start winding down",
+      "category": "sleep",
+      "reason": "A bedtime you actually start makes the next day less of a scramble.",
+      "difficulty": "easy",
+      "suggestedTime": "22:00",
+      "repeat": "daily"
+    },
+    {
+      "id": "sleep-screens",
+      "title": "Screens off 30 minutes before bed",
+      "category": "sleep",
+      "reason": "Screens off before bed makes it easier to fall asleep.",
+      "difficulty": "medium",
+      "suggestedTime": "21:30",
+      "repeat": "daily"
+    },
+    {
+      "id": "sleep-wake",
+      "title": "Set an alarm for the same wake time tomorrow",
+      "category": "sleep",
+      "reason": "The same wake time does more for your energy than a perfect night.",
+      "difficulty": "easy",
+      "suggestedTime": "07:30",
+      "repeat": "daily"
+    },
+    {
+      "id": "prod-top-three",
+      "title": "Write tomorrow's top three priorities",
+      "category": "productivity",
+      "reason": "Three priorities beat a long list you will not finish.",
+      "difficulty": "easy",
+      "suggestedTime": "21:00",
+      "repeat": "daily"
+    },
+    {
+      "id": "prod-two-minute",
+      "title": "Finish one two-minute task you have been avoiding",
+      "category": "productivity",
+      "reason": "A tiny task you have been avoiding is a quick win.",
+      "difficulty": "easy",
+      "repeat": null
+    },
+    {
+      "id": "prod-week",
+      "title": "Sketch a rough plan for the week",
+      "category": "productivity",
+      "reason": "A rough week plan keeps the days from blurring together.",
+      "difficulty": "medium",
+      "suggestedTime": "18:00",
+      "repeat": "weekly"
+    },
+    {
+      "id": "money-save",
+      "title": "Move a small amount into savings",
+      "category": "money",
+      "reason": "A small transfer into savings counts, even if it is tiny.",
+      "difficulty": "easy",
+      "repeat": "weekly"
+    },
+    {
+      "id": "money-skip",
+      "title": "Skip one unplanned purchase today",
+      "category": "money",
+      "reason": "Skipping one unplanned purchase is a real saving.",
+      "difficulty": "medium",
+      "repeat": null
+    },
+    {
+      "id": "money-spent",
+      "title": "Write down what you spent today",
+      "category": "money",
+      "reason": "Writing down what you spent makes the money picture honest.",
+      "difficulty": "easy",
+      "suggestedTime": "21:00",
+      "repeat": "daily"
+    },
+    {
+      "id": "health-fruit",
+      "title": "Eat one piece of fruit",
+      "category": "health",
+      "reason": "One piece of fruit is a simple way to look after yourself.",
+      "difficulty": "easy",
+      "repeat": "daily"
+    },
+    {
+      "id": "health-move",
+      "title": "Move your body for 15 minutes",
+      "category": "health",
+      "reason": "Fifteen minutes of moving counts, even if it is not a workout.",
+      "difficulty": "easy",
+      "suggestedTime": "17:30",
+      "repeat": "daily"
+    },
+    {
+      "id": "health-posture",
+      "title": "Reset your posture and unclench your shoulders",
+      "category": "health",
+      "reason": "Unclench your shoulders. Your body has been holding the day.",
+      "difficulty": "easy",
+      "repeat": null
+    },
+    {
+      "id": "health-water",
+      "title": "Drink a full glass of water",
+      "category": "health",
+      "reason": "One full glass of water is an easy health win.",
+      "difficulty": "easy",
+      "suggestedTime": "09:00",
+      "repeat": "daily"
+    },
+    {
+      "id": "meals-breakfast",
+      "title": "Eat breakfast before you start the day",
+      "category": "meals",
+      "reason": "Eating before the day starts keeps the morning from running you.",
+      "difficulty": "easy",
+      "suggestedTime": "08:00",
+      "repeat": "daily"
+    },
+    {
+      "id": "meals-lunch",
+      "title": "Sit down for a real lunch",
+      "category": "meals",
+      "reason": "A real lunch beats grazing over your work.",
+      "difficulty": "easy",
+      "suggestedTime": "12:15",
+      "repeat": "daily"
+    },
+    {
+      "id": "mind-breath",
+      "title": "Take three slow breaths",
+      "category": "mindfulness",
+      "reason": "Three slow breaths reset a loud hour.",
+      "difficulty": "easy",
+      "repeat": null
+    },
+    {
+      "id": "mind-journal",
+      "title": "Write one line about how today went",
+      "category": "mindfulness",
+      "reason": "One line about today is enough to put it down.",
+      "difficulty": "easy",
+      "suggestedTime": "21:15",
+      "repeat": "daily"
+    },
+    {
+      "id": "chores-laundry",
+      "title": "Start one load of laundry",
+      "category": "chores",
+      "reason": "Starting one load is the whole chore. Folding can wait.",
+      "difficulty": "medium",
+      "repeat": "weekly"
+    },
+    {
+      "id": "chores-tidy",
+      "title": "Tidy one surface for 10 minutes",
+      "category": "chores",
+      "reason": "Ten minutes on one surface is enough. Leave the rest.",
+      "difficulty": "easy",
+      "repeat": null
+    },
+    {
+      "id": "social-meal",
+      "title": "Plan one meal with someone this week",
+      "category": "social",
+      "reason": "One shared meal gives the week a person, not just tasks.",
+      "difficulty": "easy",
+      "repeat": "weekly"
+    },
+    {
+      "id": "social-text",
+      "title": "Send a message to a friend",
+      "category": "social",
+      "reason": "A short message is enough to stay connected.",
+      "difficulty": "easy",
+      "repeat": null
+    },
+    {
+      "id": "social-thanks",
+      "title": "Thank someone who helped you recently",
+      "category": "social",
+      "reason": "Thanking someone makes the help feel seen.",
+      "difficulty": "easy",
+      "repeat": null
+    }
+  ]
+}
