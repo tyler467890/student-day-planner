@@ -219,7 +219,7 @@ test('older teen and adult goals stay off until the setting is turned on', async
   await page.reload();
   await page.getByRole('button', { name: 'Customize' }).click();
   await expect(page.getByRole('checkbox', { name: 'Include goals for older teens and adults' })).toBeChecked();
-  await page.getByRole('button', { name: 'Back' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   await bubble(page).getByRole('button', { name: 'Not now', exact: true }).click();
   await page.evaluate(() => window.__dayli.checkReminders());
   await expect.poll(() => page.evaluate(() => window.__suggest.lastSettings?.suggestIncludeOlder)).toBe(true);
