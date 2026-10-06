@@ -13,8 +13,8 @@ const FREQS = new Set(['off', 'rare', 'normal', 'often']);
 const PACES = new Set(['rare', 'normal', 'often']);
 const HM = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
-/** Overnight window used when the planner has no quiet-hours setting yet. */
-export const DEFAULT_QUIET = { start: '22:00', end: '07:00' };
+/** Overnight window used when the engine does not say whether it is quiet. */
+export const DEFAULT_QUIET = { start: '21:00', end: '07:00' };
 
 export function isHm(value) {
   return HM.test(String(value || ''));
@@ -41,7 +41,7 @@ function hmMinutes(hm) {
  * Quiet hours for suggestion notifications.
  * `settings.quietHours = false` or `{ on: false }` turns them off.
  * A `{ start, end }` window (also `from`/`to`, or `quietStart`/`quietEnd`) wins.
- * Anything else uses 22:00–07:00.
+ * Anything else uses 21:00–07:00.
  */
 export function quietWindow(settings) {
   const q = settings?.quietHours ?? settings?.quiet ?? null;
@@ -71,16 +71,36 @@ export function isQuietHours(now, settings) {
 }
 
 /**
+ * Whether this suggestion may notify right now.
+ * 'send' is fine, 'later' waits for a clock window, 'never' means the
+ * suggestion itself is quiet and the card is the only delivery.
+ * A missing `quiet` field and a missing canNotify use the app window.
+ */
+export function suggestionHold({ now, settings, suggestion, canNotify } = {}) {
+  if (suggestion && suggestion.quiet === true) return 'never';
+  if (typeof canNotify === 'function') {
+    let allowed;
+    try { allowed = canNotify(now); } catch { allowed = undefined; }
+    if (allowed === false) return 'later';
+    if (allowed === true) return 'send';
+  }
+  if (typeof suggestion?.quiet === 'boolean') return suggestion.quiet ? 'never' : 'send';
+  return isQuietHours(now, settings) ? 'later' : 'send';
+}
+
+/**
  * Whether a suggestion notification may go out.
  * 'send' now, 'later' because of quiet hours, 'skip' when notifications
- * are off or this idea was already sent.
+ * are off, this idea was already sent, or the suggestion itself is quiet.
  */
-export function noticePlan({ now, settings, permission, alreadyNotified }) {
+export function noticePlan({ now, settings, permission, alreadyNotified, suggestion, canNotify } = {}) {
   if (alreadyNotified) return 'skip';
   if (normalizeSuggestFrequency(settings?.suggestFrequency) === 'off') return 'skip';
   const allowed = Boolean(settings?.remindersWanted) && permission === 'granted';
   if (!allowed) return 'skip';
-  if (isQuietHours(now, settings)) return 'later';
+  const hold = suggestionHold({ now, settings, suggestion, canNotify });
+  if (hold === 'never') return 'skip';
+  if (hold === 'later') return 'later';
   return 'send';
 }
 
@@ -138,6 +158,7 @@ export function sanitizeSuggestCard(card) {
   const suggestedTime = isHm(card.suggestedTime) ? card.suggestedTime : null;
   const time = isHm(card.time) ? card.time : suggestedTime;
   const notice = card.notice === 'sent' || card.notice === 'later' || card.notice === 'skipped' ? card.notice : null;
+  const quiet = typeof card.quiet === 'boolean' ? card.quiet : null;
   return {
     id,
     title,
@@ -149,6 +170,7 @@ export function sanitizeSuggestCard(card) {
     time,
     shown: Boolean(card.shown),
     notice,
+    quiet,
   };
 }
 
@@ -162,6 +184,7 @@ export function suggestionFromEngine(raw) {
     difficulty: raw.difficulty,
     suggestedTime: raw.suggestedTime,
     repeat: raw.repeat,
+    quiet: raw.quiet,
     time: isHm(raw.suggestedTime) ? raw.suggestedTime : null,
     shown: false,
     notice: null,

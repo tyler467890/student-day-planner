@@ -199,6 +199,7 @@ function mergeSettings(saved) {
   const settings = migrateSettings(saved);
   settings.suggestFrequency = normalizeSuggestFrequency(settings.suggestFrequency);
   settings.suggestPace = suggestPace(settings);
+  settings.suggestIncludeOlder = settings.suggestIncludeOlder === true;
   settings.suggestCard = sanitizeSuggestCard(settings.suggestCard);
   return settings;
 }
@@ -922,6 +923,22 @@ async function sendSuggestionNotice(card) {
   });
 }
 
+async function suggestionNoticePlan(card) {
+  let engine = null;
+  try { engine = await loadSuggestEngine(); } catch { engine = null; }
+  const canNotify = typeof engine?.canNotify === 'function'
+    ? (now) => engine.canNotify(now)
+    : undefined;
+  return noticePlan({
+    now: currentDate(),
+    settings: S.settings,
+    permission: notificationPermission(),
+    alreadyNotified: false,
+    suggestion: card,
+    canNotify,
+  });
+}
+
 function settleSuggestionCard(card) {
   if (!card || card.shown) return;
   card.shown = true;
@@ -930,35 +947,27 @@ function settleSuggestionCard(card) {
     celebrations: S.settings.celebrations,
   });
   if (lastSuggestGesture) reactPet(lastSuggestGesture);
+  announce(card.reason ? `${card.title}. ${card.reason}` : card.title);
   loadSuggestEngine().then((engine) => {
     try { engine?.markShown?.(card.id); } catch { /* ignore */ }
   }).catch(() => {});
-  const plan = noticePlan({
-    now: currentDate(),
-    settings: S.settings,
-    permission: notificationPermission(),
-    alreadyNotified: false,
-  });
-  if (plan === 'send') {
-    card.notice = 'sent';
-    void sendSuggestionNotice(card);
-  } else if (plan === 'later') {
-    card.notice = 'later';
-  } else {
-    card.notice = 'skipped';
-  }
-  announce(card.reason ? `${card.title}. ${card.reason}` : card.title);
-  void persistAll();
+  void suggestionNoticePlan(card).then(async (plan) => {
+    if (!S.settings.suggestCard || S.settings.suggestCard.id !== card.id) return;
+    if (plan === 'send') {
+      card.notice = 'sent';
+      await sendSuggestionNotice(card);
+    } else if (plan === 'later') {
+      card.notice = 'later';
+    } else {
+      card.notice = 'skipped';
+    }
+    await persistAll();
+  }).catch(() => {});
 }
 
 async function flushLaterNotice(card) {
   if (!card || card.notice !== 'later') return;
-  const plan = noticePlan({
-    now: currentDate(),
-    settings: S.settings,
-    permission: notificationPermission(),
-    alreadyNotified: false,
-  });
+  const plan = await suggestionNoticePlan(card);
   if (plan === 'send') {
     card.notice = 'sent';
     await sendSuggestionNotice(card);
@@ -999,7 +1008,10 @@ async function maybeOfferSuggestion(reason) {
       raw = engine.getSuggestion({
         tasks: S.tasks,
         now: currentDate(),
-        settings: S.settings,
+        settings: {
+          ...S.settings,
+          suggestIncludeOlder: S.settings.suggestIncludeOlder === true,
+        },
       });
     } catch {
       return;
@@ -3374,10 +3386,17 @@ function renderSuggestSettings() {
     if (box.checked) void maybeOfferSuggestion('open');
   });
   const choices = [
-    ['rare', 'Rarely'],
-    ['normal', 'Normal'],
-    ['often', 'Often'],
+    ['rare', 'Rarely', ''],
+    ['normal', 'Normal', 'a couple a week'],
+    ['often', 'Often', ''],
   ];
+  const older = h('input', { type: 'checkbox', 'aria-label': 'Include goals for older teens and adults' });
+  older.checked = s.suggestIncludeOlder === true;
+  older.addEventListener('change', async () => {
+    s.suggestIncludeOlder = older.checked === true;
+    await persistAll();
+    render();
+  });
   return h('section', { class: 'suggest-settings' },
     h('h2', { text: 'Suggested goals' }),
     h('label', { class: 'check-row' }, box, 'Suggest goals'),
@@ -3385,11 +3404,12 @@ function renderSuggestSettings() {
       class: 'chips',
       role: 'radiogroup',
       'aria-label': 'How often',
-    }, choices.map(([id, label]) => h('button', {
+    }, choices.map(([id, label, note]) => h('button', {
       type: 'button',
-      class: `chip${pace === id ? ' is-selected' : ''}`,
+      class: `chip${note ? ' big' : ''}${pace === id ? ' is-selected' : ''}`,
       role: 'radio',
       'aria-checked': pace === id ? 'true' : 'false',
+      'aria-label': note ? `${label}: ${note}` : label,
       onclick: async () => {
         s.suggestPace = id;
         s.suggestFrequency = id;
@@ -3397,13 +3417,15 @@ function renderSuggestSettings() {
         render();
         void maybeOfferSuggestion('open');
       },
-    }, label))),
+    }, label, note ? h('span', { class: 'chip-sub', text: note }) : null))),
     h('p', {
       class: 'fine',
       text: on
-        ? 'Your pet offers one small goal at a time.'
+        ? 'Normal is a couple a week, at most one a day. Your pet offers one at a time.'
         : 'Off. Your pet stays quiet.',
-    }));
+    }),
+    h('label', { class: 'check-row' }, older, 'Include goals for older teens and adults'),
+    h('p', { class: 'fine', text: 'Budgeting, caffeine, and similar ideas. Off until you turn this on.' }));
 }
 
 function testReminder() {
@@ -3608,7 +3630,7 @@ function renderHelp() {
       h('h2', { text: 'Repeating' }),
       h('p', { text: 'Pick Every day, Weekdays, Weekends, or your own days. Checking one off finishes that day only. Describe my week turns a sentence into repeating goals, and nothing is saved until you tap Add these.' }),
       h('h2', { text: 'Suggested goals' }),
-      h('p', { text: 'Every so often your pet suggests one goal. Add puts it on today. Not now hides it. Don\'t suggest this skips that idea. Finishing one the first time adds 2 bonus coins.' }),
+      h('p', { text: 'Every so often your pet suggests one goal. Normal is a couple a week. Add puts it on today. Not now hides it. Don\'t suggest this skips that idea. Finishing one the first time adds 2 bonus coins. Goals for older teens and adults stay off until you turn them on.' }),
       h('h2', { text: 'Backup' }),
       h('p', { text: 'Customize, then Back up now, saves a file on your device. Restore brings it back. A Home Screen install is the safest place to keep your planner on iPhone.' })));
 }

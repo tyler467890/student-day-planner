@@ -35,8 +35,9 @@ async function installMock(context, sample = SAMPLE) {
     window.__suggestGo = true;
     window.DayliSuggest = {
       async loadLibrary() { state.calls.push('load'); },
-      getSuggestion() {
+      getSuggestion(input) {
         state.calls.push('get');
+        state.lastSettings = input && input.settings ? input.settings : null;
         if (!window.__suggestGo) return null;
         return state.suggestion;
       },
@@ -192,6 +193,36 @@ test('suggested goals setting stores off, rarely, normal, and often', async ({ c
   await expect.poll(() => page.evaluate(() => window.__dayli.getState().settings.suggestFrequency)).toBe('often');
   await page.getByRole('radio', { name: 'Rarely' }).click();
   await expect.poll(() => page.evaluate(() => window.__dayli.getState().settings.suggestFrequency)).toBe('rare');
+  await expect(page.getByRole('radio', { name: 'Normal: a couple a week' })).toBeVisible();
+  await expect(page.getByText('Normal is a couple a week, at most one a day. Your pet offers one at a time.')).toBeVisible();
+});
+
+test('older teen and adult goals stay off until the setting is turned on', async ({ context, page }) => {
+  await installMock(context);
+  await useClock(page, '2026-09-25T15:00:00-04:00');
+  await skipToToday(page);
+  await page.getByRole('button', { name: 'Customize' }).click();
+  const older = page.getByRole('checkbox', { name: 'Include goals for older teens and adults' });
+  await expect(older).not.toBeChecked();
+  expect(await page.evaluate(() => window.__dayli.getState().settings.suggestIncludeOlder)).toBe(false);
+  await older.click();
+  await expect.poll(() => page.evaluate(() => new Promise((resolve, reject) => {
+    const req = indexedDB.open('dayli');
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result;
+      const get = db.transaction('settings', 'readonly').objectStore('settings').get('main');
+      get.onerror = () => reject(get.error);
+      get.onsuccess = () => resolve(get.result?.suggestIncludeOlder === true);
+    };
+  }))).toBe(true);
+  await page.reload();
+  await page.getByRole('button', { name: 'Customize' }).click();
+  await expect(page.getByRole('checkbox', { name: 'Include goals for older teens and adults' })).toBeChecked();
+  await page.getByRole('button', { name: 'Back' }).click();
+  await bubble(page).getByRole('button', { name: 'Not now', exact: true }).click();
+  await page.evaluate(() => window.__dayli.checkReminders());
+  await expect.poll(() => page.evaluate(() => window.__suggest.lastSettings?.suggestIncludeOlder)).toBe(true);
 });
 
 test('quiet hours hold the suggestion notification until daytime', async ({ context, page }) => {
@@ -206,7 +237,7 @@ test('quiet hours hold the suggestion notification until daytime', async ({ cont
   });
   await installMock(context);
   await page.addInitScript(() => { window.__suggestGo = false; });
-  await useClock(page, '2026-09-25T23:10:00-04:00');
+  await useClock(page, '2026-09-25T21:10:00-04:00');
   await skipToToday(page);
   await expect(bubble(page)).toHaveCount(0);
   await page.evaluate(() => {
@@ -233,6 +264,60 @@ test('quiet hours hold the suggestion notification until daytime', async ({ cont
   await expect(page.getByRole('heading', { level: 1, name: 'My Day' })).toBeVisible();
   await expect(bubble(page)).toBeVisible();
   expect(page.url()).not.toContain('suggest=');
+});
+
+test('a quiet suggestion and canNotify false stay on the card', async ({ context, page }) => {
+  await context.addInitScript(() => {
+    Object.defineProperty(Notification, 'permission', { configurable: true, get: () => 'granted' });
+    window.__notes = [];
+    const orig = ServiceWorkerRegistration.prototype.showNotification;
+    ServiceWorkerRegistration.prototype.showNotification = function show(title, opts) {
+      window.__notes.push({ title, body: opts?.body, data: opts?.data || null, actions: opts?.actions || null });
+      try { return orig.apply(this, arguments); } catch { return Promise.resolve(); }
+    };
+  });
+  await installMock(context, { ...SAMPLE, quiet: true });
+  await page.addInitScript(() => { window.__suggestGo = false; });
+  await useClock(page, '2026-09-25T15:00:00-04:00');
+  await skipToToday(page);
+  await page.evaluate(() => {
+    window.__dayli.getState().settings.remindersWanted = true;
+    window.__suggestGo = true;
+  });
+  await page.evaluate(() => window.__dayli.checkReminders());
+  await expect(bubble(page)).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__dayli.getState().settings.suggestCard?.notice)).toBe('skipped');
+  expect(await page.evaluate(() => window.__notes.length)).toBe(0);
+  await page.evaluate(() => {
+    window.__DAYLI_NOW = new Date('2026-09-25T16:00:00-04:00').getTime();
+    window.__dayli.checkReminders();
+  });
+  await page.waitForTimeout(300);
+  expect(await page.evaluate(() => window.__notes.length)).toBe(0);
+
+  await page.evaluate(() => {
+    window.__suggest.suggestion = {
+      id: 'walk-1',
+      title: 'Take a short walk',
+      category: 'health',
+      reason: 'A short walk breaks up a long list.',
+      difficulty: 'easy',
+      suggestedTime: '16:00',
+      repeat: null,
+    };
+    window.DayliSuggest.canNotify = () => false;
+    window.__dayli.getState().settings.suggestCard = null;
+    window.__DAYLI_NOW = new Date('2026-09-25T15:00:00-04:00').getTime();
+  });
+  await page.evaluate(() => window.__dayli.checkReminders());
+  await expect(bubble(page).getByText('Take a short walk')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__dayli.getState().settings.suggestCard?.notice)).toBe('later');
+  expect(await page.evaluate(() => window.__notes.length)).toBe(0);
+  await page.evaluate(() => {
+    window.DayliSuggest.canNotify = () => true;
+    window.__dayli.checkReminders();
+  });
+  await expect.poll(() => page.evaluate(() => window.__notes.length)).toBe(1);
 });
 
 test('finishing a suggested goal adds 2 coins once, and undo takes them back', async ({ context, page }) => {

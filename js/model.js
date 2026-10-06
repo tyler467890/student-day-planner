@@ -304,6 +304,7 @@ export function defaultSettings() {
     wardrobe: defaultWardrobe(),
     suggestFrequency: 'normal',
     suggestPace: 'normal',
+    suggestIncludeOlder: false,
     suggestCard: null,
     schemaVersion: 4,
   };

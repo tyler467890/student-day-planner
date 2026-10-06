@@ -7,7 +7,7 @@ import { dayOfWeek, levelForPoints, sumPoints } from '../js/model.js';
 import {
   applySuggestionBonus, buildSuggestionTask, defaultSuggestionTime, isQuietAtMinutes,
   noticePlan, normalizeSuggestFrequency, resolveSuggestEngine, shouldAskSuggestion,
-  suggestionBonusId, suggestionGesture, suggestPace,
+  suggestionBonusId, suggestionFromEngine, suggestionGesture, suggestionHold, suggestPace,
 } from '../js/suggestions.js';
 
 const QUIET = { quietHours: { on: true, start: '22:00', end: '07:00' } };
@@ -54,6 +54,42 @@ test('quiet hours block a suggestion notification and a daytime one can send', (
     permission: 'granted',
     alreadyNotified: true,
   }), 'skip');
+});
+
+test('suggestion quiet hours start at 21:00 unless the engine says otherwise', () => {
+  const settings = { suggestFrequency: 'normal', remindersWanted: true };
+  const night = new Date(2026, 8, 25, 21, 0);
+  const evening = new Date(2026, 8, 25, 20, 59);
+  assert.equal(isQuietAtMinutes(21 * 60, settings), true);
+  assert.equal(isQuietAtMinutes(20 * 60 + 59, settings), false);
+  assert.equal(noticePlan({ now: night, settings, permission: 'granted' }), 'later');
+  assert.equal(noticePlan({ now: evening, settings, permission: 'granted' }), 'send');
+
+  const idea = { id: 'budget', title: 'Sketch a budget', quiet: true };
+  assert.equal(suggestionFromEngine(idea).quiet, true);
+  assert.equal(suggestionHold({ now: evening, settings, suggestion: idea }), 'never');
+  assert.equal(noticePlan({
+    now: evening, settings, permission: 'granted', suggestion: idea,
+  }), 'skip');
+  assert.equal(suggestionHold({
+    now: night, settings, suggestion: { quiet: false },
+  }), 'send');
+  assert.equal(suggestionHold({
+    now: evening, settings, canNotify: () => false,
+  }), 'later');
+  assert.equal(suggestionHold({
+    now: night, settings, canNotify: () => true,
+  }), 'send');
+  assert.equal(suggestionHold({
+    now: night, settings, suggestion: { quiet: true }, canNotify: () => true,
+  }), 'never');
+  assert.equal(suggestionHold({
+    now: night, settings, canNotify() { throw new Error('missing'); },
+  }), 'later');
+  assert.equal(suggestionFromEngine({ id: 'walk', title: 'Walk' }).quiet, null);
+  assert.equal(suggestionHold({
+    now: night, settings, suggestion: { quiet: null },
+  }), 'later');
 });
 
 test('the same suggestion is not asked again within the hour while the app stays open', () => {
