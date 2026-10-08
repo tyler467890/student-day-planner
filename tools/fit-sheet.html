@@ -42,32 +42,46 @@
       effect: ITEMS.filter((item) => item.slot === 'effect').map((item) => item.id),
       all: ITEMS.map((item) => item.id),
     };
+    const OUTFITS = [
+      { label: 'Scarf + sweater', view: 'front', outfit: { neck: 'scarf', body: 'sweater' } },
+      { label: 'Scarf + sweater 3/4', view: 'quarter', outfit: { neck: 'scarf', body: 'sweater' } },
+      { label: 'Sweater + backpack', view: 'front', outfit: { body: 'sweater', back: 'backpack' } },
+      { label: 'Sweater + backpack 3/4', view: 'quarter', outfit: { body: 'sweater', back: 'backpack' } },
+      { label: 'Scarf + cape', view: 'front', outfit: { neck: 'scarf', back: 'cape' } },
+      { label: 'Scarf + cape 3/4', view: 'quarter', outfit: { neck: 'scarf', back: 'cape' } },
+    ];
     const params = new URLSearchParams(location.search);
     const set = params.get('set') || 'featured';
     const view = params.get('view') || '';
     const pose = params.get('pose') || 'static';
     const poseT = Number(params.get('t') || 0);
-    const items = GROUPS[set] || set.split(',').filter((id) => ITEMS.some((item) => item.id === id));
     const byId = new Map(ITEMS.map((item) => [item.id, item]));
+    const columns = set === 'outfits'
+      ? OUTFITS
+      : (GROUPS[set] || set.split(',').filter((id) => byId.has(id))).map((id) => ({
+        label: byId.get(id).short,
+        view: view || undefined,
+        outfit: { [byId.get(id).slot]: id },
+      }));
 
     const cellW = 210;
     const cellH = 240;
     const labelH = 18;
     const head = 26;
     const sheet = document.getElementById('sheet');
-    sheet.width = Math.max(1, cellW * items.length);
+    sheet.width = Math.max(1, cellW * columns.length);
     sheet.height = head + (cellH + labelH) * PETS.length;
     const ctx = sheet.getContext('2d');
     ctx.fillStyle = '#efeaf8';
     ctx.fillRect(0, 0, sheet.width, sheet.height);
     ctx.fillStyle = '#2a1860';
-    ctx.font = 'bold 13px Nunito, sans-serif';
-    items.forEach((id, col) => ctx.fillText(byId.get(id).short, col * cellW + 8, 18));
+    ctx.font = 'bold 12px Nunito, sans-serif';
+    columns.forEach((col, i) => ctx.fillText(col.label, i * cellW + 8, 18));
 
     const stageCanvas = document.getElementById('stage');
     const stage = createPetStage(stageCanvas);
 
-    function paintCell(animal, item, col, row) {
+    function paintCell(animal, col, row) {
       const y = head + row * (cellH + labelH);
       const x = col * cellW;
       const grad = ctx.createLinearGradient(0, y, 0, y + cellH);
@@ -84,19 +98,19 @@
     window.__sheet = { done: false, error: null };
     try {
       for (let row = 0; row < PETS.length; row += 1) {
-        for (let col = 0; col < items.length; col += 1) {
-          const item = byId.get(items[col]);
+        for (let col = 0; col < columns.length; col += 1) {
+          const column = columns[col];
           await stage.setPet({
             animal: PETS[row],
-            outfit: { [item.slot]: item.id },
-            view: view || undefined,
+            outfit: column.outfit,
+            view: column.view || undefined,
           });
           stage.poseAt(pose, Number.isFinite(poseT) ? poseT : 0);
           await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-          paintCell(PETS[row], item, col, row);
+          paintCell(PETS[row], col, row);
         }
       }
-      window.__sheet = { done: true, items: items.length, pets: PETS.length };
+      window.__sheet = { done: true, items: columns.length, pets: PETS.length };
     } catch (err) {
       window.__sheet = { done: true, error: String(err) };
     }

@@ -2524,6 +2524,7 @@
     },
     "scarf": {
       "slot": "neck",
+      "note": "Origin sits under the chin. Scale clears the sweater collar so the wrap layers over it.",
       "default": {
         "file": "scarf.glb"
       },
@@ -2531,7 +2532,7 @@
         "dog": {
           "position": [
             0,
-            0.4,
+            0.8,
             0
           ],
           "rotation": [
@@ -2539,12 +2540,12 @@
             0,
             0
           ],
-          "scale": 1
+          "scale": 1.1
         },
         "cat": {
           "position": [
             0,
-            0.38,
+            0.81,
             0
           ],
           "rotation": [
@@ -2552,12 +2553,12 @@
             0,
             0
           ],
-          "scale": 1
+          "scale": 1.1
         },
         "bunny": {
           "position": [
             0,
-            0.4,
+            0.8,
             0
           ],
           "rotation": [
@@ -2565,12 +2566,12 @@
             0,
             0
           ],
-          "scale": 1
+          "scale": 1.1
         },
         "penguin": {
           "position": [
             0,
-            0.46,
+            0.8,
             0
           ],
           "rotation": [
@@ -2578,12 +2579,12 @@
             0,
             0
           ],
-          "scale": 1
+          "scale": 1.1
         },
         "monkey": {
           "position": [
             0,
-            0.41,
+            0.8,
             0
           ],
           "rotation": [
@@ -2591,12 +2592,12 @@
             0,
             0
           ],
-          "scale": 1
+          "scale": 1.1
         },
         "tiger": {
           "position": [
             0,
-            0.4,
+            0.83,
             0
           ],
           "rotation": [
@@ -2604,12 +2605,12 @@
             0,
             0
           ],
-          "scale": 1
+          "scale": 1.1
         },
         "pig": {
           "position": [
             0,
-            0.44,
+            0.8,
             0
           ],
           "rotation": [
@@ -2617,12 +2618,12 @@
             0,
             0
           ],
-          "scale": 1
+          "scale": 1.1
         },
         "lion": {
           "position": [
             0,
-            0.42,
+            0.83,
             0
           ],
           "rotation": [
@@ -2630,12 +2631,12 @@
             0,
             0
           ],
-          "scale": 1
+          "scale": 1.12
         },
         "panda": {
           "position": [
             0,
-            0.4,
+            0.82,
             0
           ],
           "rotation": [
@@ -2643,12 +2644,12 @@
             0,
             0
           ],
-          "scale": 1
+          "scale": 1.1
         },
         "fox": {
           "position": [
             0,
-            0.4,
+            0.8,
             0
           ],
           "rotation": [
@@ -2656,12 +2657,12 @@
             0,
             0
           ],
-          "scale": 1
+          "scale": 1.1
         },
         "koala": {
           "position": [
             0,
-            0.38,
+            0.78,
             0
           ],
           "rotation": [
@@ -2669,12 +2670,12 @@
             0,
             0
           ],
-          "scale": 1
+          "scale": 1.1
         },
         "chick": {
           "position": [
             0,
-            0.46,
+            0.8,
             0
           ],
           "rotation": [
@@ -2682,7 +2683,7 @@
             0,
             0
           ],
-          "scale": 1
+          "scale": 1.1
         }
       }
     },

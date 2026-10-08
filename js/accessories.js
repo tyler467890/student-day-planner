@@ -7,11 +7,13 @@
 import {
   Group, Mesh, BoxGeometry, ConeGeometry, CylinderGeometry, SphereGeometry,
   TorusGeometry, MeshPhysicalMaterial, DoubleSide, BufferGeometry, BufferAttribute,
-  Box3, Vector3,
+  Box3, Vector3, CanvasTexture, SRGBColorSpace, ClampToEdgeWrapping, RepeatWrapping,
 } from 'three';
 import { itemById } from './shop.js';
 import { HEAD_TOP, PET_FIT, anchorFromFit, mergeFit } from './pet-fit.js';
-import { clearGlbItems, fitFor as v2FitFor, loadFits as loadV2Fits, placeItemGlb } from './glb-items.js';
+import {
+  clearGlbItems, fitFor as v2FitFor, glbGroup, loadFits as loadV2Fits, placeItemGlb, poseFor,
+} from './glb-items.js';
 
 const BODY_Y = 0.18125;
 const TOP = HEAD_TOP;
@@ -308,7 +310,8 @@ async function placeGlb(parent, url, loc, scale, rotY = 0) {
   return obj;
 }
 
-async function topHat(parent) {
+/** Kenney top hat with the brim at the local origin, so a fits.json pose can seat it. */
+async function topHatMesh() {
   if (!hatTemplate) {
     const src = await loadScene(GLB.hat);
     const base = src.clone(true);
@@ -321,11 +324,31 @@ async function topHat(parent) {
     const minY = bounds.min.y;
     const center = bounds.getCenter(new Vector3());
     base.scale.setScalar(2.2);
-    base.position.set(-center.x * 2.2, (TOP - 0.02) - minY * 2.2, -center.z * 2.2);
+    base.position.set(-center.x * 2.2, -0.02 - minY * 2.2, -center.z * 2.2);
     hatTemplate = base;
   }
-  const hat = hatTemplate.clone(true);
-  parent.add(hat);
+  return hatTemplate.clone(true);
+}
+
+/**
+ * Wear the built-in top hat. A per-animal pose from items/v2/fits.json (the lion
+ * lift included) is applied in pet space. Without one, the brim stays on the
+ * 1.3.2 hat anchor.
+ */
+async function topHat(anchors, pose) {
+  const hat = await topHatMesh();
+  if (pose?.position) {
+    const worn = new Group();
+    worn.add(hat);
+    worn.position.fromArray(pose.position);
+    const r = pose.rotation || [0, 0, 0];
+    worn.rotation.set(r[0], r[1], r[2]);
+    worn.scale.setScalar(pose.scale ?? 1);
+    glbGroup(anchors).add(worn);
+    return;
+  }
+  hat.position.y += TOP;
+  anchors.hat.add(hat);
 }
 
 function partyHat(parent) {
@@ -436,13 +459,13 @@ function bowTie(parent) {
 }
 
 function scarf(parent) {
-  // Knit wrap: a rounded band on the neck, plus two hanging ends with fringe.
-  band(parent, [0, 0, 0.48], 0.66, 0.055, '#e23b4a', { flat: 1.12 });
-  band(parent, [0, 0, 0.44], 0.68, 0.018, '#ffffff', { flat: 1.05 });
-  box(parent, [0.1, -0.64, 0.16], [0.2, 0.08, 0.52], '#e23b4a');
-  box(parent, [-0.08, -0.62, 0.12], [0.18, 0.075, 0.44], '#e23b4a');
-  box(parent, [0.1, -0.64, -0.09], [0.2, 0.084, 0.055], '#ffffff');
-  box(parent, [-0.08, -0.62, -0.09], [0.18, 0.08, 0.05], '#ffffff');
+  // Fallback when the scarf GLB is missing. The wrap sits under the chin.
+  band(parent, [0, 0, 0.86], 0.7, 0.05, '#e23b4a', { flat: 1.12 });
+  band(parent, [0, 0, 0.84], 0.71, 0.016, '#ffffff', { flat: 1.05 });
+  box(parent, [0.12, -0.72, 0.48], [0.16, 0.055, 0.4], '#e23b4a');
+  box(parent, [-0.08, -0.7, 0.4], [0.15, 0.05, 0.34], '#e23b4a');
+  box(parent, [0.12, -0.72, 0.26], [0.16, 0.06, 0.04], '#ffffff');
+  box(parent, [-0.08, -0.7, 0.22], [0.15, 0.055, 0.04], '#ffffff');
 }
 
 function backpack(parent, winged) {
@@ -517,30 +540,111 @@ function heroMask(parent, fit = {}) {
   puff(parent, [sep / 2, -frontZ, eyeY], 0.07, [1.15, 0.72, 0.28], '#ffe08a');
 }
 
-async function sweater(parent, winged) {
-  const wool = '#6d4aff';
-  const rib = '#3a249e';
-  const stripe = '#ffffff';
-  // Wool shell over the cube. Stripes and the hem sit just outside it so they read.
-  cloth(parent, 0.56, 0.7, 0.76, 0.6, wool, winged);
-  cloth(parent, 0.42, 0.8, 0.83, 0.06, stripe, winged);
-  cloth(parent, 0.56, 0.785, 0.81, 0.055, stripe, winged);
-  cloth(parent, 0.7, 0.76, 0.785, 0.05, stripe, winged);
-  cloth(parent, 0.3, 0.8, 0.84, 0.1, rib, winged);
-  cloth(parent, 0.3, 0.84, 0.87, 0.032, wool, winged);
-  band(parent, [0, 0, 0.88], 0.68, 0.036, rib, { flat: 1.25 });
-  if (!winged) {
-    [-1, 1].forEach((sign) => {
-      const lean = sign * -0.5;
-      const sleeve = tube(parent, [sign * 0.7, 0.02, 0.62], 0.14, 0.38, wool, { sides: 18 });
-      sleeve.rotation.z = lean;
-      const stripeBand = tube(parent, [sign * 0.74, 0.02, 0.66], 0.145, 0.05, stripe, { sides: 16 });
-      stripeBand.rotation.z = lean;
-      const cuff = tube(parent, [sign * 0.86, 0.03, 0.4], 0.12, 0.09, rib, { sides: 16 });
-      cuff.rotation.z = lean;
-    });
+let knitMat = null;
+
+/** One knit texture: ribs at the hem and collar, stripes across the same cloth. */
+function knitMaterial() {
+  if (knitMat) return knitMat;
+  const canvas = document.createElement('canvas');
+  canvas.width = 8;
+  canvas.height = 128;
+  const g = canvas.getContext('2d');
+  g.fillStyle = '#6d4aff';
+  g.fillRect(0, 0, 8, 128);
+  g.fillStyle = '#3a249e';
+  g.fillRect(0, 0, 8, 16);
+  g.fillRect(0, 112, 8, 16);
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 36, 8, 9);
+  g.fillRect(0, 62, 8, 9);
+  g.fillRect(0, 88, 8, 9);
+  const tex = new CanvasTexture(canvas);
+  tex.colorSpace = SRGBColorSpace;
+  tex.wrapS = RepeatWrapping;
+  tex.wrapT = ClampToEdgeWrapping;
+  knitMat = new MeshPhysicalMaterial({
+    map: tex,
+    color: '#ffffff',
+    roughness: 0.92,
+    metalness: 0,
+    side: DoubleSide,
+  });
+  return knitMat;
+}
+
+/** Distance from the body centre to a point just outside the cube. */
+function shellRadius(theta, v) {
+  const s = Math.abs(Math.sin(theta));
+  const c = Math.abs(Math.cos(theta));
+  const cube = 0.625 / Math.max(s, c, 1e-4);
+  const rib = v < 0.1 || v > 0.9 ? 0.016 : 0;
+  return cube + 0.042 + rib;
+}
+
+function torsoShell(openSides) {
+  const hem = 0.34;
+  const collar = 0.86;
+  const rows = 20;
+  const spans = openSides
+    ? [[-1.15, 1.15], [Math.PI - 1.15, Math.PI + 1.15]]
+    : [[-Math.PI, Math.PI]];
+  const positions = [];
+  const uvs = [];
+  const indices = [];
+  for (const [a0, a1] of spans) {
+    const base = positions.length / 3;
+    const cols = openSides ? 18 : 48;
+    for (let row = 0; row <= rows; row += 1) {
+      const v = row / rows;
+      const y = hem + (collar - hem) * v;
+      for (let col = 0; col <= cols; col += 1) {
+        const u = col / cols;
+        const theta = a0 + (a1 - a0) * u;
+        const rad = shellRadius(theta, v);
+        positions.push(Math.sin(theta) * rad, y, Math.cos(theta) * rad);
+        uvs.push(u * (openSides ? 1 : 2), v);
+      }
+    }
+    const stride = cols + 1;
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        const i = base + row * stride + col;
+        indices.push(i, i + stride, i + 1, i + 1, i + stride, i + stride + 1);
+      }
+    }
   }
-  await placeGlb(parent, GLB.heart, [0.02, -0.88, 0.58], 0.48);
+  const geo = new BufferGeometry();
+  geo.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3));
+  geo.setAttribute('uv', new BufferAttribute(new Float32Array(uvs), 2));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function clearSweaterSleeves(anchors) {
+  for (const node of anchors?.sweaterSleeves || []) node.removeFromParent();
+  if (anchors) anchors.sweaterSleeves = [];
+}
+
+async function sweater(parent, winged, anchors) {
+  const shell = new Mesh(torsoShell(winged), knitMaterial());
+  shell.castShadow = true;
+  parent.add(shell);
+  if (!winged) {
+    const pet = parent.parent?.parent?.parent;
+    for (const name of ['leg-front-left', 'leg-front-right']) {
+      const leg = pet?.getObjectByName(name);
+      if (!leg) continue;
+      const sleeve = new Mesh(new CylinderGeometry(0.25, 0.23, 0.36, 20, 6, true), knitMaterial());
+      sleeve.name = 'sweater-sleeve';
+      sleeve.castShadow = true;
+      // Leg pivot is the shoulder. This covers the leg and tucks up into the hem.
+      sleeve.position.y = -0.08;
+      leg.add(sleeve);
+      (anchors.sweaterSleeves ||= []).push(sleeve);
+    }
+  }
+  await placeGlb(parent, GLB.heart, [0, -0.72, 0.58], 0.34);
 }
 
 function cape(parent) {
@@ -653,7 +757,7 @@ const BUILDERS = {
   beanie: async (p) => beanie(p),
   cap: async (p) => cap(p),
   flower_crown: async (p) => flowerCrown(p),
-  top_hat: async (p) => topHat(p),
+  top_hat: async (p) => topHat({ hat: p }),
   grad_cap: async (p) => gradCap(p),
   wizard_hat: async (p) => wizardHat(p),
   flame_band: async (p) => flameBand(p),
@@ -668,7 +772,7 @@ const BUILDERS = {
   bell_collar: async (p) => bellCollar(p),
   star_medal: async (p) => starMedal(p),
   tutu: async (p, ctx) => tutu(p, ctx.winged),
-  sweater: async (p, ctx) => sweater(p, ctx.winged),
+  sweater: async (p, ctx) => sweater(p, ctx.winged, ctx.anchors),
   backpack: async (p, ctx) => backpack(p, ctx.winged),
   cape: async (p) => cape(p),
   wings: async (p) => wingPair(p, '#7ec8ff'),
@@ -726,18 +830,20 @@ export async function buildOutfit(anchors, outfit, animal) {
   seat(anchors.back, anchorFromFit(fit, 'back'));
   seat(anchors.effect, anchorFromFit(fit, 'effect'));
   clearGlbItems(anchors);
+  clearSweaterSleeves(anchors);
   for (const group of [anchors.hat, anchors.face, anchors.neck, anchors.body, anchors.back, anchors.effect]) {
     emptyGroup(group);
   }
-  const ctx = { winged: Boolean(fit.winged), animal, fit };
+  const ctx = { winged: Boolean(fit.winged), animal, fit, anchors };
   const jobs = [];
   for (const slot of ['hat', 'face', 'neck', 'body', 'back', 'effect']) {
     const id = outfit?.[slot];
     if (!id) continue;
     const custom = customSpec(map[id]);
     const build = BUILDERS[id];
-    // The designer's sweater is being redone. Keep the striped sweater builder.
-    const v2 = id !== 'sweater' ? v2FitFor(v2fits, id, animal) : null;
+    // A file in items/v2/fits.json replaces the builder, including a future sweater GLB.
+    const pose = poseFor(v2fits, id, animal);
+    const v2 = v2FitFor(v2fits, id, animal);
     jobs.push((async () => {
       if (custom) {
         try {
@@ -749,6 +855,10 @@ export async function buildOutfit(anchors, outfit, animal) {
       }
       if (v2) {
         await placeItemGlb(anchors, id, animal, loadScene);
+        return;
+      }
+      if (id === 'top_hat') {
+        await topHat(anchors, pose);
         return;
       }
       if (!build) return;

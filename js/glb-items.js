@@ -1,8 +1,7 @@
 /**
- * Drop-in helper for Dayli v1.3.2: wear the v2 item GLBs using fits.json.
- * Not wired into the app yet. See ../README.md for the 3 small edits in js/accessories.js.
- *
- * Assumes the GLBs + fits.json are copied to  <repo>/items/v2/  (same folder).
+ * Wear items/v2 GLBs from fits.json. A pose with no file still seats a built-in
+ * mesh (the top hat). Drop a new GLB in under the same filename and it replaces
+ * the builder, including a future sweater.
  */
 import { Group } from 'three';
 
@@ -14,12 +13,17 @@ export function loadFits() {
   return fitsTask;
 }
 
-/** Merge the item's default entry with the per-animal entry. Returns null if the item has no GLB. */
-export function fitFor(fits, id, animal) {
+/** Merge the item's default entry with the per-animal entry. Includes items that have a pose but no GLB yet. */
+export function poseFor(fits, id, animal) {
   const entry = fits?.items?.[id];
   if (!entry) return null;
-  const fit = { ...(entry.default || {}), ...(entry.pets?.[animal] || entry.pets?.dog || {}) };
-  return fit.file ? fit : null;
+  return { ...(entry.default || {}), ...(entry.pets?.[animal] || entry.pets?.dog || {}) };
+}
+
+/** Merge the item's default entry with the per-animal entry. Returns null if the item has no GLB. */
+export function fitFor(fits, id, animal) {
+  const fit = poseFor(fits, id, animal);
+  return fit?.file ? fit : null;
 }
 
 /** One group under anchors.root (model space, identity) that holds every GLB item. */
