@@ -18,6 +18,7 @@ import {
   normalizeSuggestFrequency, resolveSuggestEngine, sanitizeSuggestCard, shouldAskSuggestion,
   suggestionFromEngine, suggestionGesture, suggestionNoticeCopy, suggestPace,
 } from './suggestions.js';
+import { forwardHomeScroll, installKeyboardFit, captureScroll, restoreScroll } from './fixed-layout.js';
 
 const {
   POINTS, DAY_COMPLETE_BONUS, THEMES, ACCENTS, WEEKDAY_LABELS,
@@ -1928,10 +1929,21 @@ function saveCurrentLook() {
   input.select();
 }
 
+function screenKey() {
+  if (!S.settings.setupComplete) return `setup-${S.settings.setupStep || 1}`;
+  return S.screen || 'today';
+}
+
+let lastScreenKey = null;
+
 function render() {
-  const scrollY = window.scrollY;
   applyChrome();
   const root = appEl();
+  // Screens scroll inside #app (the page never does), so keep the spot across redraws.
+  const key = screenKey();
+  const saved = key === lastScreenKey ? captureScroll(root) : null;
+  lastScreenKey = key;
+  root.dataset.screen = key;
   if (petHolder) petHolder.remove();
   root.replaceChildren();
   if (!S.settings.setupComplete) root.append(renderSetup());
@@ -1942,8 +1954,8 @@ function render() {
   else if (S.screen === 'closet') root.append(renderCloset());
   else root.append(renderToday());
   renderOverlayBits();
+  restoreScroll(root, saved || { app: 0, list: 0 });
   if (openWheel) {
-    window.scrollTo(0, scrollY);
     document.getElementById('colour-wheel-panel')?.scrollIntoView({ block: 'nearest' });
   }
   if (petStage) {
@@ -2218,10 +2230,12 @@ function renderToday() {
     shell.append(h('p', { class: 'note', text: 'Reminders and saving work best from your Home Screen.' }));
   }
 
+  // Notices ride at the top of the goals list so the pet keeps its space.
+  const listLead = [];
   const missed = viewingToday ? missedReminders() : [];
-  if (missed.length) shell.append(renderAway(missed));
+  if (missed.length) listLead.push(renderAway(missed));
 
-  if (shouldNudgeBackup() && viewingToday) shell.append(renderBackupNudge());
+  if (shouldNudgeBackup() && viewingToday) listLead.push(renderBackupNudge());
 
   const repeatingCount = S.tasks.filter((task) => task.repeat && task.repeat !== 'none').length;
   shell.append(h('div', { class: 'week-links' },
@@ -2232,7 +2246,7 @@ function renderToday() {
       onclick: openRepeatingSheet,
     }, repeatingCount ? `Repeating (${repeatingCount})` : 'Repeating')));
 
-  const list = h('div', { class: 'day-list', id: 'day-list' });
+  const list = h('div', { class: 'day-list', id: 'day-list' }, listLead);
   if (!instances.length) {
     const evening = viewingToday && isEvening();
     list.append(h('div', { class: 'empty' },
@@ -2271,6 +2285,7 @@ function renderToday() {
     onclick: () => openSheet(null),
   }, icon(I.plus)));
   attachDaySwipe(list);
+  forwardHomeScroll(shell, list);
   return shell;
 }
 
@@ -4235,6 +4250,7 @@ async function handleLaunchParams() {
 }
 
 async function boot() {
+  installKeyboardFit();
   const loaded = await db.loadAll();
   S.tasks = loaded.tasks;
   S.overrides = loaded.overrides;
