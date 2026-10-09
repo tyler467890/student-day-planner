@@ -1,5 +1,5 @@
 /**
- * Generate a VAPID key pair for Dayli.
+ * Generate a VAPID key pair for Calo.
  * Run from the repo root or from push-server:
  *   node push-server/scripts/generate-vapid.js
  *

@@ -1,5 +1,5 @@
 /**
- * Dayli UI. Plain DOM, no framework. All user data stays in IndexedDB.
+ * Calo UI. Plain DOM, no framework. All user data stays in IndexedDB.
  */
 
 import { PRODUCT_NAME, APP_VERSION, GUIDE_NAME } from './config.js';
@@ -2064,7 +2064,7 @@ function renderSetup2() {
       h('div', { class: 'illu-row', text: 'Add to Home Screen' }),
       h('div', { class: 'illu-row', text: 'Open as Web App' })));
   } else if (promptReady) {
-    body.push(h('p', { class: 'lede', text: 'Install Dayli so it opens like an app.' }));
+    body.push(h('p', { class: 'lede', text: `Install ${PRODUCT_NAME} so it opens like an app.` }));
     body.push(h('button', {
       type: 'button',
       class: 'btn primary',
@@ -3577,7 +3577,7 @@ async function restoreFile(file) {
   } catch {
     overlayEl().append(h('div', { class: 'sheet-wrap', role: 'dialog', 'aria-label': 'Backup problem' },
       h('div', { class: 'sheet' },
-        h('h2', { text: "That file doesn't look like a Dayli backup." }),
+        h('h2', { text: `That file doesn't look like a ${PRODUCT_NAME} backup.` }),
         h('button', { type: 'button', class: 'btn primary', onclick: (e) => e.target.closest('.sheet-wrap').remove() }, 'OK'))));
   }
 }
@@ -4418,5 +4418,5 @@ document.addEventListener('keydown', (e) => {
 boot().catch((err) => {
   console.error(err);
   const root = appEl();
-  if (root) root.textContent = 'Dayli couldn’t open storage in this browser.';
+  if (root) root.textContent = `${PRODUCT_NAME} couldn’t open storage in this browser.`;
 });

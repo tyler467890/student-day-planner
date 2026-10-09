@@ -115,9 +115,9 @@ test('replay tour sets the flag back without losing the open count', () => {
 });
 
 test('tour drops greeting when already greeted and skips missing targets', () => {
-  const all = buildTour({ has: () => true, names: { guide: 'Muffin', app: 'Dayli' } });
+  const all = buildTour({ has: () => true, names: { guide: 'Calo', app: 'Calo' } });
   assert.equal(all[0].id, 'hello');
-  assert.match(all[0].text, /Muffin.*Dayli/);
+  assert.equal(all[0].text, "Hi, I'm Calo! Welcome to your new planner.");
   assert.equal(all.at(-1).end, true);
   const greeted = buildTour({ has: () => true, greeted: true });
   assert.notEqual(greeted[0].id, 'hello');

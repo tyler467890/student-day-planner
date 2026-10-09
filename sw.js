@@ -1,6 +1,7 @@
-/* Dayli service worker: offline shell, push, and notification actions. */
+/* Calo service worker: offline shell, push, and notification actions. */
 
-// Only caches with this prefix belong to this app copy, so a preview copy on
+// The 'dayli-v' prefix is the old working name, kept on purpose so updates
+// clean up existing caches. Only caches with this prefix belong to this app copy, so a preview copy on
 // the same github.io origin never deletes the live app's cache (or the reverse).
 const CACHE_PREFIX = 'dayli-v';
 const CACHE = 'dayli-v19';

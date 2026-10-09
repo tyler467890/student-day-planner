@@ -1,5 +1,5 @@
 /**
- * Dayli push worker.
+ * Calo push worker.
  * Stores a subscription and up to 7 days of reminders in KV, and sends
  * each one with Web Push when a cron tick finds it due. Sent reminders
  * are deleted. Unsubscribe deletes the whole record.

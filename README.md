@@ -1,8 +1,10 @@
-# Dayli
+# Calo
 
 A no-account day planner for students. It runs as a static site (plain HTML, CSS and JavaScript) and keeps every plan on the device.
 
-The name **Dayli** is a working title. It is not final.
+Calo is also the name of the bunny guide who greets new users, gives a short tour, and pops in now and then with a pep talk.
+
+The app was first built under the working name *Dayli*. Internal storage names (the `dayli` IndexedDB database, `dayli.*` localStorage keys and the `dayli-v` service worker cache prefix) keep that old name on purpose so existing users keep their data. Do not rename them.
 
 ## Run it locally
 
@@ -28,13 +30,13 @@ npx playwright test
 
 ## Change the product name
 
-The working name lives in three places the running app reads:
+The name lives in three places the running app reads:
 
 1. `PRODUCT_NAME` in `js/config.js` — document title, first-run wordmark, About, and notification fallbacks.
 2. `name` and `short_name` in `manifest.webmanifest`.
 3. `apple-mobile-web-app-title` in `index.html` — iOS reads this before JavaScript runs.
 
-Also update the PDFs in `etsy/` before a listing, if the name changes. Search the repo for `Dayli` after editing those three so nothing else still shows the old name.
+Also update the PDFs in `etsy/` before a listing, if the name changes. The guide's name is `GUIDE_NAME` in `js/config.js`. Search the repo for the old name after editing so nothing visible still shows it (internal storage names excepted).
 
 ## Closed-app reminders
 

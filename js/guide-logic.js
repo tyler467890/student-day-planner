@@ -101,7 +101,7 @@ export const TOUR_STEPS = [
   {
     id: 'hello',
     greet: true,
-    text: "Hi! I'm {guide}, your guide to {app}!",
+    text: "Hi, I'm {guide}! Welcome to your new planner.",
   },
   {
     id: 'pet',
@@ -140,8 +140,8 @@ export const TOUR_STEPS = [
 
 export function fillCopy(text, names) {
   return String(text)
-    .replaceAll('{guide}', names?.guide || 'Muffin')
-    .replaceAll('{app}', names?.app || 'Dayli');
+    .replaceAll('{guide}', names?.guide || 'Calo')
+    .replaceAll('{app}', names?.app || 'Calo');
 }
 
 /** Resolve steps against the live page. */

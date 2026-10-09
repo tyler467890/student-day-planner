@@ -428,7 +428,7 @@ export function createGuide(opts) {
     ensureRoot('greet');
     document.body.classList.add('guide-touring');
     const lines = [
-      fillCopy("Hi! I'm {guide}, your guide to {app}!", names),
+      fillCopy("Hi, I'm {guide}! Welcome to your new planner.", names),
       'First, let\u2019s set up your planner. I\u2019ll show you around after!',
     ];
     let i = 0;
@@ -486,7 +486,18 @@ export function createGuide(opts) {
       actorEl.style.opacity = '0';
       await wait(220);
     }
-    if (id === runId) teardown();
+    if (id === runId) {
+      teardown();
+      // Setup can finish while he is still hopping out after the greeting.
+      // No render comes after that, so start the waiting tour from here.
+      if (pendingTour && opts.enabled !== false && opts.screen?.() === 'today') {
+        pendingTour = false;
+        setTimeout(() => {
+          if (!busy && opts.screen?.() === 'today') void runTour();
+          else pendingTour = true;
+        }, 450);
+      }
+    }
   }
 
   /* ---------- walkthrough ---------- */

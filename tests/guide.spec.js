@@ -50,7 +50,7 @@ async function guideState(page) {
 test('first open: greeting, tour with next, then pet and first goal', async ({ page }) => {
   await optIn(page);
   await page.goto('/');
-  await expect(card(page)).toContainText("Hi! I'm Muffin, your guide to Dayli!");
+  await expect(card(page)).toContainText("Hi, I'm Calo! Welcome to your new planner.");
   await expect(page.locator('#guide .guide-actor')).toHaveCSS('opacity', '1');
   await typed(page);
   await next(page).click();
@@ -144,7 +144,7 @@ test('return visit: pops in on a later open, hops away when tapped, never blocks
   await expect(page.locator('#guide')).toHaveCount(0);
   expect((await guideState(page)).opens).toBe(2);
 
-  // Open 3: Muffin pops in with a pep talk.
+  // Open 3: Calo pops in with a pep talk.
   await page.reload();
   const visit = page.locator('#guide .guide-card.is-visit');
   await expect(visit).toBeVisible({ timeout: 6000 });
@@ -176,8 +176,8 @@ test('reduced motion fades instead of hopping and still works', async ({ browser
   const page = await context.newPage();
   await optIn(page);
   await page.goto('/');
-  await expect(card(page)).toContainText("Hi! I'm Muffin");
-  await expect(card(page).locator('.guide-text')).toHaveText("Hi! I'm Muffin, your guide to Dayli!");
+  await expect(card(page)).toContainText("Hi, I'm Calo");
+  await expect(card(page).locator('.guide-text')).toHaveText("Hi, I'm Calo! Welcome to your new planner.");
   await context.close();
 });
 
@@ -186,4 +186,16 @@ test('guide stays out of the way under automation unless opted in', async ({ pag
   await expect(page.getByRole('button', { name: 'Continue' })).toBeVisible();
   await page.waitForTimeout(1200);
   await expect(page.locator('#guide')).toHaveCount(0);
+});
+
+test('tour still starts when setup is finished while the greeting hops out', async ({ page }) => {
+  await optIn(page);
+  await page.goto('/');
+  await typed(page);
+  await next(page).click();
+  await typed(page);
+  await card(page).getByRole('button', { name: 'Let’s go!' }).click();
+  // Do not wait for him to leave: finish setup right away.
+  await finishSetup(page);
+  await expect(card(page)).toHaveAttribute('data-step', 'pet', { timeout: 8000 });
 });
