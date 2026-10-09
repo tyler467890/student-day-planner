@@ -32,7 +32,7 @@ html[data-font="lexend"] { --font: "Lexend", "Segoe UI", sans-serif; --title-fon
 html[data-font="caveat"] { --font: "Nunito", "Segoe UI", sans-serif; --title-font: "Caveat", "Nunito", cursive; }
 
 *, *::before, *::after { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; }
+html, body { margin: 0; height: 100%; }
 body {
   font-family: var(--font);
   font-size: 17px;
@@ -89,10 +89,92 @@ html[data-photo="on"][data-scrim="light"]:not([data-text="custom"]) .setup-title
   width: min(100%, 35rem);
   margin: 0 auto;
   padding: 16px 16px 140px;
-  min-height: 100vh;
+  min-height: 100%;
 }
 @media (min-width: 720px) {
   .shell { padding: 24px 24px 140px; }
+}
+
+/* Fixed layout: the page never scrolls. Each screen scrolls inside #app, and
+   the home screen keeps its header and pet still while only the goals list
+   (#day-list) scrolls. Sheets scroll inside themselves. */
+html, body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+#app {
+  height: 100vh;
+  height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-top: env(safe-area-inset-top);
+}
+.shell { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+#app[data-screen="today"] { overflow: hidden; }
+.shell.today {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 0;
+  overflow: hidden;
+}
+.shell.today > * { flex: 0 0 auto; }
+.shell.today > .pet-slot { flex: 0 1 auto; min-height: 0; }
+.shell.today > .day-list {
+  flex: 1 1 0;
+  min-height: 140px;
+  margin: 4px -16px 0;
+  padding: 6px 16px calc(96px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 10px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 10px);
+}
+.shell.today > .day-list > .away:first-child,
+.shell.today > .day-list > .nudge:first-child { margin-top: 4px; }
+.shell.today .pet-hero {
+  height: clamp(150px, 32dvh, 320px);
+  min-height: 0;
+}
+.shell.today .pet-slot.has-suggest .pet-hero {
+  height: clamp(130px, 25dvh, 240px);
+  min-height: 0;
+}
+@media (min-width: 720px) {
+  .shell.today { padding-bottom: 0; }
+  .shell.today > .day-list { margin: 4px -24px 0; padding-left: 24px; padding-right: 24px; }
+}
+/* Short phones (iPhone SE and similar): tighter header and a smaller pet. */
+@media (max-height: 720px) {
+  .shell.today { padding-top: 10px; }
+  .shell.today .top-title { font-size: 24px; line-height: 30px; }
+  .shell.today .date-row { margin-top: 0; }
+  .shell.today .stats { margin-top: 4px; }
+  .shell.today .level-btn { min-height: 0; width: auto; flex-direction: row; gap: 6px; }
+  .shell.today .level-ring { width: 48px; height: 48px; }
+  .shell.today .level-num { height: 48px; width: 48px; right: auto; font-size: 16px; }
+  .shell.today .pet-hero { height: clamp(130px, 27dvh, 220px); }
+  .shell.today .pet-slot.has-suggest .pet-hero { height: clamp(110px, 20dvh, 180px); }
+  .shell.today .week-links { margin-top: 2px; }
+}
+/* Very short windows (landscape phones, an open keyboard on Android): there is
+   no room for a still pet plus a list, so the home screen scrolls as one. */
+@media (max-height: 500px) {
+  #app[data-screen="today"] { overflow-y: auto; }
+  .shell.today { display: block; height: auto; min-height: 100%; overflow: visible; padding-bottom: 140px; }
+  .shell.today > .day-list {
+    margin: 8px 0 0;
+    padding: 0;
+    overflow: visible;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  .shell.today .pet-hero,
+  .shell.today .pet-slot.has-suggest .pet-hero { height: 150px; }
 }
 
 .top-title, .setup-title {
@@ -295,7 +377,7 @@ html[data-theme="night"] .card { box-shadow: none; }
 .fab {
   position: fixed;
   right: max(16px, calc(50vw - 17.5rem + 16px));
-  bottom: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
   width: 56px;
   height: 56px;
   border-radius: 16px;
@@ -587,17 +669,21 @@ body.sheet-open .fab { visibility: hidden; }
 .settings section { margin-top: 24px; }
 .help p { margin-top: 0; }
 
-.sheet-wrap { position: fixed; inset: 0; z-index: 40; display: flex; align-items: flex-end; justify-content: center; }
+.sheet-wrap { position: fixed; inset: 0; z-index: 40; display: flex; align-items: flex-end; justify-content: center; overscroll-behavior: contain; }
+/* While the on-screen keyboard is open, fit sheets into the part of the screen you can see. */
+html[data-keyboard="open"] .sheet-wrap { top: var(--vv-top, 0px); bottom: auto; height: var(--vv-height, 100%); }
 .sheet-backdrop { position: absolute; inset: 0; border: 0; background: rgba(18, 19, 26, 0.4); }
 .sheet {
   position: relative;
   width: min(100%, 35rem);
-  max-height: min(92vh, 900px);
+  max-height: min(92%, 900px);
   overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   background: var(--surface);
   color: var(--text);
   border-radius: 24px 24px 0 0;
-  padding: 16px 16px 24px;
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
   box-shadow: var(--shadow);
   animation: rise 250ms ease-out;
 }
@@ -1184,3 +1270,94 @@ button.shop-tile { cursor: pointer; }
 .rare-kicker { font-weight: 800; color: var(--accent); margin: 0; }
 .rare-card.is-fade { animation: fade-in 200ms ease; }
 .shop-screen { padding-bottom: 128px; }
+
+/* ---------- Guide bunny ---------- */
+.guide { position: fixed; inset: 0; z-index: 80; pointer-events: none; }
+.guide-block { position: absolute; inset: 0; display: none; pointer-events: auto; }
+.guide[data-mode="tour"] .guide-block, .guide[data-mode="greet"] .guide-block { display: block; }
+.guide.is-leaving .guide-block { display: none; }
+.guide-spot {
+  position: absolute;
+  display: none;
+  border-radius: 20px;
+  box-shadow: 0 0 0 3px var(--accent), 0 0 0 200vmax rgba(22, 14, 48, 0.52);
+  transition: left 0.35s ease, top 0.35s ease, width 0.35s ease, height 0.35s ease;
+  pointer-events: none;
+}
+.guide-spot.no-target { box-shadow: 0 0 0 200vmax rgba(22, 14, 48, 0.52); }
+.guide[data-mode="visit"] .guide-spot { display: none !important; }
+.guide-actor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  will-change: transform;
+  filter: drop-shadow(0 6px 6px rgba(30, 20, 60, 0.18));
+}
+.guide[data-mode="visit"] .guide-actor { pointer-events: auto; cursor: pointer; }
+.guide-canvas { width: 100%; height: 100%; display: block; }
+.guide-emoji { display: none; font-size: 72px; line-height: 1; text-align: center; width: 100%; padding-top: 30px; }
+.guide-actor.is-fallback .guide-canvas { display: none; }
+.guide-actor.is-fallback .guide-emoji { display: block; }
+.guide-card {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  margin: 0 auto;
+  max-width: 420px;
+  padding: 16px 18px 14px;
+  border-radius: 22px;
+  background: #fff;
+  color: #2A1860;
+  box-shadow: 0 10px 30px rgba(22, 14, 48, 0.28);
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.guide.is-on .guide-card { opacity: 1; transform: none; }
+.guide-card.at-bottom { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+.guide-card.at-top { top: calc(16px + env(safe-area-inset-top, 0px)); }
+.guide-card.is-visit {
+  top: auto;
+  bottom: var(--guide-y, 180px);
+  left: 12px;
+  right: auto;
+  max-width: min(300px, calc(100vw - 24px));
+  padding: 12px 16px;
+  border-radius: 20px 20px 20px 6px;
+}
+.guide-card.is-visit.from-right { left: auto; right: 12px; border-radius: 20px 20px 6px 20px; }
+.guide-card.is-visit .guide-foot { margin-top: 10px; }
+.guide-card.is-handoff .guide-btns { flex-direction: column-reverse; align-items: stretch; width: 100%; }
+.guide-card.is-handoff .guide-btns .btn { width: 100%; }
+.guide-name {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6D4AFF;
+}
+.guide-text { margin: 0; font-size: 19px; line-height: 26px; font-weight: 600; min-height: 52px; }
+.guide-card.is-visit .guide-text { font-size: 17px; line-height: 24px; min-height: 0; }
+.guide-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.guide-dots { display: flex; gap: 6px; }
+.guide-dot { width: 8px; height: 8px; border-radius: 50%; background: #D9D1FF; }
+.guide-dot.is-on { background: var(--accent); width: 20px; border-radius: 4px; }
+.guide-btns { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
+.guide-next { min-height: 48px; padding: 0 22px; font-size: 18px; }
+.guide-alt { min-height: 48px; background: #F1EDFF; color: #2A1860; }
+.guide-skip {
+  background: none;
+  border: 0;
+  color: #533C86;
+  font-weight: 600;
+  text-decoration: underline;
+  min-height: 44px;
+  padding: 0 6px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .guide-spot, .guide-card { transition: none; }
+}

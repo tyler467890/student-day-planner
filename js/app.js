@@ -1,8 +1,10 @@
 /**
- * Dayli UI. Plain DOM, no framework. All user data stays in IndexedDB.
+ * Calo UI. Plain DOM, no framework. All user data stays in IndexedDB.
  */
 
-import { PRODUCT_NAME, APP_VERSION } from './config.js';
+import { PRODUCT_NAME, APP_VERSION, GUIDE_NAME } from './config.js';
+import { createGuide } from './guide.js';
+import { GUIDE_STORE_KEY } from './guide-logic.js';
 import { parseWeekDescription, findOverlaps } from './week-parser.js';
 import * as model from './model.js';
 import * as db from './db.js';
@@ -18,6 +20,7 @@ import {
   normalizeSuggestFrequency, resolveSuggestEngine, sanitizeSuggestCard, shouldAskSuggestion,
   suggestionFromEngine, suggestionGesture, suggestionNoticeCopy, suggestPace,
 } from './suggestions.js';
+import { forwardHomeScroll, installKeyboardFit, captureScroll, restoreScroll } from './fixed-layout.js';
 
 const {
   POINTS, DAY_COMPLETE_BONUS, THEMES, ACCENTS, WEEKDAY_LABELS,
@@ -80,6 +83,7 @@ let suggestBusy = false;
 let suggestEnginePromise = null;
 let lastSuggestGesture = null;
 const highWater = { level: 1, celebrated: 1, shown: {} };
+let guide = null;
 
 const appEl = () => document.getElementById('app');
 const overlayEl = () => document.getElementById('overlay');
@@ -1928,10 +1932,21 @@ function saveCurrentLook() {
   input.select();
 }
 
+function screenKey() {
+  if (!S.settings.setupComplete) return `setup-${S.settings.setupStep || 1}`;
+  return S.screen || 'today';
+}
+
+let lastScreenKey = null;
+
 function render() {
-  const scrollY = window.scrollY;
   applyChrome();
   const root = appEl();
+  // Screens scroll inside #app (the page never does), so keep the spot across redraws.
+  const key = screenKey();
+  const saved = key === lastScreenKey ? captureScroll(root) : null;
+  lastScreenKey = key;
+  root.dataset.screen = key;
   if (petHolder) petHolder.remove();
   root.replaceChildren();
   if (!S.settings.setupComplete) root.append(renderSetup());
@@ -1942,8 +1957,8 @@ function render() {
   else if (S.screen === 'closet') root.append(renderCloset());
   else root.append(renderToday());
   renderOverlayBits();
+  restoreScroll(root, saved || { app: 0, list: 0 });
   if (openWheel) {
-    window.scrollTo(0, scrollY);
     document.getElementById('colour-wheel-panel')?.scrollIntoView({ block: 'nearest' });
   }
   if (petStage) {
@@ -1953,6 +1968,7 @@ function render() {
       petStage.resize();
     }
   }
+  guide?.onRender({ screen: S.screen || 'today', setupComplete: Boolean(S.settings.setupComplete) });
 }
 
 function renderSetup() {
@@ -2048,7 +2064,7 @@ function renderSetup2() {
       h('div', { class: 'illu-row', text: 'Add to Home Screen' }),
       h('div', { class: 'illu-row', text: 'Open as Web App' })));
   } else if (promptReady) {
-    body.push(h('p', { class: 'lede', text: 'Install Dayli so it opens like an app.' }));
+    body.push(h('p', { class: 'lede', text: `Install ${PRODUCT_NAME} so it opens like an app.` }));
     body.push(h('button', {
       type: 'button',
       class: 'btn primary',
@@ -2218,21 +2234,23 @@ function renderToday() {
     shell.append(h('p', { class: 'note', text: 'Reminders and saving work best from your Home Screen.' }));
   }
 
+  // Notices ride at the top of the goals list so the pet keeps its space.
+  const listLead = [];
   const missed = viewingToday ? missedReminders() : [];
-  if (missed.length) shell.append(renderAway(missed));
+  if (missed.length) listLead.push(renderAway(missed));
 
-  if (shouldNudgeBackup() && viewingToday) shell.append(renderBackupNudge());
+  if (shouldNudgeBackup() && viewingToday) listLead.push(renderBackupNudge());
 
   const repeatingCount = S.tasks.filter((task) => task.repeat && task.repeat !== 'none').length;
   shell.append(h('div', { class: 'week-links' },
-    h('button', { type: 'button', class: 'text-btn', onclick: openWeekSheet }, 'Describe my week'),
+    h('button', { type: 'button', class: 'text-btn', 'data-guide': 'week', onclick: openWeekSheet }, 'Describe my week'),
     h('button', {
       type: 'button',
       class: 'text-btn',
       onclick: openRepeatingSheet,
     }, repeatingCount ? `Repeating (${repeatingCount})` : 'Repeating')));
 
-  const list = h('div', { class: 'day-list', id: 'day-list' });
+  const list = h('div', { class: 'day-list', id: 'day-list' }, listLead);
   if (!instances.length) {
     const evening = viewingToday && isEvening();
     list.append(h('div', { class: 'empty' },
@@ -2271,6 +2289,7 @@ function renderToday() {
     onclick: () => openSheet(null),
   }, icon(I.plus)));
   attachDaySwipe(list);
+  forwardHomeScroll(shell, list);
   return shell;
 }
 
@@ -3194,6 +3213,20 @@ function renderCustomize() {
     h('label', { class: 'field-label', for: 'photo-blur', text: 'Background blur' }),
     h('div', { class: 'split' }, blur, blurVal)));
 
+  page.append(h('section', {},
+    h('h2', { text: `${GUIDE_NAME} the guide` }),
+    h('p', { class: 'fine', text: `${GUIDE_NAME} shows you around and pops in now and then with a pep talk.` }),
+    h('button', {
+      type: 'button',
+      class: 'btn secondary',
+      onclick: () => {
+        guide?.replayTour();
+        S.screen = 'today';
+        viewDate = null;
+        render();
+      },
+    }, 'Replay tour')));
+
   page.append(renderCategories());
   page.append(renderReminderSettings());
   page.append(renderSuggestSettings());
@@ -3544,7 +3577,7 @@ async function restoreFile(file) {
   } catch {
     overlayEl().append(h('div', { class: 'sheet-wrap', role: 'dialog', 'aria-label': 'Backup problem' },
       h('div', { class: 'sheet' },
-        h('h2', { text: "That file doesn't look like a Dayli backup." }),
+        h('h2', { text: `That file doesn't look like a ${PRODUCT_NAME} backup.` }),
         h('button', { type: 'button', class: 'btn primary', onclick: (e) => e.target.closest('.sheet-wrap').remove() }, 'OK'))));
   }
 }
@@ -3574,6 +3607,7 @@ function confirmErase2() {
 
 async function eraseAll() {
   await db.eraseDatabase();
+  try { localStorage.removeItem(GUIDE_STORE_KEY); } catch { /* ignore */ }
   S.tasks = [];
   S.overrides = [];
   S.completions = [];
@@ -4234,7 +4268,51 @@ async function handleLaunchParams() {
   }
 }
 
+function guideEnabled() {
+  // Older UI tests drive the app without the tour in the way. Guide tests opt in.
+  try {
+    if (navigator.webdriver && !localStorage.getItem('dayli.guide.force')) return false;
+  } catch { /* ignore */ }
+  return true;
+}
+
+function guideContext() {
+  const today = plannerToday();
+  const instances = instancesOn(today, S.tasks, S.overrides);
+  const left = instances.filter((inst) => !isDone(inst)).length;
+  return {
+    hour: currentDate().getHours(),
+    streak: streakInfo(today).streak || 0,
+    left,
+    allDone: instances.length > 0 && left === 0,
+  };
+}
+
+function makeGuide() {
+  try {
+    return createGuide({
+      names: { guide: GUIDE_NAME, app: PRODUCT_NAME },
+      animal: 'bunny',
+      storage: window.localStorage,
+      enabled: guideEnabled(),
+      reducedMotion,
+      soundOn: () => S.settings.sound !== false,
+      context: guideContext,
+      screen: () => (S.settings.setupComplete ? (S.screen || 'today') : 'setup'),
+      actions: {
+        openPet: () => { viewDate = null; openPetScreen('today'); },
+        addGoal: () => openSheet(null),
+        describeWeek: () => openWeekSheet(),
+      },
+    });
+  } catch (err) {
+    console.warn('guide off', err);
+    return null;
+  }
+}
+
 async function boot() {
+  installKeyboardFit();
   const loaded = await db.loadAll();
   S.tasks = loaded.tasks;
   S.overrides = loaded.overrides;
@@ -4261,6 +4339,8 @@ async function boot() {
   }
   refreshReminderRecords();
   await persistAll();
+  guide = makeGuide();
+  guide?.onBoot({ setupComplete: Boolean(S.settings.setupComplete) });
   render();
   await handleLaunchParams();
   document.addEventListener('visibilitychange', () => {
@@ -4317,6 +4397,7 @@ async function boot() {
       void maybeOfferSuggestion('resume');
     },
     lastSuggestGesture: () => lastSuggestGesture,
+    guide: () => guide,
     petMode: () => petStage?.mode || null,
     petYaw: () => petStage?.yaw ?? null,
     posePet: (mode, t) => petStage?.poseAt(mode, t),
@@ -4337,5 +4418,5 @@ document.addEventListener('keydown', (e) => {
 boot().catch((err) => {
   console.error(err);
   const root = appEl();
-  if (root) root.textContent = 'Dayli couldn’t open storage in this browser.';
+  if (root) root.textContent = `${PRODUCT_NAME} couldn’t open storage in this browser.`;
 });

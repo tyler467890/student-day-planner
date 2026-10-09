@@ -756,8 +756,8 @@ test('no third-party requests and the manifest is installable', async ({ page })
     const data = await (await fetch(href)).json();
     return { href, data };
   });
-  expect(manifest.data.name).toBe('Dayli');
-  expect(manifest.data.short_name).toBe('Dayli');
+  expect(manifest.data.name).toBe('Calo');
+  expect(manifest.data.short_name).toBe('Calo');
   expect(manifest.data.display).toBe('standalone');
   expect(manifest.data.start_url).toBe('./');
   expect(manifest.data.scope).toBe('./');

@@ -150,14 +150,18 @@ test('drag, spin, and framing at phone and desktop size', async ({ browser }) =>
     await page.getByLabel('What?').fill(title);
     await page.getByRole('button', { name: 'Save', exact: true }).click();
   }
-  await page.evaluate(() => window.scrollTo(0, 0));
-  const scrollBefore = await page.evaluate(() => window.scrollY);
+  // The home screen stays still: a vertical swipe over the pet scrolls the goals list instead of the page.
+  await page.locator('#day-list').evaluate((el) => { el.scrollTop = 0; });
+  const petBox = await page.locator('#pet-hero').boundingBox();
+  const yawBeforeSwipe = await yawOf(page);
   await touchDrag(page, 0, -220);
-  const scrollAfter = await page.evaluate(() => window.scrollY);
-  expect(scrollAfter).toBeGreaterThan(scrollBefore + 30);
+  await expect.poll(() => page.locator('#day-list').evaluate((el) => el.scrollTop)).toBeGreaterThan(30);
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  expect(await page.locator('#pet-hero').boundingBox()).toEqual(petBox);
+  expect(Math.abs((await yawOf(page)) - yawBeforeSwipe)).toBeLessThan(0.2);
   await expect(page.getByRole('heading', { level: 1, name: 'My Day' })).toBeVisible();
 
-  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.locator('#day-list').evaluate((el) => { el.scrollTop = 0; });
   const yawBeforeTouch = await yawOf(page);
   await touchDrag(page, -180, 8);
   const yawAfterTouch = await yawOf(page);

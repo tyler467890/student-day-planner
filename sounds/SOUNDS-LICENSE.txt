@@ -1,4 +1,4 @@
-Dayli celebration sounds
+Calo celebration sounds
 ========================
 
 Every file in this folder is short, mono, and from a CC0 source

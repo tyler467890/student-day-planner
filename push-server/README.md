@@ -1,4 +1,4 @@
-# Dayli push server
+# Calo push server
 
 Small Cloudflare Worker that stores a browser push subscription and up to 7 days of reminders, then sends each one with Web Push when it is due. The planner works with this server left undeployed: leave `PUSH_SERVER_URL` empty in `js/config.js` and closed-app push is skipped.
 

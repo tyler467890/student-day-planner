@@ -1,6 +1,10 @@
-/* Dayli service worker: offline shell, push, and notification actions. */
+/* Calo service worker: offline shell, push, and notification actions. */
 
-const CACHE = 'dayli-v17';
+// The 'dayli-v' prefix is the old working name, kept on purpose so updates
+// clean up existing caches. Only caches with this prefix belong to this app copy, so a preview copy on
+// the same github.io origin never deletes the live app's cache (or the reverse).
+const CACHE_PREFIX = 'dayli-v';
+const CACHE = 'dayli-v19';
 
 const ASSETS = [
   './',
@@ -22,6 +26,9 @@ const ASSETS = [
   './js/suggest.js',
   './js/suggestions.js',
   './js/accessories.js',
+  './js/guide.js',
+  './js/guide-logic.js',
+  './js/fixed-layout.js',
   './data/suggestions.json',
   './data/gap-rules.json',
   './vendor/three.module.js',
@@ -108,7 +115,7 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
+    caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== CACHE).map((key) => caches.delete(key))))
       .then(() => self.clients.claim()),
   );
 });

@@ -564,7 +564,7 @@ export function librarySource() {
 
 function warnFallback(detail) {
   if (typeof console === 'undefined' || !console.warn) return;
-  console.warn(`Dayli suggestions: ${detail} Using the built-in set.`);
+  console.warn(`Calo suggestions: ${detail} Using the built-in set.`);
 }
 
 async function doLoad() {
