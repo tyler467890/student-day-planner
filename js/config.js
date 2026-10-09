@@ -20,6 +20,13 @@
  */
 
 export const PRODUCT_NAME = 'Dayli';
+
+/**
+ * GUIDE (the bunny who gives the tour and pops in with pep talks).
+ * Rename him here: one line. If the app is renamed after him, change
+ * PRODUCT_NAME above too (plus the manifest and index.html, as listed).
+ */
+export const GUIDE_NAME = 'Muffin';
 export const APP_VERSION = '1.3.6';
 
 /** @type {string} Empty string disables closed-app push. */
