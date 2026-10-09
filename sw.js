@@ -3,7 +3,7 @@
 // Only caches with this prefix belong to this app copy, so a preview copy on
 // the same github.io origin never deletes the live app's cache (or the reverse).
 const CACHE_PREFIX = 'dayli-v';
-const CACHE = 'dayli-v18';
+const CACHE = 'dayli-v19';
 
 const ASSETS = [
   './',
@@ -27,6 +27,7 @@ const ASSETS = [
   './js/accessories.js',
   './js/guide.js',
   './js/guide-logic.js',
+  './js/fixed-layout.js',
   './data/suggestions.json',
   './data/gap-rules.json',
   './vendor/three.module.js',
