@@ -37,3 +37,34 @@ export const PUSH_SERVER_URL = '';
 
 /** Base64url uncompressed P-256 public key. Empty when push is off. */
 export const VAPID_PUBLIC_KEY = '';
+
+/**
+ * UNLOCK CODES (paid access). Off until the unlock Worker is deployed.
+ * Steps are in worker/README.md. While REQUIRE_UNLOCK is false, nothing
+ * changes for anyone. If it's true but UNLOCK_API_URL or UNLOCK_PUBLIC_KEY
+ * is still empty, the app stays open (so a half-finished setup can't lock
+ * people out).
+ */
+export const REQUIRE_UNLOCK = false;
+
+/** The Worker's address, e.g. 'https://calo-unlock.yourname.workers.dev'. No trailing slash. */
+export const UNLOCK_API_URL = '';
+
+/**
+ * The public half of the signing key, printed by
+ *   node worker/scripts/generate-signing-key.js
+ * Paste the object it prints, e.g. { kty: 'EC', crv: 'P-256', x: '...', y: '...' }.
+ * It's safe to be public: it can only CHECK unlock tokens, not make them.
+ */
+export const UNLOCK_PUBLIC_KEY = null;
+
+/**
+ * Devices that already have saved planner data (finished setup or any goal)
+ * the first time they open a version with REQUIRE_UNLOCK on stay unlocked
+ * for good, so current testers aren't locked out. Set to false to make
+ * everyone enter a code.
+ */
+export const UNLOCK_GRANDFATHER_EXISTING = true;
+
+/** Shown in the "already on 3 devices" message, e.g. 'hello@calo.ca'. Optional. */
+export const UNLOCK_SUPPORT_CONTACT = '';

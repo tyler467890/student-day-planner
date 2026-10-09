@@ -44,6 +44,10 @@ Also update the PDFs in `etsy/` before a listing, if the name changes. The guide
 
 To send reminders when the app is closed, deploy the Cloudflare Worker in `push-server/` and paste its URL and VAPID public key into `js/config.js`. Exact commands (Wrangler, KV, VAPID keys, secrets) are in [push-server/README.md](push-server/README.md).
 
+## Unlock codes (paid access)
+
+Calo can ask each new device for an Etsy unlock code (`CALO-XXXX-XXXX-XXXX-XXXX`, up to 3 devices per code). It's **off** until `REQUIRE_UNLOCK` in `js/config.js` is set to `true` after the Cloudflare Worker in `worker/` is deployed. Plans still stay on the device: only the code and a random device ID are sent, once. Devices that already have saved data stay unlocked (`UNLOCK_GRANDFATHER_EXISTING`). Step-by-step setup, the admin page, code generation and the honest limits are in [worker/README.md](worker/README.md). Worker tests: `cd worker && npm install && npm test` (Node 22+).
+
 ## Pages
 
 Pushes to `main` deploy the static app with GitHub Actions (`.github/workflows/pages.yml`). The live site is [https://tyler467890.github.io/student-day-planner/](https://tyler467890.github.io/student-day-planner/).
