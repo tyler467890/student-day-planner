@@ -1184,3 +1184,94 @@ button.shop-tile { cursor: pointer; }
 .rare-kicker { font-weight: 800; color: var(--accent); margin: 0; }
 .rare-card.is-fade { animation: fade-in 200ms ease; }
 .shop-screen { padding-bottom: 128px; }
+
+/* ---------- Guide bunny ---------- */
+.guide { position: fixed; inset: 0; z-index: 80; pointer-events: none; }
+.guide-block { position: absolute; inset: 0; display: none; pointer-events: auto; }
+.guide[data-mode="tour"] .guide-block, .guide[data-mode="greet"] .guide-block { display: block; }
+.guide.is-leaving .guide-block { display: none; }
+.guide-spot {
+  position: absolute;
+  display: none;
+  border-radius: 20px;
+  box-shadow: 0 0 0 3px var(--accent), 0 0 0 200vmax rgba(22, 14, 48, 0.52);
+  transition: left 0.35s ease, top 0.35s ease, width 0.35s ease, height 0.35s ease;
+  pointer-events: none;
+}
+.guide-spot.no-target { box-shadow: 0 0 0 200vmax rgba(22, 14, 48, 0.52); }
+.guide[data-mode="visit"] .guide-spot { display: none !important; }
+.guide-actor {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  will-change: transform;
+  filter: drop-shadow(0 6px 6px rgba(30, 20, 60, 0.18));
+}
+.guide[data-mode="visit"] .guide-actor { pointer-events: auto; cursor: pointer; }
+.guide-canvas { width: 100%; height: 100%; display: block; }
+.guide-emoji { display: none; font-size: 72px; line-height: 1; text-align: center; width: 100%; padding-top: 30px; }
+.guide-actor.is-fallback .guide-canvas { display: none; }
+.guide-actor.is-fallback .guide-emoji { display: block; }
+.guide-card {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  margin: 0 auto;
+  max-width: 420px;
+  padding: 16px 18px 14px;
+  border-radius: 22px;
+  background: #fff;
+  color: #2A1860;
+  box-shadow: 0 10px 30px rgba(22, 14, 48, 0.28);
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.guide.is-on .guide-card { opacity: 1; transform: none; }
+.guide-card.at-bottom { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+.guide-card.at-top { top: calc(16px + env(safe-area-inset-top, 0px)); }
+.guide-card.is-visit {
+  top: auto;
+  bottom: var(--guide-y, 180px);
+  left: 12px;
+  right: auto;
+  max-width: min(300px, calc(100vw - 24px));
+  padding: 12px 16px;
+  border-radius: 20px 20px 20px 6px;
+}
+.guide-card.is-visit.from-right { left: auto; right: 12px; border-radius: 20px 20px 6px 20px; }
+.guide-card.is-visit .guide-foot { margin-top: 10px; }
+.guide-card.is-handoff .guide-btns { flex-direction: column-reverse; align-items: stretch; width: 100%; }
+.guide-card.is-handoff .guide-btns .btn { width: 100%; }
+.guide-name {
+  margin: 0 0 2px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6D4AFF;
+}
+.guide-text { margin: 0; font-size: 19px; line-height: 26px; font-weight: 600; min-height: 52px; }
+.guide-card.is-visit .guide-text { font-size: 17px; line-height: 24px; min-height: 0; }
+.guide-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.guide-dots { display: flex; gap: 6px; }
+.guide-dot { width: 8px; height: 8px; border-radius: 50%; background: #D9D1FF; }
+.guide-dot.is-on { background: var(--accent); width: 20px; border-radius: 4px; }
+.guide-btns { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap; justify-content: flex-end; }
+.guide-next { min-height: 48px; padding: 0 22px; font-size: 18px; }
+.guide-alt { min-height: 48px; background: #F1EDFF; color: #2A1860; }
+.guide-skip {
+  background: none;
+  border: 0;
+  color: #533C86;
+  font-weight: 600;
+  text-decoration: underline;
+  min-height: 44px;
+  padding: 0 6px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .guide-spot, .guide-card { transition: none; }
+}

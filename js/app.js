@@ -2,7 +2,9 @@
  * Dayli UI. Plain DOM, no framework. All user data stays in IndexedDB.
  */
 
-import { PRODUCT_NAME, APP_VERSION } from './config.js';
+import { PRODUCT_NAME, APP_VERSION, GUIDE_NAME } from './config.js';
+import { createGuide } from './guide.js';
+import { GUIDE_STORE_KEY } from './guide-logic.js';
 import { parseWeekDescription, findOverlaps } from './week-parser.js';
 import * as model from './model.js';
 import * as db from './db.js';
@@ -80,6 +82,7 @@ let suggestBusy = false;
 let suggestEnginePromise = null;
 let lastSuggestGesture = null;
 const highWater = { level: 1, celebrated: 1, shown: {} };
+let guide = null;
 
 const appEl = () => document.getElementById('app');
 const overlayEl = () => document.getElementById('overlay');
@@ -1953,6 +1956,7 @@ function render() {
       petStage.resize();
     }
   }
+  guide?.onRender({ screen: S.screen || 'today', setupComplete: Boolean(S.settings.setupComplete) });
 }
 
 function renderSetup() {
@@ -2225,7 +2229,7 @@ function renderToday() {
 
   const repeatingCount = S.tasks.filter((task) => task.repeat && task.repeat !== 'none').length;
   shell.append(h('div', { class: 'week-links' },
-    h('button', { type: 'button', class: 'text-btn', onclick: openWeekSheet }, 'Describe my week'),
+    h('button', { type: 'button', class: 'text-btn', 'data-guide': 'week', onclick: openWeekSheet }, 'Describe my week'),
     h('button', {
       type: 'button',
       class: 'text-btn',
@@ -3194,6 +3198,20 @@ function renderCustomize() {
     h('label', { class: 'field-label', for: 'photo-blur', text: 'Background blur' }),
     h('div', { class: 'split' }, blur, blurVal)));
 
+  page.append(h('section', {},
+    h('h2', { text: `${GUIDE_NAME} the guide` }),
+    h('p', { class: 'fine', text: `${GUIDE_NAME} shows you around and pops in now and then with a pep talk.` }),
+    h('button', {
+      type: 'button',
+      class: 'btn secondary',
+      onclick: () => {
+        guide?.replayTour();
+        S.screen = 'today';
+        viewDate = null;
+        render();
+      },
+    }, 'Replay tour')));
+
   page.append(renderCategories());
   page.append(renderReminderSettings());
   page.append(renderSuggestSettings());
@@ -3574,6 +3592,7 @@ function confirmErase2() {
 
 async function eraseAll() {
   await db.eraseDatabase();
+  try { localStorage.removeItem(GUIDE_STORE_KEY); } catch { /* ignore */ }
   S.tasks = [];
   S.overrides = [];
   S.completions = [];
@@ -4234,6 +4253,49 @@ async function handleLaunchParams() {
   }
 }
 
+function guideEnabled() {
+  // Older UI tests drive the app without the tour in the way. Guide tests opt in.
+  try {
+    if (navigator.webdriver && !localStorage.getItem('dayli.guide.force')) return false;
+  } catch { /* ignore */ }
+  return true;
+}
+
+function guideContext() {
+  const today = plannerToday();
+  const instances = instancesOn(today, S.tasks, S.overrides);
+  const left = instances.filter((inst) => !isDone(inst)).length;
+  return {
+    hour: currentDate().getHours(),
+    streak: streakInfo(today).streak || 0,
+    left,
+    allDone: instances.length > 0 && left === 0,
+  };
+}
+
+function makeGuide() {
+  try {
+    return createGuide({
+      names: { guide: GUIDE_NAME, app: PRODUCT_NAME },
+      animal: 'bunny',
+      storage: window.localStorage,
+      enabled: guideEnabled(),
+      reducedMotion,
+      soundOn: () => S.settings.sound !== false,
+      context: guideContext,
+      screen: () => (S.settings.setupComplete ? (S.screen || 'today') : 'setup'),
+      actions: {
+        openPet: () => { viewDate = null; openPetScreen('today'); },
+        addGoal: () => openSheet(null),
+        describeWeek: () => openWeekSheet(),
+      },
+    });
+  } catch (err) {
+    console.warn('guide off', err);
+    return null;
+  }
+}
+
 async function boot() {
   const loaded = await db.loadAll();
   S.tasks = loaded.tasks;
@@ -4261,6 +4323,8 @@ async function boot() {
   }
   refreshReminderRecords();
   await persistAll();
+  guide = makeGuide();
+  guide?.onBoot({ setupComplete: Boolean(S.settings.setupComplete) });
   render();
   await handleLaunchParams();
   document.addEventListener('visibilitychange', () => {
@@ -4317,6 +4381,7 @@ async function boot() {
       void maybeOfferSuggestion('resume');
     },
     lastSuggestGesture: () => lastSuggestGesture,
+    guide: () => guide,
     petMode: () => petStage?.mode || null,
     petYaw: () => petStage?.yaw ?? null,
     posePet: (mode, t) => petStage?.poseAt(mode, t),
