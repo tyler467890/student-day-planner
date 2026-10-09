@@ -1,0 +1,18 @@
+{
+  "name": "calo-unlock-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply calo-unlock --remote",
+    "keys": "node scripts/generate-signing-key.js",
+    "codes": "node scripts/generate-codes.js"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.4.0",
+    "vitest": "4.1.11",
+    "wrangler": "^4.149.0"
+  }
+}

@@ -1,0 +1,23 @@
+name = "calo-unlock"
+main = "src/index.js"
+compatibility_date = "2026-01-15"
+
+# Create the database, then paste the database_id it prints here:
+#   npx wrangler d1 create calo-unlock
+[[d1_databases]]
+binding = "DB"
+database_name = "calo-unlock"
+database_id = "replace-with-d1-database-id"
+migrations_dir = "migrations"
+
+[vars]
+# Sites allowed to unlock. Add or remove with commas. No trailing slashes.
+ALLOWED_ORIGINS = "https://tyler467890.github.io,https://calo.ca,https://www.calo.ca"
+MAX_DEVICES = "3"
+RATE_LIMIT_MAX = "5"
+RATE_LIMIT_WINDOW_SECONDS = "900"
+
+# Secrets (never put these in this file):
+#   npx wrangler secret put CODE_PEPPER
+#   npx wrangler secret put UNLOCK_SIGNING_KEY
+#   npx wrangler secret put ADMIN_PASSWORD
