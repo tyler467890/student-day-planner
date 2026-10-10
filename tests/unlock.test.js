@@ -251,3 +251,35 @@ test('activate: maps server answers to friendly messages', async () => {
   assert.equal(offline.kind, 'offline');
   void priv;
 });
+
+/* ---------- the shipped config (lock is ON for launch) ---------- */
+
+test('shipped config: lock on, live unlock address, existing users grandfathered, public key set', async () => {
+  const cfg = await import('../js/config.js');
+  assert.equal(cfg.REQUIRE_UNLOCK, true);
+  assert.equal(cfg.UNLOCK_API_URL, 'https://api.caloplanner.com');
+  assert.equal(cfg.UNLOCK_GRANDFATHER_EXISTING, true);
+  assert.equal(cfg.UNLOCK_PUBLIC_KEY?.kty, 'EC');
+  assert.equal(cfg.UNLOCK_PUBLIC_KEY?.crv, 'P-256');
+  // Never the private half.
+  assert.equal(cfg.UNLOCK_PUBLIC_KEY.d, undefined);
+});
+
+test('shipped config: a new device is locked, one with saved goals is grandfathered (and stays so)', async () => {
+  const c = await import('../js/config.js');
+  const cfg = {
+    requireUnlock: c.REQUIRE_UNLOCK, apiUrl: c.UNLOCK_API_URL, publicKey: c.UNLOCK_PUBLIC_KEY,
+    grandfatherExisting: c.UNLOCK_GRANDFATHER_EXISTING,
+  };
+  const fresh = memoryStorage();
+  assert.equal((await decideGate({ cfg, storage: fresh, hadData: false, hostname: 'caloplanner.com' })).state, 'locked');
+  // Automation alone never bypasses on the real sites.
+  assert.equal((await decideGate({ cfg, storage: fresh, hadData: false, automation: true, hostname: 'caloplanner.com' })).state, 'locked');
+
+  const existing = memoryStorage();
+  const withGoals = hasSavedData({ settings: { setupComplete: false }, tasks: [{ id: 't1', title: 'Read ch. 3' }] });
+  assert.equal(withGoals, true);
+  assert.deepEqual(await decideGate({ cfg, storage: existing, hadData: withGoals, hostname: 'caloplanner.com' }), { state: 'grandfathered', reason: 'existing-data' });
+  // Later, even after they delete every goal, the device stays open.
+  assert.deepEqual(await decideGate({ cfg, storage: existing, hadData: false, hostname: 'caloplanner.com' }), { state: 'grandfathered', reason: 'saved-flag' });
+});

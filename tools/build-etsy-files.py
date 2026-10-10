@@ -9,7 +9,7 @@ PDFs with Helvetica, no dependencies. The wallpaper zip is built separately.
 from pathlib import Path
 
 PRODUCT = 'Calo'
-APP_URL = 'https://tyler467890.github.io/student-day-planner/'  # switch to https://caloplanner.com/ once it serves the app
+APP_URL = 'https://caloplanner.com'
 OUT = Path(__file__).resolve().parent.parent / 'etsy'
 
 
@@ -56,6 +56,8 @@ start = [
     APP_URL,
     'Your unlock code comes in your Etsy order message.',
     'It works on up to 3 of your devices.',
+    'Tip: add Calo to your home screen first,',
+    'then open it and enter your code.',
     'iPhone: tap Share, Add to Home Screen,',
     'turn on Open as Web App, then Add.',
     'Android: browser menu, Install app.',

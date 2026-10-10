@@ -8,7 +8,7 @@
  * Reads the admin key from a file, never from the command line, so it
  * doesn't end up in shell history:
  *   CALO_ADMIN_KEY_FILE   default ~/.calo/admin_key
- *   CALO_UNLOCK_URL       default https://calo-unlock.tyler467890.workers.dev
+ *   CALO_UNLOCK_URL       default https://api.caloplanner.com
  * Writes the plain codes to ~/.calo/codes/calo-codes-<time>.csv (private,
  * mode 600, outside the repo). Add --print to also show them in the terminal.
  */
@@ -20,7 +20,7 @@ const args = process.argv.slice(2).filter((a) => a !== '--print');
 const print = process.argv.includes('--print');
 const count = Number(args[0] || 1);
 const note = String(args[1] || '').slice(0, 200);
-const base = (process.env.CALO_UNLOCK_URL || 'https://calo-unlock.tyler467890.workers.dev').replace(/\/+$/, '');
+const base = (process.env.CALO_UNLOCK_URL || 'https://api.caloplanner.com').replace(/\/+$/, '');
 const keyFile = process.env.CALO_ADMIN_KEY_FILE || path.join(os.homedir(), '.calo', 'admin_key');
 
 if (!(Number.isInteger(count) && count >= 1 && count <= 500)) {

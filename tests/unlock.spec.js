@@ -45,14 +45,14 @@ function mockWorker({ validCode, max = 3 } = {}) {
   };
 }
 
-/** Serve js/config.js with the lock switched on. */
-async function lockOn(page, { grandfather = true } = {}) {
+/** Serve js/config.js with the lock switched on (as shipped) but pointing at the mocked Worker. */
+async function lockOn(page, { grandfather = true, require = true } = {}) {
   const src = fs.readFileSync(path.join(process.cwd(), 'js/config.js'), 'utf8')
-    .replace('export const REQUIRE_UNLOCK = false;', 'export const REQUIRE_UNLOCK = true;')
+    .replace(/export const REQUIRE_UNLOCK = (true|false);/, `export const REQUIRE_UNLOCK = ${require};`)
     .replace(/export const UNLOCK_API_URL = '[^']*';/, `export const UNLOCK_API_URL = '${API}';`)
     .replace(/export const UNLOCK_PUBLIC_KEY = (null|\{[^;]*\});/, `export const UNLOCK_PUBLIC_KEY = ${JSON.stringify(keys.publicJwk)};`)
     .replace('export const UNLOCK_GRANDFATHER_EXISTING = true;', `export const UNLOCK_GRANDFATHER_EXISTING = ${grandfather};`);
-  if (!src.includes('REQUIRE_UNLOCK = true') || !src.includes(API)) throw new Error('config.js changed shape');
+  if (!src.includes(`REQUIRE_UNLOCK = ${require}`) || !src.includes(API)) throw new Error('config.js changed shape');
   await page.route('**/js/config.js', (route) => route.fulfill({ contentType: 'text/javascript', body: src }));
 }
 
@@ -75,7 +75,11 @@ async function shot(page, name) {
   await page.screenshot({ path: path.join(SHOTS, name) });
 }
 
-test('lock off (the default): app opens as today, no unlock screen', async ({ page }) => {
+const GREETING = 'Hi! I’m Calo. Enter your code to open your planner.';
+const AGAIN = 'Enter your code to open your planner.';
+
+test('lock off (REQUIRE_UNLOCK = false): app opens as before, no unlock screen', async ({ page }) => {
+  await lockOn(page, { require: false });
   await forceGate(page);
   await page.goto('/');
   await expect(page.getByRole('button', { name: 'Continue' })).toBeVisible();
@@ -99,8 +103,10 @@ test('new device: enter code, unlock, then stays unlocked offline', async ({ pag
   await page.goto('/');
 
   await expect(screen(page)).toBeVisible();
-  await expect(bubble(page)).toHaveText('Enter your code to get started!');
+  await expect(bubble(page)).toHaveText(GREETING);
+  await expect(page.locator('.unlock-help')).toHaveText('Your code is in your Etsy order message. One code works on up to 3 of your devices.');
   await expect(page.getByRole('button', { name: 'Continue' })).toHaveCount(0);
+  await expect(screen(page)).toHaveAttribute('data-greet', 'done');
   await expect(input(page)).toBeFocused();
   await shot(page, '1-enter-code.png');
 
@@ -143,7 +149,7 @@ test('wrong code: friendly message, can try again', async ({ page }) => {
   // Typing again clears the error.
   await input(page).press('Backspace');
   await expect(msg(page)).toBeEmpty();
-  await expect(bubble(page)).toHaveText('Enter your code to get started!');
+  await expect(bubble(page)).toHaveText(AGAIN);
 });
 
 test('typo: caught on the phone, nothing sent', async ({ page }) => {
@@ -221,4 +227,107 @@ test('with grandfathering off, an existing user must enter a code too', async ({
   await page.evaluate(() => localStorage.setItem('dayli.unlock.force', '1'));
   await page.reload();
   await expect(screen(page)).toBeVisible();
+});
+
+/* ---------- greeting animation ---------- */
+
+/** Sample the greeting a few times as it plays (for the frame strip and to check it moves). */
+async function sampleGreeting(page) {
+  return page.evaluate(() => new Promise((resolve) => {
+    const out = [];
+    const t0 = performance.now();
+    const tick = () => {
+      const root = document.querySelector('.unlock');
+      const op = (sel) => Number(getComputedStyle(root.querySelector(sel)).opacity);
+      out.push({ t: Math.round(performance.now() - t0), greet: root.dataset.greet, bunny: op('.unlock-bunny'), bubble: op('.unlock-bubble'), card: op('.unlock-card'),
+        cardAnim: getComputedStyle(root.querySelector('.unlock-card')).animationName });
+      if (root.dataset.greet === 'done' || out.length > 80) resolve(out); else setTimeout(tick, 50);
+    };
+    tick();
+  }));
+}
+
+test('greeting: Calo hops in and says hi, then the code card appears (about 2 seconds)', async ({ page }) => {
+  await lockOn(page);
+  await forceGate(page);
+  await page.goto('/');
+  await expect(screen(page)).toBeVisible();
+  const frames = await sampleGreeting(page);
+  const playing = frames.filter((f) => f.greet === 'playing');
+  expect(playing.length).toBeGreaterThan(5);
+  expect(playing[0].cardAnim).toBe('unlock-rise');
+  // The card comes last: hidden while Calo says hi, fully there at the end.
+  expect(playing[0].card).toBeLessThan(0.05);
+  expect(Math.max(...playing.map((f) => f.bubble))).toBeGreaterThan(0.9);
+  const done = frames.at(-1);
+  expect(done.greet).toBe('done');
+  expect(done.card).toBe(1);
+  // Short: from first paint to the code field in under 3 seconds (bunny wait included).
+  expect(done.t).toBeLessThan(3000);
+  await expect(bubble(page)).toHaveText(GREETING);
+  await expect(input(page)).toBeFocused();
+  await expect(page.locator('.unlock-bunny')).toHaveClass(/has-3d|is-fallback/);
+});
+
+test('greeting: a tap skips straight to the code field', async ({ page }) => {
+  await lockOn(page);
+  await forceGate(page);
+  await page.goto('/');
+  await expect(screen(page)).toHaveAttribute('data-greet', /waiting|playing/);
+  await page.mouse.click(20, 20);
+  await expect(screen(page)).toHaveAttribute('data-greet', 'done');
+  await expect(input(page)).toBeFocused();
+  expect(await page.locator('.unlock-card').evaluate((n) => getComputedStyle(n).opacity)).toBe('1');
+});
+
+test('greeting: prefers-reduced-motion shows everything at once, no animation', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await lockOn(page);
+  await forceGate(page);
+  await page.goto('/');
+  await expect(screen(page)).toHaveAttribute('data-greet', 'done');
+  for (const sel of ['.unlock-bunny', '.unlock-bubble', '.unlock-card']) {
+    const st = await page.locator(sel).evaluate((n) => ({ a: getComputedStyle(n).animationName, o: getComputedStyle(n).opacity }));
+    expect(st).toEqual({ a: 'none', o: '1' });
+  }
+  await expect(bubble(page)).toHaveText(GREETING);
+  await expect(input(page)).toBeFocused();
+});
+
+test('greeting: if the 3D bunny is slow, the emoji bunny greets instead', async ({ page }) => {
+  await lockOn(page);
+  await forceGate(page);
+  await page.route('**/models/bunny.glb', async (route) => { await new Promise((r) => setTimeout(r, 4000)); await route.continue().catch(() => {}); });
+  await page.goto('/');
+  await expect(page.locator('.unlock-bunny')).toHaveClass(/is-fallback/, { timeout: 3000 });
+  await expect(page.locator('.unlock-emoji')).toBeVisible();
+  await expect(screen(page)).toHaveAttribute('data-greet', 'done', { timeout: 4000 });
+  await expect(input(page)).toBeFocused();
+});
+
+test('shipped config: existing user with a saved goal goes straight to the planner', async ({ page }) => {
+  // Real js/config.js (lock on, grandfathering on), no mock config.
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByRole('button', { name: 'Skip for now' }).or(page.getByRole('button', { name: 'Not now' }))).toBeVisible();
+  await page.evaluate(async () => {
+    const req = indexedDB.open('dayli');
+    const db = await new Promise((r) => { req.onsuccess = () => r(req.result); });
+    const tx = db.transaction('tasks', 'readwrite');
+    tx.objectStore('tasks').put({ id: 'gf-test-goal', title: 'Finish lab report', createdAt: Date.now() });
+    await new Promise((r) => { tx.oncomplete = r; });
+  });
+  await page.evaluate(() => localStorage.setItem('dayli.unlock.force', '1'));
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-unlock', 'grandfathered');
+  await expect(screen(page)).toHaveCount(0);
+});
+
+test('shipped config: a brand-new device sees the greeting and the lock', async ({ page }) => {
+  await forceGate(page);
+  await page.goto('/');
+  await expect(screen(page)).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('data-unlock', 'locked');
+  await expect(bubble(page)).toHaveText(GREETING);
+  await expect(page.getByRole('button', { name: 'Continue' })).toHaveCount(0);
 });

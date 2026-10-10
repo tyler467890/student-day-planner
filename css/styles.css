@@ -1401,3 +1401,37 @@ html.is-locked, html.is-locked body { overflow: hidden; }
 .unlock-done { display: none; }
 .unlock[data-state="success"] .unlock-form { display: none; }
 .unlock[data-state="success"] .unlock-done { display: block; padding-top: 6px; }
+
+/* Greeting: Calo hops in and waves, the bubble pops, then the code card slides up
+   (about 1.8s; js/unlock.js GREETING_MS). Only transform and opacity animate,
+   so it stays smooth on phones. Tap anywhere to skip. */
+.unlock[data-greet="waiting"] > .unlock-bunny,
+.unlock[data-greet="waiting"] > .unlock-bubble,
+.unlock[data-greet="waiting"] > .unlock-card { opacity: 0; }
+.unlock[data-greet="playing"] > .unlock-bunny { animation: unlock-hop 620ms cubic-bezier(.3, 1.4, .5, 1) both; }
+.unlock[data-greet="playing"] .unlock-emoji { animation: unlock-wave 900ms ease-in-out 620ms both; transform-origin: 50% 85%; }
+.unlock[data-greet="playing"] > .unlock-bubble { animation: unlock-pop 380ms cubic-bezier(.3, 1.5, .55, 1) 560ms both; transform-origin: 50% 0; }
+.unlock[data-greet="playing"] > .unlock-card { animation: unlock-rise 460ms cubic-bezier(.2, .9, .3, 1) 1300ms both; }
+.unlock[data-greet="done"] > * , .unlock[data-greet="done"] .unlock-emoji { animation: none; opacity: 1; transform: none; }
+@keyframes unlock-hop {
+  0% { opacity: 0; transform: translateY(70px) scale(.55); }
+  55% { opacity: 1; transform: translateY(-16px) scale(1.04); }
+  78% { transform: translateY(0) scale(1.06, .94); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes unlock-wave {
+  0%, 100% { transform: rotate(0); }
+  20%, 60% { transform: rotate(-12deg); }
+  40%, 80% { transform: rotate(12deg); }
+}
+@keyframes unlock-pop {
+  0% { opacity: 0; transform: translateY(10px) scale(.85); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes unlock-rise {
+  0% { opacity: 0; transform: translateY(28px); }
+  100% { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .unlock > *, .unlock .unlock-emoji { animation: none !important; opacity: 1 !important; transform: none !important; }
+}

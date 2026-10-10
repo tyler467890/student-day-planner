@@ -4,6 +4,7 @@
  *   POST /activate            { code, deviceId } -> { token, devicesUsed, maxDevices }
  *   GET  /admin               password-protected admin page (HTML)
  *   POST /admin/api/generate  { count, note }    -> { codes: [{ code, id }], csv }
+ *   POST /admin/api/list      { limit }          -> newest codes first: id, note, date, devices used, blocked
  *   POST /admin/api/lookup    { code }           -> code details + devices
  *   POST /admin/api/reset     { code }           -> frees all device slots
  *   POST /admin/api/revoke    { code, revoked }  -> stop a code activating new devices
@@ -242,6 +243,27 @@ async function handleAdminApi(request, env, cfg, action) {
     return json({ codes: rows, csv });
   }
 
+  if (action === 'list') {
+    const limit = Math.min(500, Math.max(1, Math.floor(Number(body.limit)) || 200));
+    const { results } = await env.DB.prepare(
+      `SELECT c.id, c.note, c.created_at, c.max_devices, c.revoked,
+              (SELECT COUNT(*) FROM devices d WHERE d.code_id = c.id) AS used
+       FROM codes c ORDER BY c.created_at DESC, c.rowid DESC LIMIT ?`,
+    ).bind(limit).all();
+    const total = await env.DB.prepare('SELECT COUNT(*) AS n FROM codes').first();
+    return json({
+      total: total?.n ?? 0,
+      codes: (results || []).map((c) => ({
+        id: c.id,
+        note: c.note,
+        createdAt: new Date(c.created_at * 1000).toISOString(),
+        devicesUsed: c.used,
+        maxDevices: c.max_devices,
+        revoked: Boolean(c.revoked),
+      })),
+    });
+  }
+
   const code = await findCode(env, body.code);
   if (!code) return json({ error: 'not_found', message: 'No code like that.' }, 404);
 
@@ -278,7 +300,7 @@ export default {
     }
 
     if (path === '/admin' && request.method === 'GET') return adminPage();
-    const m = path.match(/^\/admin\/api\/(generate|lookup|reset|revoke)$/);
+    const m = path.match(/^\/admin\/api\/(generate|list|lookup|reset|revoke)$/);
     if (m) {
       if (request.method !== 'POST') return json({ error: 'method' }, 405);
       // Admin calls must come from the admin page itself (same origin), not from other sites.

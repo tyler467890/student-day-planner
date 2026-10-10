@@ -9,7 +9,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> /Annots [6 0 R] >>
 endobj
 4 0 obj
-<< /Length 623 >>
+<< /Length 699 >>
 stream
 BT
 /F1 18 Tf
@@ -22,11 +22,15 @@ BT
 0 -22 Td
 (Open the app:) Tj
 0 -22 Td
-(https://tyler467890.github.io/student-day-planner/) Tj
+(https://caloplanner.com) Tj
 0 -22 Td
 (Your unlock code comes in your Etsy order message.) Tj
 0 -22 Td
 (It works on up to 3 of your devices.) Tj
+0 -22 Td
+(Tip: add Calo to your home screen first,) Tj
+0 -22 Td
+(then open it and enter your code.) Tj
 0 -22 Td
 (iPhone: tap Share, Add to Home Screen,) Tj
 0 -22 Td
@@ -44,7 +48,7 @@ endobj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
 endobj
 6 0 obj
-<< /Type /Annot /Subtype /Link /Rect [72 646 540 672] /Border [0 0 0] /A << /Type /Action /S /URI /URI (https://tyler467890.github.io/student-day-planner/) >> >>
+<< /Type /Annot /Subtype /Link /Rect [72 646 540 672] /Border [0 0 0] /A << /Type /Action /S /URI /URI (https://caloplanner.com) >> >>
 endobj
 xref
 0 7
@@ -53,9 +57,9 @@ xref
 0000000058 00000 n 
 0000000115 00000 n 
 0000000257 00000 n 
-0000000930 00000 n 
-0000001000 00000 n 
+0000001006 00000 n 
+0000001076 00000 n 
 trailer << /Size 7 /Root 1 0 R >>
 startxref
-1177
+1226
 %%EOF

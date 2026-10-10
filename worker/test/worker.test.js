@@ -202,7 +202,43 @@ describe('admin', () => {
     const res = await call('/admin', { method: 'GET', origin: null });
     expect(res.status).toBe(200);
     expect(res.headers.get('content-security-policy')).toContain("frame-ancestors 'none'");
-    expect(await res.text()).toContain('Calo codes admin');
+    const html = await res.text();
+    expect(html).toContain('Calo codes');
+    expect(html).toContain('New code');
+    expect(html).toContain('Copy message');
+    expect(html).toContain('https://caloplanner.com');
+    expect(html).toContain('up to 3 of your devices');
+    expect(html).not.toContain('__NONCE__');
+    expect(html).not.toContain('__LINK__');
+    // The script only runs with this response's nonce.
+    const nonce = res.headers.get('content-security-policy').match(/'nonce-([^']+)'/)[1];
+    expect(html).toContain(`<script nonce="${nonce}">`);
+  });
+
+  it('lists issued codes newest first with note, date, devices used and blocked state (never the code)', async () => {
+    const first = await makeCodes(1, 'Order #111 Sam');
+    await new Promise((r) => { setTimeout(r, 1100); });
+    const second = await makeCodes(1, 'Order #222 Alex');
+    await activate(second.codes[0].code, newDeviceId(), freshIp());
+    await activate(second.codes[0].code, newDeviceId(), freshIp());
+    await call('/admin/api/revoke', { body: { code: first.codes[0].id, revoked: true }, auth: ADMIN, origin: null });
+
+    const res = await call('/admin/api/list', { body: {}, auth: ADMIN, origin: null });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.total).toBe(2);
+    expect(data.codes.map((c) => c.note)).toEqual(['Order #222 Alex', 'Order #111 Sam']);
+    expect(data.codes[0]).toMatchObject({ id: second.codes[0].id, devicesUsed: 2, maxDevices: 3, revoked: false });
+    expect(data.codes[1]).toMatchObject({ id: first.codes[0].id, devicesUsed: 0, revoked: true });
+    expect(Date.parse(data.codes[0].createdAt)).toBeGreaterThan(0);
+    expect(JSON.stringify(data)).not.toContain(second.codes[0].code);
+
+    // Reset by id frees the slots; a blocked code can't unlock new devices.
+    const reset = await call('/admin/api/reset', { body: { code: second.codes[0].id }, auth: ADMIN, origin: null });
+    expect((await reset.json()).devices).toHaveLength(0);
+    expect((await activate(first.codes[0].code, newDeviceId(), freshIp(3))).status).toBe(404);
+
+    expect((await call('/admin/api/list', { body: {}, auth: 'nope', origin: null, ip: freshIp(8) })).status).toBe(401);
   });
 });
 

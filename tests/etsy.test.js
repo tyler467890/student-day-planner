@@ -22,7 +22,9 @@ test('Etsy download files stay within listing limits', async () => {
 test('Start-Here PDF links to the app and has no QR code or upsell', async () => {
   const bytes = await readFile(path.join(dir, 'Start-Here.pdf'));
   const text = bytes.toString('latin1');
-  assert.match(text, /https:\/\/tyler467890\.github\.io\/student-day-planner\//);
+  assert.match(text, /\/URI \(https:\/\/caloplanner\.com\)/);
+  assert.doesNotMatch(text, /github\.io/);
+  assert.match(text, /up to 3 of your devices/);
   assert.doesNotMatch(text, /QR/i);
   assert.doesNotMatch(text, /upsell|buy now|shop now|subscribe/i);
   assert.match(text, /\/URI/);

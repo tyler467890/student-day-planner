@@ -39,21 +39,19 @@ export const PUSH_SERVER_URL = '';
 export const VAPID_PUBLIC_KEY = '';
 
 /**
- * UNLOCK CODES (paid access). Off until the unlock Worker is deployed.
- * Steps are in worker/README.md. While REQUIRE_UNLOCK is false, nothing
- * changes for anyone. If it's true but UNLOCK_API_URL or UNLOCK_PUBLIC_KEY
- * is still empty, the app stays open (so a half-finished setup can't lock
- * people out).
+ * UNLOCK CODES (paid access). ON since Oct 10, 2026: new devices see Calo's
+ * greeting and enter their Etsy code once. Set REQUIRE_UNLOCK to false to
+ * open the app for everyone again. If UNLOCK_API_URL or UNLOCK_PUBLIC_KEY is
+ * empty, the app stays open (so a half-finished setup can't lock people out).
+ * Steps are in worker/README.md.
  */
-export const REQUIRE_UNLOCK = false;
+export const REQUIRE_UNLOCK = true;
 
 /**
- * The Worker's address. No trailing slash. TEMPORARY workers.dev address.
- * Plan: once caloplanner.com is on Cloudflare, give the Worker the custom
- * domain api.caloplanner.com and change this to
- * 'https://api.caloplanner.com' (steps in worker/README.md).
+ * The Worker's address. No trailing slash. The old
+ * https://calo-unlock.tyler467890.workers.dev address still works too.
  */
-export const UNLOCK_API_URL = 'https://calo-unlock.tyler467890.workers.dev';
+export const UNLOCK_API_URL = 'https://api.caloplanner.com';
 
 /**
  * The public half of the signing key, printed by
@@ -64,8 +62,7 @@ export const UNLOCK_API_URL = 'https://calo-unlock.tyler467890.workers.dev';
 export const UNLOCK_PUBLIC_KEY = {"kty":"EC","crv":"P-256","x":"ssGSHXB_Wwu9k9iDkGd8jHMvF9Z9oKV_Z9Tmtm67INw","y":"ItnccLUxQq9GDWB3PNYPaSezUQn3tjX-JKOKaHsMz_8"};
 
 /**
- * DECISION FOR TYLER before REQUIRE_UNLOCK goes on (default = safest: true).
- * Devices that already have saved planner data (finished setup or any goal)
+ * Grandfathering (Tyler chose true). Devices that already have saved planner data (finished setup or any goal)
  * the first time they open a version with REQUIRE_UNLOCK on stay unlocked
  * for good, so current testers aren't locked out. Set to false to make
  * everyone enter a code.

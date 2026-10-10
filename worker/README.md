@@ -1,8 +1,28 @@
 # Calo unlock codes
 
-This folder is a small Cloudflare Worker that checks Etsy unlock codes. It is
-**not switched on yet**. Until you finish the steps below, Calo works exactly
-as it does today for everyone.
+This folder is a small Cloudflare Worker that checks Etsy unlock codes. It
+runs at **https://api.caloplanner.com** and the lock is **on** (since
+Oct 10, 2026): new devices on caloplanner.com need a code.
+
+## Give a buyer their code (the everyday job)
+
+1. Open **https://api.caloplanner.com/admin** (phone or computer).
+2. The first time on that device, type the admin password and keep
+   "Remember on this device" ticked. It's saved only in that browser, for that
+   site. **Sign out** forgets it.
+3. Optionally type the Etsy order number or the buyer's name as a note.
+4. Tap **New code**, then **Copy message**. It copies a friendly message with
+   the code, the link https://caloplanner.com and "works on up to 3 of your
+   devices".
+5. In Etsy: Orders & Shipping, open the order, message the buyer, paste, send.
+
+The code is shown only once (the Worker keeps a scrambled version), so copy
+it before leaving the page. The **Issued codes** list shows each code's note,
+date and devices used, with **Reset devices** (buyer got a new phone) and
+**Block** (refund or a code shared online).
+
+The admin password is stored on the box in `/home/box/.calo/admin_key`
+(mode 600). Keep a copy in your password manager.
 
 ## How it works (plain words)
 
@@ -10,8 +30,9 @@ as it does today for everyone.
    It has 16 letters and numbers after `CALO`. Codes never use 0, O, 1 or I,
    so they're easy to read. The last character is a check letter, so a typo
    is caught on the phone right away.
-2. The first time someone opens Calo, Calo the bunny says "Enter your code to
-   get started!". They type the code once.
+2. The first time someone opens Calo, Calo the bunny hops in, waves and says
+   "Hi! I'm Calo. Enter your code to open your planner." (about 2 seconds;
+   no animation with reduced motion; a tap skips it). They type the code once.
 3. The app sends the code and a random device ID (made on that phone) to this
    Worker. The Worker checks the code and remembers the device. One code works
    on up to **3 devices**. The 4th gets: "This code is already on 3 devices.
@@ -27,9 +48,9 @@ minutes** per internet address, and a code that keeps hitting its device limit
 is paused for 15 minutes too. With about 38,000,000,000,000,000,000,000
 possible codes, guessing one is not realistic.
 
-People who already use Calo (anyone with saved goals or a finished setup) stay
-unlocked automatically when you switch the lock on, so your testers aren't
-locked out. Set `UNLOCK_GRANDFATHER_EXISTING = false` in `js/config.js` if you
+People who already used Calo (anyone with saved goals or a finished setup on
+that website address) stayed unlocked automatically when the lock went on, so
+your testers aren't locked out. Set `UNLOCK_GRANDFATHER_EXISTING = false` in `js/config.js` if you
 want everyone to enter a code.
 
 ## What you need
@@ -43,10 +64,13 @@ inside this `worker` folder: `cd worker`.
 
 ## Current state (Oct 10, 2026)
 
-Steps 1 to 6 below are **already done**:
+Everything below is **done** and the lock is on:
 
-- Worker: `https://calo-unlock.tyler467890.workers.dev` (**temporary**
-  workers.dev address; the plan is `https://api.caloplanner.com`). `/health` shows `{"ok":true}`.
+- Worker: `https://api.caloplanner.com` (custom domain, in `wrangler.toml`
+  `routes`). The old `https://calo-unlock.tyler467890.workers.dev` address
+  still works. `/health` shows `{"ok":true}`.
+- App: `https://caloplanner.com` (Cloudflare Pages project `calo`) and the
+  older GitHub Pages copy. Both have `REQUIRE_UNLOCK = true`.
 - Storage: one SQLite-backed Durable Object (`CaloStore`, free plan). Not KV
   and not D1: KV is eventually consistent, so two phones unlocking at the same
   moment could both get slot 3, and the Cloudflare API token on the box can't
@@ -57,8 +81,10 @@ Steps 1 to 6 below are **already done**:
   `code_pepper`, `signing_key_private.jwk`, `signing_key_public.jwk`,
   `admin_key` (this is the admin password). Save them in your password manager.
   **If the pepper or signing key is lost, sold codes stop working.**
-- `js/config.js` already has `UNLOCK_API_URL` and `UNLOCK_PUBLIC_KEY`.
-  `REQUIRE_UNLOCK` is still `false`, so nothing changes for anyone yet.
+- `js/config.js` has `REQUIRE_UNLOCK = true`,
+  `UNLOCK_API_URL = 'https://api.caloplanner.com'`, `UNLOCK_PUBLIC_KEY` and
+  `UNLOCK_GRANDFATHER_EXISTING = true`.
+- All test codes made during setup are blocked.
 
 ## Redo or change the setup
 
@@ -72,8 +98,7 @@ Commands run inside this `worker` folder with Node 22+ and Wrangler logged in.
    `https://tyler467890.github.io`, `https://caloplanner.com` and
    `https://www.caloplanner.com`. After the move, remove the github.io one and
    run `npx wrangler deploy`.
-3. Once caloplanner.com's nameservers point at Cloudflare, give the Worker its
-   own address: add to `wrangler.toml`
+3. (Done.) The Worker's own address is in `wrangler.toml`:
 
    ```toml
    routes = [{ pattern = "api.caloplanner.com", custom_domain = true }]
@@ -87,10 +112,10 @@ Commands run inside this `worker` folder with Node 22+ and Wrangler logged in.
 
 ## Make codes
 
-**Admin page:** open `https://calo-unlock.tyler467890.workers.dev/admin`,
-type the admin password, choose how many codes and an optional note (like the
-Etsy order number), click **Make codes**, then **Download CSV**. Codes are
-shown **only once**, because the Worker only keeps scrambled versions.
+**Admin page:** see "Give a buyer their code" at the top. For a batch, open
+**More** on the admin page, choose how many codes and a note, click **Make
+codes + CSV**, then **Download CSV**. Codes are shown **only once**, because
+the Worker only keeps scrambled versions.
 
 **Or from a terminal** (reads the admin key from `~/.calo/admin_key`, never
 from the command line):
@@ -105,17 +130,22 @@ the repo). Add `--print` to show them in the terminal too.
 Etsy gives every buyer the same download files, so a per-buyer code can't go
 inside the PDF. Send each buyer their code in the Etsy order message.
 
-### 7. Turn the lock on
+### The lock switch
 
-In `js/config.js` set:
+`REQUIRE_UNLOCK` in `js/config.js` is `true`. After changing anything in the
+app, bump `CACHE` in `sw.js`, merge to `main` (GitHub Pages updates itself)
+and redeploy Cloudflare Pages (below). Open the app in a private window: you
+should see Calo's greeting and the code field. A device with saved goals
+stays unlocked.
 
-```js
-export const REQUIRE_UNLOCK = true;
+### Deploy caloplanner.com (Cloudflare Pages project `calo`)
+
+From a clean checkout of `main`, with Node 22+ and a Cloudflare API token:
+
 ```
-
-Commit, open a pull request and merge it. GitHub Pages updates in a minute
-or two. Open the app in a private/incognito window: you should see Calo
-asking for a code. Your own phone, with its saved goals, stays unlocked.
+mkdir -p _site && cp index.html manifest.webmanifest sw.js robots.txt _site/ && cp -r css js fonts icons pets-preview sounds items data _site/ && cp -aL models _site/models && cp -aL vendor _site/vendor
+npx wrangler pages deploy _site --project-name calo --branch main
+```
 
 **Safety net:** if `UNLOCK_API_URL` or `UNLOCK_PUBLIC_KEY` is empty, the app
 stays open even with `REQUIRE_UNLOCK = true`, so a half-finished setup never
@@ -123,8 +153,8 @@ locks people out. To turn the lock off again, set it back to `false` and merge.
 
 ## Helping a buyer (admin page)
 
-- **Look up:** type their code (or the `c_...` id from your CSV) to see how
-  many devices use it.
+- **Find them:** search the Issued codes list by the note (order number or
+  name), or use **More > Look up** with their code or the `c_...` id.
 - **Reset devices:** frees all 3 slots so they can unlock new devices. Their
   old devices stay unlocked, because tickets are checked offline.
 - **Block code:** for refunds or a code posted online. It stops the code from
@@ -162,8 +192,8 @@ codes can't be guessed. It is **not** uncrackable:
   addresses gets more tries, but the number of codes makes guessing hopeless
   anyway.
 
-**Recommended later (once sales are coming in): host on Cloudflare Pages at
-caloplanner.com and make the GitHub repo private.** GitHub's free plan can't serve a
+**Recommended later (once sales are coming in): make the GitHub repo
+private.** caloplanner.com is already on Cloudflare Pages (steps 1 to 4 below are done). GitHub's free plan can't serve a
 site from a private repo, but Cloudflare Pages can:
 
 1. caloplanner.com is registered at Porkbun (Oct 10, 2026). Add it to
