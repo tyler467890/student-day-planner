@@ -4,7 +4,7 @@
 // clean up existing caches. Only caches with this prefix belong to this app copy, so a preview copy on
 // the same github.io origin never deletes the live app's cache (or the reverse).
 const CACHE_PREFIX = 'dayli-v';
-const CACHE = 'dayli-v21';
+const CACHE = 'dayli-v22';
 
 const ASSETS = [
   './',
@@ -109,6 +109,11 @@ const ASSETS = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
+  './icons/icon-maskable-192.png',
+  './icons/apple-touch-icon.png',
+  './icons/favicon-16.png',
+  './icons/favicon-32.png',
+  './favicon.ico',
 ];
 
 self.addEventListener('install', (event) => {

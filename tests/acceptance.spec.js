@@ -761,7 +761,7 @@ test('no third-party requests and the manifest is installable', async ({ page })
   expect(manifest.data.display).toBe('standalone');
   expect(manifest.data.start_url).toBe('./');
   expect(manifest.data.scope).toBe('./');
-  expect(manifest.data.icons.map((icon) => icon.sizes).sort()).toEqual(['192x192', '512x512', '512x512']);
+  expect(manifest.data.icons.map((icon) => icon.sizes).sort()).toEqual(['192x192', '192x192', '512x512', '512x512']);
   const origin = new URL(page.url()).origin;
   const third = urls.filter((url) => !url.startsWith(origin) && !url.startsWith('data:'));
   expect(third).toEqual([]);
