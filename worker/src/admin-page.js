@@ -8,7 +8,10 @@
  * "Sign out" forgets it.
  */
 
-export const APP_LINK = 'https://caloplanner.com';
+// The buyer's message has no web address on purpose: Etsy's Seller Policy
+// frowns on external URLs in Messages, so the link lives in the Start Here PDF
+// that Etsy delivers with the order.
+export const PDF_HINT = 'Open Calo with the link in your Start Here PDF (in your Etsy Purchases).';
 
 const PAGE = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
@@ -109,7 +112,7 @@ const PAGE = `<!DOCTYPE html>
 </div>
 </main>
 <script nonce="__NONCE__">
-const LINK = '__LINK__';
+const START = '__START__';
 const KEY = 'calo-admin-key';
 const NL = String.fromCharCode(10);
 const $ = (id) => document.getElementById(id);
@@ -155,7 +158,7 @@ function message(code) {
     code,
     '',
     'How to start:',
-    '1. Open ' + LINK,
+    '1. ' + START,
     '   (iPhone: tap Share, then Add to Home Screen first, and open Calo from your home screen.)',
     '2. Calo the bunny will say hi. Type your code and tap Unlock.',
     '',
@@ -270,7 +273,7 @@ if (pw) signIn(true);
 
 export function adminPage() {
   const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(16))));
-  return new Response(PAGE.replace('__NONCE__', nonce).replace('__LINK__', APP_LINK), {
+  return new Response(PAGE.replace('__NONCE__', nonce).replace('__START__', PDF_HINT), {
     headers: {
       'content-type': 'text/html; charset=utf-8',
       'cache-control': 'no-store',

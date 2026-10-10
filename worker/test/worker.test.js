@@ -206,10 +206,13 @@ describe('admin', () => {
     expect(html).toContain('Calo codes');
     expect(html).toContain('New code');
     expect(html).toContain('Copy message');
-    expect(html).toContain('https://caloplanner.com');
+    // Etsy message: no web address, the link is in the Start Here PDF.
+    expect(html).toContain('Open Calo with the link in your Start Here PDF (in your Etsy Purchases).');
+    expect(html).not.toContain('caloplanner.com');
+    expect(html).not.toMatch(/https?:\/\//);
     expect(html).toContain('up to 3 of your devices');
     expect(html).not.toContain('__NONCE__');
-    expect(html).not.toContain('__LINK__');
+    expect(html).not.toContain('__START__');
     // The script only runs with this response's nonce.
     const nonce = res.headers.get('content-security-policy').match(/'nonce-([^']+)'/)[1];
     expect(html).toContain(`<script nonce="${nonce}">`);

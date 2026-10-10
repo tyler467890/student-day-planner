@@ -58,6 +58,6 @@ Setup details, the command-line code maker and the honest limits are in [worker/
 
 The live site is [https://caloplanner.com](https://caloplanner.com), served by the Cloudflare Pages project `calo` (deploy steps in [worker/README.md](worker/README.md)). Pushes to `main` also deploy the older GitHub Pages copy at [https://tyler467890.github.io/student-day-planner/](https://tyler467890.github.io/student-day-planner/) with GitHub Actions (`.github/workflows/pages.yml`); it keeps working for early users.
 
-The Etsy files are in `etsy/`. `python3 tools/build-etsy-files.py` rebuilds the Start-Here and Quick Guide PDFs (the Start-Here link points to https://caloplanner.com).
+The Etsy files are in `etsy/`. `node tools/build-etsy-files.mjs` rebuilds `Calo-Start-Here.pdf` and `Calo-Quick-Guide.pdf` from the HTML in `tools/etsy/` with Playwright's Chromium (add `--png` for previews in `/tmp/etsy-previews`). The Start-Here link points to https://caloplanner.com. Buyer code messages from the admin page carry no web address; they point to this PDF.
 
 The product spec is in `docs/spec.md`.

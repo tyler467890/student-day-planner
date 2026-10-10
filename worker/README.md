@@ -12,8 +12,9 @@ Oct 10, 2026): new devices on caloplanner.com need a code.
    site. **Sign out** forgets it.
 3. Optionally type the Etsy order number or the buyer's name as a note.
 4. Tap **New code**, then **Copy message**. It copies a friendly message with
-   the code, the link https://caloplanner.com and "works on up to 3 of your
-   devices".
+   the code, setup steps and "works on up to 3 of your devices". It has no
+   web address on purpose (Etsy discourages external links in Messages); it
+   points the buyer to the link in their Start Here PDF instead.
 5. In Etsy: Orders & Shipping, open the order, message the buyer, paste, send.
 
 The code is shown only once (the Worker keeps a scrambled version), so copy

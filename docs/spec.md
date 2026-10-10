@@ -188,9 +188,9 @@ Also seen: a Reddit post titled "New shop selling a wedding planner web app" on 
 ### 1.5 Recommendation
 **Recommended: a no-account installable web app (PWA), sold on Etsy as a one-time instant digital download.**
 - **The Etsy download (.zip plus PDF, within 5 files / 20 MB each):**
-	1. `Start-Here.pdf`: welcome, the app link (a plain tappable link, **no QR code**), and 3-step install instructions for iPhone, Android and laptop.
+	1. `Calo-Start-Here.pdf`: welcome, the app link (a plain tappable link, **no QR code**), and 3-step install instructions for iPhone, Android and laptop.
 	2. `Wallpaper-Pack.zip`: 6-10 original background images designed by Tyler, sized for phones. This is a real original-design deliverable.
-	3. `Quick-Guide.pdf`: one page covering how points, levels and streaks work, and how to back up.
+	3. `Calo-Quick-Guide.pdf`: one page covering how points, levels and streaks work, and how to back up.
 	4. *(Nice to have)* `Planner-Offline.zip`: the app's own files. Buyers own a copy even if hosting changes. Note: opened as a local file it runs as a basic planner only. No install, no notifications (service workers need HTTPS).
 - **App:** plain HTML/CSS/JS, hosted free (GitHub Pages or Cloudflare Pages). Data stays on the device. Reminders work in three tiers (Part 2, section 4).
 **Why:** it's the only format that meets all of Tyler's must-haves at once: on-time reminders, points/levels/streaks with animation, the user's own background photos, and a very simple UI. PDF, Notion and Sheets each miss at least two of these.

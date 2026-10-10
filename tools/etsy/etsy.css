@@ -1,0 +1,45 @@
+/* Shared look for the Etsy PDFs (Calo purple palette, Nunito). */
+/* Static faces (Type 3 fonts come out of variable fonts, so avoid those). 800/900 are
+   instances of the OFL Nunito variable font (see fonts/OFL.txt). */
+@font-face { font-family: "Nunito"; font-weight: 400; src: url("../../fonts/nunito-400.woff2") format("woff2"); }
+@font-face { font-family: "Nunito"; font-weight: 600; src: url("../../fonts/nunito-600.woff2") format("woff2"); }
+@font-face { font-family: "Nunito"; font-weight: 700; src: url("../../fonts/nunito-700.woff2") format("woff2"); }
+@font-face { font-family: "Nunito"; font-weight: 800; src: url("nunito-800.woff2") format("woff2"); }
+@font-face { font-family: "Nunito"; font-weight: 900; src: url("nunito-900.woff2") format("woff2"); }
+@page { size: Letter; margin: 0; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { font-family: "Nunito", sans-serif; color: #2A1860; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.page { width: 8.5in; height: 11in; position: relative; overflow: hidden; padding: 0.55in 0.6in 0.5in;
+  background: radial-gradient(5in 4in at 8% 0%, #FFFFFF 0%, rgba(255,255,255,0) 70%),
+              radial-gradient(4in 4in at 100% 100%, #FFE6D3 0%, rgba(255,230,211,0) 70%),
+              linear-gradient(160deg, #F7F5FF 0%, #ECE7FF 55%, #E2DAFF 100%);
+  page-break-after: always; }
+.page:last-child { page-break-after: auto; }
+.blob { position: absolute; border-radius: 50%; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 22px; letter-spacing: -0.3px; }
+.brand img { width: 36px; height: 36px; border-radius: 10px; box-shadow: 0 4px 10px rgba(77,64,229,.25); }
+.brand small { font-weight: 700; font-size: 12px; color: #6D4AFF; letter-spacing: 1.5px; text-transform: uppercase; margin-left: 6px; }
+h1 { font-weight: 900; font-size: 38px; line-height: 1.05; letter-spacing: -1px; }
+h2 { font-weight: 900; font-size: 19px; line-height: 1.15; letter-spacing: -0.3px; }
+p, li { font-weight: 600; font-size: 12.5px; line-height: 1.45; color: #3D2A75; }
+.sub { font-weight: 700; font-size: 15px; color: #533C86; margin-top: 8px; line-height: 1.35; }
+.card { background: #FFFFFF; border-radius: 20px; padding: 16px 20px; box-shadow: 0 8px 24px rgba(42,24,96,.08); position: relative; }
+.num { width: 30px; height: 30px; border-radius: 50%; background: #6D4AFF; color: #fff; font-weight: 900; font-size: 16px;
+  display: inline-flex; align-items: center; justify-content: center; flex: none; box-shadow: 0 4px 10px rgba(109,74,255,.3); }
+.row { display: flex; gap: 12px; align-items: flex-start; }
+.btn { display: inline-block; background: #6D4AFF; color: #FFFFFF; text-decoration: none; font-weight: 900; font-size: 20px;
+  border-radius: 999px; padding: 10px 26px; box-shadow: 0 6px 16px rgba(109,74,255,.35); }
+.tag { display: inline-block; background: #EFEAFF; color: #6D4AFF; font-weight: 800; font-size: 10.5px; letter-spacing: 1.2px;
+  text-transform: uppercase; border-radius: 999px; padding: 3px 10px; }
+.hl { background: #FFF4E8; border: 2px solid #FFB877; }
+.hl .tag { background: #FFE2C4; color: #B4520A; }
+ol.steps { list-style: none; counter-reset: s; margin-top: 6px; }
+ol.steps li { counter-increment: s; position: relative; padding-left: 26px; margin: 4px 0; }
+ol.steps li::before { content: counter(s); position: absolute; left: 0; top: 1px; width: 18px; height: 18px; border-radius: 50%;
+  background: #EFEAFF; color: #6D4AFF; font-weight: 900; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+.hl ol.steps li::before { background: #FFE2C4; color: #B4520A; }
+b { font-weight: 900; color: #2A1860; }
+.foot { position: absolute; left: 0.6in; right: 0.6in; bottom: 0.4in; display: flex; justify-content: space-between; align-items: center;
+  font-weight: 700; font-size: 10.5px; color: #6B5A9A; }
+.foot a { color: #6D4AFF; text-decoration: none; font-weight: 900; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
