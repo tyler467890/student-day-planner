@@ -1,0 +1,33 @@
+name = "calo-unlock"
+main = "src/index.js"
+compatibility_date = "2026-01-15"
+account_id = "0ec810336034d7fb6c906e6f7a12f9cc"
+workers_dev = true
+preview_urls = false
+
+# The Worker's own address (Cloudflare made the DNS record and certificate).
+# The workers.dev address above keeps working too.
+routes = [{ pattern = "api.caloplanner.com", custom_domain = true }]
+
+# Codes, device slots and wrong-guess counters live in one SQLite-backed
+# Durable Object (free plan). See src/store.js for why it isn't KV.
+[[durable_objects.bindings]]
+name = "STORE"
+class_name = "CaloStore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["CaloStore"]
+
+[vars]
+# Sites allowed to unlock. Add or remove with commas. No trailing slashes.
+# Drop the github.io entry once everyone uses caloplanner.com.
+ALLOWED_ORIGINS = "https://tyler467890.github.io,https://caloplanner.com,https://www.caloplanner.com"
+MAX_DEVICES = "3"
+RATE_LIMIT_MAX = "5"
+RATE_LIMIT_WINDOW_SECONDS = "900"
+
+# Secrets (never put these in this file):
+#   npx wrangler secret put CODE_PEPPER
+#   npx wrangler secret put UNLOCK_SIGNING_KEY
+#   npx wrangler secret put ADMIN_PASSWORD

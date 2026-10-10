@@ -2,6 +2,8 @@
 
 A no-account day planner for students. It runs as a static site (plain HTML, CSS and JavaScript) and keeps every plan on the device.
 
+**Live: [https://caloplanner.com](https://caloplanner.com)**
+
 Calo is also the name of the bunny guide who greets new users, gives a short tour, and pops in now and then with a pep talk.
 
 The app was first built under the working name *Dayli*. Internal storage names (the `dayli` IndexedDB database, `dayli.*` localStorage keys and the `dayli-v` service worker cache prefix) keep that old name on purpose so existing users keep their data. Do not rename them.
@@ -44,8 +46,18 @@ Also update the PDFs in `etsy/` before a listing, if the name changes. The guide
 
 To send reminders when the app is closed, deploy the Cloudflare Worker in `push-server/` and paste its URL and VAPID public key into `js/config.js`. Exact commands (Wrangler, KV, VAPID keys, secrets) are in [push-server/README.md](push-server/README.md).
 
+## Unlock codes (paid access)
+
+The lock is **on**. A new device opens [caloplanner.com](https://caloplanner.com), Calo the bunny hops in and says hi (about 2 seconds, skipped with reduced motion or a tap), and the buyer enters the Etsy unlock code (`CALO-XXXX-XXXX-XXXX-XXXX`, up to 3 devices per code) once. After that it works offline. The Worker in `worker/` runs at `https://api.caloplanner.com` (the old `https://calo-unlock.tyler467890.workers.dev` address still works). Plans still stay on the device: only the code and a random device ID are sent, once. Devices that already had saved goals or a finished setup stay unlocked (`UNLOCK_GRANDFATHER_EXISTING`).
+
+**Making a code for a buyer:** open [https://api.caloplanner.com/admin](https://api.caloplanner.com/admin), sign in with the admin password (once per device), tap **New code**, optionally type the Etsy order number or name, tap **Copy message**, and paste it into the Etsy order conversation. The same page lists every code with its note, date and devices used, with **Reset devices** and **Block** buttons.
+
+Setup details, the command-line code maker and the honest limits are in [worker/README.md](worker/README.md). Worker tests: `cd worker && npm install && npm test` (Node 22+).
+
 ## Pages
 
-Pushes to `main` deploy the static app with GitHub Actions (`.github/workflows/pages.yml`). The live site is [https://tyler467890.github.io/student-day-planner/](https://tyler467890.github.io/student-day-planner/).
+The live site is [https://caloplanner.com](https://caloplanner.com), served by the Cloudflare Pages project `calo` (deploy steps in [worker/README.md](worker/README.md)). Pushes to `main` also deploy the older GitHub Pages copy at [https://tyler467890.github.io/student-day-planner/](https://tyler467890.github.io/student-day-planner/) with GitHub Actions (`.github/workflows/pages.yml`); it keeps working for early users.
+
+The Etsy files are in `etsy/`. `python3 tools/build-etsy-files.py` rebuilds the Start-Here and Quick Guide PDFs (the Start-Here link points to https://caloplanner.com).
 
 The product spec is in `docs/spec.md`.

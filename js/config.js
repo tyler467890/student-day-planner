@@ -37,3 +37,37 @@ export const PUSH_SERVER_URL = '';
 
 /** Base64url uncompressed P-256 public key. Empty when push is off. */
 export const VAPID_PUBLIC_KEY = '';
+
+/**
+ * UNLOCK CODES (paid access). ON since Oct 10, 2026: new devices see Calo's
+ * greeting and enter their Etsy code once. Set REQUIRE_UNLOCK to false to
+ * open the app for everyone again. If UNLOCK_API_URL or UNLOCK_PUBLIC_KEY is
+ * empty, the app stays open (so a half-finished setup can't lock people out).
+ * Steps are in worker/README.md.
+ */
+export const REQUIRE_UNLOCK = true;
+
+/**
+ * The Worker's address. No trailing slash. The old
+ * https://calo-unlock.tyler467890.workers.dev address still works too.
+ */
+export const UNLOCK_API_URL = 'https://api.caloplanner.com';
+
+/**
+ * The public half of the signing key, printed by
+ *   node worker/scripts/generate-signing-key.js
+ * Paste the object it prints, e.g. { kty: 'EC', crv: 'P-256', x: '...', y: '...' }.
+ * It's safe to be public: it can only CHECK unlock tokens, not make them.
+ */
+export const UNLOCK_PUBLIC_KEY = {"kty":"EC","crv":"P-256","x":"ssGSHXB_Wwu9k9iDkGd8jHMvF9Z9oKV_Z9Tmtm67INw","y":"ItnccLUxQq9GDWB3PNYPaSezUQn3tjX-JKOKaHsMz_8"};
+
+/**
+ * Grandfathering (Tyler chose true). Devices that already have saved planner data (finished setup or any goal)
+ * the first time they open a version with REQUIRE_UNLOCK on stay unlocked
+ * for good, so current testers aren't locked out. Set to false to make
+ * everyone enter a code.
+ */
+export const UNLOCK_GRANDFATHER_EXISTING = true;
+
+/** Shown in the "already on 3 devices" message, e.g. an email address or 'your Etsy messages'. Optional. */
+export const UNLOCK_SUPPORT_CONTACT = '';

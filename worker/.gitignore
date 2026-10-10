@@ -1,0 +1,5 @@
+node_modules/
+codes-out/
+.wrangler/
+.dev.vars
+*.csv

@@ -36,7 +36,7 @@ function clamp(v, lo, hi) {
 
 /* ---------- 3D bunny in its own small canvas ---------- */
 
-function createBunnyActor(canvas, animal) {
+export function createBunnyActor(canvas, animal) {
   let renderer;
   try {
     renderer = new WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'low-power' });

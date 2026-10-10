@@ -2,7 +2,11 @@
  * Calo UI. Plain DOM, no framework. All user data stays in IndexedDB.
  */
 
-import { PRODUCT_NAME, APP_VERSION, GUIDE_NAME } from './config.js';
+import {
+  PRODUCT_NAME, APP_VERSION, GUIDE_NAME, REQUIRE_UNLOCK, UNLOCK_API_URL, UNLOCK_PUBLIC_KEY,
+  UNLOCK_GRANDFATHER_EXISTING, UNLOCK_SUPPORT_CONTACT,
+} from './config.js';
+import { decideGate, hasSavedData } from './unlock-gate.js';
 import { createGuide } from './guide.js';
 import { GUIDE_STORE_KEY } from './guide-logic.js';
 import { parseWeekDescription, findOverlaps } from './week-parser.js';
@@ -4311,9 +4315,45 @@ function makeGuide() {
   }
 }
 
+async function unlockGate(loaded) {
+  const cfg = {
+    requireUnlock: REQUIRE_UNLOCK,
+    apiUrl: UNLOCK_API_URL,
+    publicKey: UNLOCK_PUBLIC_KEY,
+    grandfatherExisting: UNLOCK_GRANDFATHER_EXISTING,
+    supportContact: UNLOCK_SUPPORT_CONTACT,
+  };
+  let gate;
+  try {
+    gate = await decideGate({
+      cfg,
+      storage: window.localStorage,
+      hadData: hasSavedData(loaded),
+      automation: Boolean(navigator.webdriver),
+      hostname: location.hostname,
+    });
+  } catch (err) {
+    console.warn('unlock gate', err);
+    gate = { state: 'locked' };
+  }
+  document.documentElement.dataset.unlock = gate.state;
+  if (gate.state !== 'locked') return;
+  const { showUnlockScreen } = await import('./unlock.js');
+  await showUnlockScreen({
+    cfg,
+    storage: window.localStorage,
+    guideName: GUIDE_NAME,
+    appName: PRODUCT_NAME,
+    reducedMotion,
+  });
+  document.documentElement.dataset.unlock = 'unlocked';
+}
+
 async function boot() {
   installKeyboardFit();
   const loaded = await db.loadAll();
+  // Before anything is saved, so a locked first visit leaves no planner data behind.
+  await unlockGate(loaded);
   S.tasks = loaded.tasks;
   S.overrides = loaded.overrides;
   S.completions = loaded.completions;
