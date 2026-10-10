@@ -37,108 +37,73 @@ want everyone to enter a code.
 - A free Cloudflare account. The free plan is enough.
 - **Node.js 22 or newer** from https://nodejs.org (the LTS button). Check with
   `node -v` in a terminal.
-- About 30 minutes.
 
 All commands below are typed in a terminal (VS Code: Terminal > New Terminal)
 inside this `worker` folder: `cd worker`.
 
-## Switch it on, step by step
+## Current state (Oct 10, 2026)
 
-### 1. Create a Cloudflare account and log in
+Steps 1 to 6 below are **already done**:
 
-1. Sign up at https://dash.cloudflare.com/sign-up and turn on two-step login.
-2. In the terminal:
+- Worker: `https://calo-unlock.tyler467890.workers.dev` (**temporary**
+  workers.dev address; the plan is `https://api.caloplanner.com`). `/health` shows `{"ok":true}`.
+- Storage: one SQLite-backed Durable Object (`CaloStore`, free plan). Not KV
+  and not D1: KV is eventually consistent, so two phones unlocking at the same
+  moment could both get slot 3, and the Cloudflare API token on the box can't
+  create D1 databases. The Durable Object handles one request at a time, so the
+  3-device limit and the wrong-guess counters are exact.
+- Secrets `CODE_PEPPER`, `UNLOCK_SIGNING_KEY` and `ADMIN_PASSWORD` are set on
+  the Worker. Copies live only on the box in `/home/box/.calo/` (mode 600):
+  `code_pepper`, `signing_key_private.jwk`, `signing_key_public.jwk`,
+  `admin_key` (this is the admin password). Save them in your password manager.
+  **If the pepper or signing key is lost, sold codes stop working.**
+- `js/config.js` already has `UNLOCK_API_URL` and `UNLOCK_PUBLIC_KEY`.
+  `REQUIRE_UNLOCK` is still `false`, so nothing changes for anyone yet.
 
+## Redo or change the setup
+
+Commands run inside this `worker` folder with Node 22+ and Wrangler logged in.
+
+1. Keys (only for a brand-new setup; changing them breaks sold codes):
+   `node scripts/generate-signing-key.js`, then
+   `npx wrangler secret put UNLOCK_SIGNING_KEY`, `CODE_PEPPER` and
+   `ADMIN_PASSWORD` (12+ characters). Put the public key in `js/config.js`.
+2. `ALLOWED_ORIGINS` in `wrangler.toml` lists the sites allowed to unlock:
+   `https://tyler467890.github.io`, `https://caloplanner.com` and
+   `https://www.caloplanner.com`. After the move, remove the github.io one and
+   run `npx wrangler deploy`.
+3. Once caloplanner.com's nameservers point at Cloudflare, give the Worker its
+   own address: add to `wrangler.toml`
+
+   ```toml
+   routes = [{ pattern = "api.caloplanner.com", custom_domain = true }]
    ```
-   npm install
-   npx wrangler login
-   ```
 
-   A browser window opens. Click **Allow**.
+   run `npx wrangler deploy` (Cloudflare makes the DNS record and certificate),
+   check `https://api.caloplanner.com/health`, then set
+   `UNLOCK_API_URL = 'https://api.caloplanner.com'` in `js/config.js`. Keep the
+   workers.dev address working too: devices that are already unlocked never
+   call it again, but anyone mid-setup on an old cached version still might.
 
-### 2. Create the database
+## Make codes
 
-```
-npx wrangler d1 create calo-unlock
-```
+**Admin page:** open `https://calo-unlock.tyler467890.workers.dev/admin`,
+type the admin password, choose how many codes and an optional note (like the
+Etsy order number), click **Make codes**, then **Download CSV**. Codes are
+shown **only once**, because the Worker only keeps scrambled versions.
 
-It prints a `database_id`. Open `wrangler.toml` and paste it over
-`replace-with-d1-database-id`. Then create the tables:
-
-```
-npx wrangler d1 migrations apply calo-unlock --remote
-```
-
-### 3. Make your keys and set the secrets
+**Or from a terminal** (reads the admin key from `~/.calo/admin_key`, never
+from the command line):
 
 ```
-node scripts/generate-signing-key.js
+node scripts/generate-codes.js 20 "Etsy batch Oct 10"
 ```
 
-It prints three things. **Save all of them in your password manager.**
+The codes are saved to `~/.calo/codes/calo-codes-<time>.csv` (private, outside
+the repo). Add `--print` to show them in the terminal too.
 
-1. The private key. Run `npx wrangler secret put UNLOCK_SIGNING_KEY` and
-   paste the whole `{"kty":"EC",...,"d":"..."}` line.
-2. The public key line, `export const UNLOCK_PUBLIC_KEY = {...};`. You'll paste
-   it into `js/config.js` in step 5. It's fine for this one to be public.
-3. A random pepper. Run `npx wrangler secret put CODE_PEPPER` and paste it.
-   **If you lose or change the pepper, every code you've sold stops working.**
-
-Then choose an admin password, at least 12 characters, different from your
-other passwords:
-
-```
-npx wrangler secret put ADMIN_PASSWORD
-```
-
-### 4. Deploy the Worker
-
-Check `ALLOWED_ORIGINS` in `wrangler.toml`. It lists the websites allowed to
-unlock: your GitHub Pages address plus `calo.ca` and `www.calo.ca`. Add or
-remove addresses with commas. Then:
-
-```
-npx wrangler deploy
-```
-
-It prints your Worker's address, like
-`https://calo-unlock.<your-name>.workers.dev`. Open
-`https://calo-unlock.<your-name>.workers.dev/health` in a browser. It should
-show `{"ok":true}`.
-
-### 5. Point the app at it (still off)
-
-In `js/config.js`:
-
-```js
-export const UNLOCK_API_URL = 'https://calo-unlock.<your-name>.workers.dev';
-export const UNLOCK_PUBLIC_KEY = { kty: 'EC', crv: 'P-256', x: '...', y: '...' }; // from step 3
-export const UNLOCK_SUPPORT_CONTACT = 'your support email'; // optional
-```
-
-Leave `REQUIRE_UNLOCK = false` for now.
-
-### 6. Make codes
-
-**Easiest way, the admin page:** open
-`https://calo-unlock.<your-name>.workers.dev/admin`, type your admin password,
-choose how many codes and an optional note (like "Etsy batch Oct 9"), and
-click **Make codes**. Click **Download CSV**. Codes are shown **only once**,
-because the Worker only keeps the scrambled versions. Keep the CSV private.
-
-**Or on your computer:**
-
-```
-CODE_PEPPER='your pepper' node scripts/generate-codes.js 20 "Etsy batch Oct 9"
-npx wrangler d1 execute calo-unlock --remote --file=codes-out/<the .sql file it names>
-```
-
-(On Windows PowerShell: `$env:CODE_PEPPER='your pepper'; node scripts/generate-codes.js 20 "Etsy batch"`.)
-
-The `codes-out` folder is ignored by git, so the codes never get uploaded.
-
-Test one code yourself before selling. Put a code in the Etsy buyer PDF, or
-paste one into each order message.
+Etsy gives every buyer the same download files, so a per-buyer code can't go
+inside the PDF. Send each buyer their code in the Etsy order message.
 
 ### 7. Turn the lock on
 
@@ -198,10 +163,11 @@ codes can't be guessed. It is **not** uncrackable:
   anyway.
 
 **Recommended later (once sales are coming in): host on Cloudflare Pages at
-calo.ca and make the GitHub repo private.** GitHub's free plan can't serve a
+caloplanner.com and make the GitHub repo private.** GitHub's free plan can't serve a
 site from a private repo, but Cloudflare Pages can:
 
-1. Buy `calo.ca` in Cloudflare (Domain Registration > Register Domains).
+1. caloplanner.com is registered at Porkbun (Oct 10, 2026). Add it to
+   Cloudflare and switch its nameservers at Porkbun to the two Cloudflare gives you.
 2. Cloudflare dashboard > **Workers & Pages** > **Create** > **Pages** >
    **Connect to Git**. Pick `student-day-planner`, branch `main`, and use the
    same copy step as the GitHub Pages workflow (the `models` folder is a link,
@@ -209,8 +175,8 @@ site from a private repo, but Cloudflare Pages can:
    - Build command:
      `mkdir -p _site && cp index.html manifest.webmanifest sw.js robots.txt _site/ && cp -r css js fonts icons pets-preview sounds items data _site/ && cp -aL models _site/models && cp -aL vendor _site/vendor`
    - Build output directory: `_site`
-3. In the Pages project: **Custom domains** > add `calo.ca` and `www.calo.ca`.
-4. Check the app works on `https://calo.ca`, then unlock it there with a code.
+3. In the Pages project: **Custom domains** > add `caloplanner.com` and `www.caloplanner.com`.
+4. Check the app works on `https://caloplanner.com`, then unlock it there with a code.
    (Each website address keeps its own data, so users moving from the
    github.io address would need to unlock again and won't see their old goals
    there. Do this move before you have many users.)
@@ -220,6 +186,6 @@ site from a private repo, but Cloudflare Pages can:
 6. Remove `https://tyler467890.github.io` from `ALLOWED_ORIGINS` and run
    `npx wrangler deploy` again.
 
-The app's files can still be downloaded from calo.ca, as with any website, but
+The app's files can still be downloaded from caloplanner.com, as with any website, but
 they're no longer sitting in a public repo with history and comments, and the
 lock is the only door.

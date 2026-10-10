@@ -72,7 +72,7 @@ export function showUnlockScreen(opts) {
     input.setAttribute('aria-describedby', 'unlock-msg unlock-help');
     const submit = el('button', 'btn primary block unlock-submit', 'Unlock');
     submit.type = 'submit';
-    const help = el('p', 'unlock-help', `Your code is in the PDF that came with your ${appName} order on Etsy. One code works on up to 3 of your devices.`);
+    const help = el('p', 'unlock-help', `Your code came with your ${appName} order on Etsy (check your Etsy messages). One code works on up to 3 of your devices.`);
     help.id = 'unlock-help';
     form.append(label, input, msg, submit, help);
 

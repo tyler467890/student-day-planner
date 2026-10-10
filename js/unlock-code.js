@@ -85,7 +85,7 @@ export function isValidCode(input) {
 /** Friendly message for a parse failure (shown under the input). */
 export function parseMessage(reason) {
   switch (reason) {
-    case 'empty': return 'Type the code from your Etsy download.';
+    case 'empty': return 'Type the code from your Etsy order.';
     case 'chars': return 'Codes never use 0, O, 1 or I. Check those letters and try again.';
     case 'length': return 'That code looks too short or too long. It has 16 letters and numbers after CALO.';
     case 'checksum': return 'That code has a typo somewhere. Check each letter and try again.';

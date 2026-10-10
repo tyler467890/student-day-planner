@@ -49,8 +49,8 @@ function mockWorker({ validCode, max = 3 } = {}) {
 async function lockOn(page, { grandfather = true } = {}) {
   const src = fs.readFileSync(path.join(process.cwd(), 'js/config.js'), 'utf8')
     .replace('export const REQUIRE_UNLOCK = false;', 'export const REQUIRE_UNLOCK = true;')
-    .replace("export const UNLOCK_API_URL = '';", `export const UNLOCK_API_URL = '${API}';`)
-    .replace('export const UNLOCK_PUBLIC_KEY = null;', `export const UNLOCK_PUBLIC_KEY = ${JSON.stringify(keys.publicJwk)};`)
+    .replace(/export const UNLOCK_API_URL = '[^']*';/, `export const UNLOCK_API_URL = '${API}';`)
+    .replace(/export const UNLOCK_PUBLIC_KEY = (null|\{[^;]*\});/, `export const UNLOCK_PUBLIC_KEY = ${JSON.stringify(keys.publicJwk)};`)
     .replace('export const UNLOCK_GRANDFATHER_EXISTING = true;', `export const UNLOCK_GRANDFATHER_EXISTING = ${grandfather};`);
   if (!src.includes('REQUIRE_UNLOCK = true') || !src.includes(API)) throw new Error('config.js changed shape');
   await page.route('**/js/config.js', (route) => route.fulfill({ contentType: 'text/javascript', body: src }));
@@ -137,7 +137,7 @@ test('wrong code: friendly message, can try again', async ({ page }) => {
   await input(page).fill(generateCode());
   await unlockBtn(page).click();
   await expect(bubble(page)).toHaveText('Hmm, that didn’t work.');
-  await expect(msg(page)).toHaveText('That code didn’t work. Check it matches your Etsy download exactly.');
+  await expect(msg(page)).toHaveText('That code didn’t work. Check it matches the one from your Etsy order.');
   await expect(input(page)).toHaveAttribute('aria-invalid', 'true');
   await shot(page, '4-wrong-code.png');
   // Typing again clears the error.

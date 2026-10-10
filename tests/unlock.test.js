@@ -188,7 +188,7 @@ test('test bypass only works for automation on a local test server', () => {
   assert.equal(testBypass({ automation: true, hostname: 'localhost', storage: s }), true);
   assert.equal(testBypass({ automation: false, hostname: '127.0.0.1', storage: s }), false);
   assert.equal(testBypass({ automation: true, hostname: 'tyler467890.github.io', storage: s }), false);
-  assert.equal(testBypass({ automation: true, hostname: 'calo.ca', storage: s }), false);
+  assert.equal(testBypass({ automation: true, hostname: 'caloplanner.com', storage: s }), false);
   s.setItem(UNLOCK_FORCE_KEY, '1');
   assert.equal(testBypass({ automation: true, hostname: '127.0.0.1', storage: s }), false);
 });
@@ -245,8 +245,8 @@ test('activate: maps server answers to friendly messages', async () => {
   }
   const tooMany = await activate({ cfg, storage: memoryStorage(), input: generateCode(), fetchImpl: fakeServer(() => ({ status: 409, body: {} })).fetchImpl });
   assert.equal(tooMany.message, MAX_DEVICES_MESSAGE);
-  const withContact = await activate({ cfg: { ...cfg, supportContact: 'hi@calo.ca' }, storage: memoryStorage(), input: generateCode(), fetchImpl: fakeServer(() => ({ status: 409, body: {} })).fetchImpl });
-  assert.equal(withContact.message, 'This code is already on 3 devices. Contact support (hi@calo.ca) to reset it.');
+  const withContact = await activate({ cfg: { ...cfg, supportContact: 'hi@caloplanner.com' }, storage: memoryStorage(), input: generateCode(), fetchImpl: fakeServer(() => ({ status: 409, body: {} })).fetchImpl });
+  assert.equal(withContact.message, 'This code is already on 3 devices. Contact support (hi@caloplanner.com) to reset it.');
   const offline = await activate({ cfg, storage: memoryStorage(), input: generateCode(), fetchImpl: async () => { throw new TypeError('Failed to fetch'); } });
   assert.equal(offline.kind, 'offline');
   void priv;

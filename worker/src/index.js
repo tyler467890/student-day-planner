@@ -10,7 +10,7 @@
  *   GET  /health
  *
  * Env (see wrangler.toml and README.md):
- *   DB                    D1 database
+ *   STORE                 SQLite Durable Object (src/store.js) holding codes, devices, attempts
  *   CODE_PEPPER           secret, used to hash codes
  *   UNLOCK_SIGNING_KEY    secret, private JWK from scripts/generate-signing-key.js
  *   ADMIN_PASSWORD        secret, for /admin
@@ -24,6 +24,9 @@ import { parseCode, generateCodes } from '../../js/unlock-code.js';
 import { importPrivateKey, signToken, isDeviceId } from '../../js/unlock-token.js';
 import { hashCode, hmacHex, safeEqual, newCodeId } from './crypto.js';
 import { adminPage } from './admin-page.js';
+import { makeDb, CaloStore } from './store.js';
+
+export { CaloStore };
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
 
@@ -85,9 +88,23 @@ async function recordFailure(env, key, cfg) {
   ).bind(key, now, cutoff).run();
 }
 
+/**
+ * IPv6 users (and attackers) usually get a whole /64, so count wrong guesses
+ * per /64 network instead of per address. IPv4 stays per address.
+ */
+export function ipBucket(ip) {
+  const s = String(ip || 'unknown').trim().toLowerCase();
+  if (!s.includes(':')) return s;
+  const [head, tail = ''] = s.split('::');
+  const h = head ? head.split(':') : [];
+  const t = s.includes('::') ? (tail ? tail.split(':') : []) : [];
+  const full = s.includes('::') ? [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill('0'), ...t] : h;
+  return `${full.slice(0, 4).map((x) => x.replace(/^0+(?=.)/, '')).join(':')}::/64`;
+}
+
 async function ipKey(env, request, prefix = 'ip') {
   // Store a keyed hash, never the raw IP address.
-  const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+  const ip = ipBucket(request.headers.get('cf-connecting-ip'));
   return `${prefix}:${(await hmacHex(env.CODE_PEPPER, `ip:${ip}`)).slice(0, 32)}`;
 }
 
@@ -245,7 +262,8 @@ async function handleAdminApi(request, env, cfg, action) {
 /* ---------- router ---------- */
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, rawEnv) {
+    const env = { ...rawEnv, DB: makeDb(rawEnv) };
     const url = new URL(request.url);
     const cfg = settings(env);
     const path = url.pathname.replace(/\/+$/, '') || '/';

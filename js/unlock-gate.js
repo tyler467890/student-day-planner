@@ -45,7 +45,7 @@ export function ensureDeviceId(storage) {
 
 /**
  * The test-only bypass: automation (navigator.webdriver) AND a local test
- * server AND no opt-in flag. It can never apply on github.io or calo.ca.
+ * server AND no opt-in flag. It can never apply on github.io or caloplanner.com.
  */
 export function testBypass({ automation, hostname, storage }) {
   if (!automation || !TEST_HOSTS.has(String(hostname || ''))) return false;
@@ -123,7 +123,7 @@ export async function activate({ cfg, storage, input, fetchImpl = globalThis.fet
     return { ok: false, kind: 'rate_limited', message: 'Too many tries. Please wait 15 minutes and try again.' };
   }
   if (res.status === 404 || res.status === 400 || data.error === 'wrong_code') {
-    return { ok: false, kind: 'wrong', message: 'That code didn’t work. Check it matches your Etsy download exactly.' };
+    return { ok: false, kind: 'wrong', message: 'That code didn’t work. Check it matches the one from your Etsy order.' };
   }
   return { ok: false, kind: 'server', message: 'Calo’s unlock service is having a moment. Please try again soon.' };
 }

@@ -1,18 +1,24 @@
 name = "calo-unlock"
 main = "src/index.js"
 compatibility_date = "2026-01-15"
+account_id = "0ec810336034d7fb6c906e6f7a12f9cc"
+workers_dev = true
+preview_urls = false
 
-# Create the database, then paste the database_id it prints here:
-#   npx wrangler d1 create calo-unlock
-[[d1_databases]]
-binding = "DB"
-database_name = "calo-unlock"
-database_id = "replace-with-d1-database-id"
-migrations_dir = "migrations"
+# Codes, device slots and wrong-guess counters live in one SQLite-backed
+# Durable Object (free plan). See src/store.js for why it isn't KV.
+[[durable_objects.bindings]]
+name = "STORE"
+class_name = "CaloStore"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["CaloStore"]
 
 [vars]
 # Sites allowed to unlock. Add or remove with commas. No trailing slashes.
-ALLOWED_ORIGINS = "https://tyler467890.github.io,https://calo.ca,https://www.calo.ca"
+# caloplanner.com is ready in advance; drop the github.io entry after the move.
+ALLOWED_ORIGINS = "https://tyler467890.github.io,https://caloplanner.com,https://www.caloplanner.com"
 MAX_DEVICES = "3"
 RATE_LIMIT_MAX = "5"
 RATE_LIMIT_WINDOW_SECONDS = "900"

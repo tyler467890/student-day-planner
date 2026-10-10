@@ -47,8 +47,13 @@ export const VAPID_PUBLIC_KEY = '';
  */
 export const REQUIRE_UNLOCK = false;
 
-/** The Worker's address, e.g. 'https://calo-unlock.yourname.workers.dev'. No trailing slash. */
-export const UNLOCK_API_URL = '';
+/**
+ * The Worker's address. No trailing slash. TEMPORARY workers.dev address.
+ * Plan: once caloplanner.com is on Cloudflare, give the Worker the custom
+ * domain api.caloplanner.com and change this to
+ * 'https://api.caloplanner.com' (steps in worker/README.md).
+ */
+export const UNLOCK_API_URL = 'https://calo-unlock.tyler467890.workers.dev';
 
 /**
  * The public half of the signing key, printed by
@@ -56,9 +61,10 @@ export const UNLOCK_API_URL = '';
  * Paste the object it prints, e.g. { kty: 'EC', crv: 'P-256', x: '...', y: '...' }.
  * It's safe to be public: it can only CHECK unlock tokens, not make them.
  */
-export const UNLOCK_PUBLIC_KEY = null;
+export const UNLOCK_PUBLIC_KEY = {"kty":"EC","crv":"P-256","x":"ssGSHXB_Wwu9k9iDkGd8jHMvF9Z9oKV_Z9Tmtm67INw","y":"ItnccLUxQq9GDWB3PNYPaSezUQn3tjX-JKOKaHsMz_8"};
 
 /**
+ * DECISION FOR TYLER before REQUIRE_UNLOCK goes on (default = safest: true).
  * Devices that already have saved planner data (finished setup or any goal)
  * the first time they open a version with REQUIRE_UNLOCK on stay unlocked
  * for good, so current testers aren't locked out. Set to false to make
@@ -66,5 +72,5 @@ export const UNLOCK_PUBLIC_KEY = null;
  */
 export const UNLOCK_GRANDFATHER_EXISTING = true;
 
-/** Shown in the "already on 3 devices" message, e.g. 'hello@calo.ca'. Optional. */
+/** Shown in the "already on 3 devices" message, e.g. an email address or 'your Etsy messages'. Optional. */
 export const UNLOCK_SUPPORT_CONTACT = '';

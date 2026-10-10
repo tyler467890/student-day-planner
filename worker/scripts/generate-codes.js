@@ -1,58 +1,52 @@
 #!/usr/bin/env node
 /**
- * Make unlock codes on your own computer (the admin page can do this too).
+ * Make a batch of unlock codes through the live Worker's admin API
+ * (the /admin page in a browser does the same thing).
  *
- *   CODE_PEPPER='same value as the Worker secret' node scripts/generate-codes.js 20 "Etsy batch Oct 9"
+ *   node scripts/generate-codes.js 20 "Etsy order 1234"
  *
- * Writes two files into worker/codes-out/ (ignored by git):
- *   calo-codes-<time>.csv   the plain codes, to paste into Etsy orders. Keep private.
- *   calo-codes-<time>.sql   only the hashes, to load into the database with:
- *     npx wrangler d1 execute calo-unlock --remote --file=codes-out/calo-codes-<time>.sql
- * Add --print to also show the codes in the terminal.
+ * Reads the admin key from a file, never from the command line, so it
+ * doesn't end up in shell history:
+ *   CALO_ADMIN_KEY_FILE   default ~/.calo/admin_key
+ *   CALO_UNLOCK_URL       default https://calo-unlock.tyler467890.workers.dev
+ * Writes the plain codes to ~/.calo/codes/calo-codes-<time>.csv (private,
+ * mode 600, outside the repo). Add --print to also show them in the terminal.
  */
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
-import { generateCodes } from '../../js/unlock-code.js';
-import { hashCode, newCodeId } from '../src/crypto.js';
 
 const args = process.argv.slice(2).filter((a) => a !== '--print');
 const print = process.argv.includes('--print');
-const count = Number(args[0] || 10);
+const count = Number(args[0] || 1);
 const note = String(args[1] || '').slice(0, 200);
-const pepper = process.env.CODE_PEPPER;
-const maxDevices = Number(process.env.MAX_DEVICES || 3);
+const base = (process.env.CALO_UNLOCK_URL || 'https://calo-unlock.tyler467890.workers.dev').replace(/\/+$/, '');
+const keyFile = process.env.CALO_ADMIN_KEY_FILE || path.join(os.homedir(), '.calo', 'admin_key');
 
-if (!pepper || pepper.length < 16) {
-  console.error('Set CODE_PEPPER to the same value as the Worker secret (16+ characters).');
+if (!(Number.isInteger(count) && count >= 1 && count <= 500)) {
+  console.error('Usage: node scripts/generate-codes.js <count 1-500> ["note"] [--print]');
   process.exit(1);
 }
-if (!(Number.isInteger(count) && count >= 1 && count <= 5000)) {
-  console.error('Usage: node scripts/generate-codes.js <count 1-5000> ["note"]');
+let key;
+try { key = fs.readFileSync(keyFile, 'utf8').trim(); } catch {
+  console.error(`Can't read the admin key file: ${keyFile}`);
   process.exit(1);
 }
 
-const sql = (s) => `'${String(s).replace(/'/g, "''")}'`;
-const csvCell = (s) => (/[",\n\r]/.test(String(s)) ? `"${String(s).replace(/"/g, '""')}"` : String(s));
-const now = Math.floor(Date.now() / 1000);
-const created = new Date(now * 1000).toISOString();
-const csv = ['code,id,note,created'];
-const inserts = [];
-for (const code of generateCodes(count)) {
-  const id = newCodeId();
-  csv.push([code, id, note, created].map(csvCell).join(','));
-  inserts.push(`INSERT INTO codes (id, hash, created_at, note, max_devices) VALUES (${sql(id)}, ${sql(await hashCode(pepper, code))}, ${now}, ${sql(note)}, ${maxDevices});`);
+const res = await fetch(`${base}/admin/api/generate`, {
+  method: 'POST',
+  headers: { 'content-type': 'application/json', authorization: `Bearer ${key}` },
+  body: JSON.stringify({ count, note }),
+});
+const data = await res.json().catch(() => ({}));
+if (!res.ok) {
+  console.error(`The Worker said no (${res.status}): ${data.message || data.error || 'unknown error'}`);
+  process.exit(1);
 }
 
-const dir = path.join(path.dirname(new URL(import.meta.url).pathname), '..', 'codes-out');
-fs.mkdirSync(dir, { recursive: true });
-const stamp = created.replace(/[:.]/g, '-');
-const csvPath = path.join(dir, `calo-codes-${stamp}.csv`);
-const sqlPath = path.join(dir, `calo-codes-${stamp}.sql`);
-fs.writeFileSync(csvPath, `${csv.join('\n')}\n`, { mode: 0o600 });
-fs.writeFileSync(sqlPath, `${inserts.join('\n')}\n`);
-if (print) console.log(csv.slice(1).map((l) => l.split(',')[0]).join('\n'));
-console.log(`Made ${count} codes.
-  Codes (private): ${csvPath}
-  Hashes for the database: ${sqlPath}
-Load them with:
-  npx wrangler d1 execute calo-unlock --remote --file=${path.relative(process.cwd(), sqlPath)}`);
+const dir = path.join(os.homedir(), '.calo', 'codes');
+fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+const file = path.join(dir, `calo-codes-${new Date().toISOString().replace(/[:.]/g, '-')}.csv`);
+fs.writeFileSync(file, `${data.csv}\n`, { mode: 0o600 });
+if (print) console.log(data.codes.map((c) => c.code).join('\n'));
+console.log(`Made ${data.codes.length} code(s). Saved privately to ${file}`);

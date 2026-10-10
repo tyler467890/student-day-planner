@@ -46,7 +46,7 @@ To send reminders when the app is closed, deploy the Cloudflare Worker in `push-
 
 ## Unlock codes (paid access)
 
-Calo can ask each new device for an Etsy unlock code (`CALO-XXXX-XXXX-XXXX-XXXX`, up to 3 devices per code). It's **off** until `REQUIRE_UNLOCK` in `js/config.js` is set to `true` after the Cloudflare Worker in `worker/` is deployed. Plans still stay on the device: only the code and a random device ID are sent, once. Devices that already have saved data stay unlocked (`UNLOCK_GRANDFATHER_EXISTING`). Step-by-step setup, the admin page, code generation and the honest limits are in [worker/README.md](worker/README.md). Worker tests: `cd worker && npm install && npm test` (Node 22+).
+Calo can ask each new device for an Etsy unlock code (`CALO-XXXX-XXXX-XXXX-XXXX`, up to 3 devices per code). The Worker in `worker/` is deployed at `https://calo-unlock.tyler467890.workers.dev` (temporary; planned `https://api.caloplanner.com`) and `js/config.js` points at it, but the lock stays **off** until `REQUIRE_UNLOCK` is set to `true`. Plans still stay on the device: only the code and a random device ID are sent, once. Devices that already have saved data stay unlocked (`UNLOCK_GRANDFATHER_EXISTING`). Step-by-step setup, the admin page, code generation and the honest limits are in [worker/README.md](worker/README.md). Worker tests: `cd worker && npm install && npm test` (Node 22+).
 
 ## Pages
 

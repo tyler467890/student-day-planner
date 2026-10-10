@@ -2,6 +2,8 @@ import { env, exports } from 'cloudflare:workers';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { verifyToken, newDeviceId } from '../../js/unlock-token.js';
 import { generateCode } from '../../js/unlock-code.js';
+import { makeDb, storeStub } from '../src/store.js';
+import { ipBucket } from '../src/index.js';
 
 const APP = 'https://tyler467890.github.io';
 const ADMIN = 'test-admin-password-123';
@@ -30,11 +32,7 @@ function activate(code, deviceId, ip) {
 
 beforeEach(async () => {
   ipCounter += 1;
-  await env.DB.batch([
-    env.DB.prepare('DELETE FROM devices'),
-    env.DB.prepare('DELETE FROM codes'),
-    env.DB.prepare('DELETE FROM attempts'),
-  ]);
+  await storeStub(env).reset();
 });
 
 const freshIp = (n = 0) => `198.51.100.${(ipCounter * 10 + n) % 250}`;
@@ -62,6 +60,14 @@ describe('activation', () => {
     expect(body.message).toBe('This code is already on 3 devices. Contact support to reset it.');
   });
 
+  it('never lets more than 3 devices in, even when they all try at once', async () => {
+    const { codes: [{ code }] } = await makeCodes(1);
+    const results = await Promise.all(Array.from({ length: 8 }, (_, i) => activate(code, newDeviceId(), freshIp(i))));
+    const statuses = results.map((r) => r.status).sort();
+    expect(statuses.filter((s) => s === 200)).toHaveLength(3);
+    expect(statuses.filter((s) => s === 409)).toHaveLength(5);
+  });
+
   it('re-activating the same device does not use another slot', async () => {
     const { codes: [{ code }] } = await makeCodes(1);
     const phone = newDeviceId();
@@ -78,7 +84,7 @@ describe('activation', () => {
 
   it('stores only hashes, never the plain code', async () => {
     const { codes: [{ code }] } = await makeCodes(1);
-    const row = await env.DB.prepare('SELECT * FROM codes').first();
+    const row = await makeDb(env).prepare('SELECT * FROM codes').first();
     expect(JSON.stringify(row)).not.toContain(code);
     expect(JSON.stringify(row)).not.toContain(code.replace(/-/g, ''));
     expect(row.hash).toMatch(/^[0-9a-f]{64}$/);
@@ -141,10 +147,10 @@ describe('activation', () => {
     expect(evil.status).toBe(403);
     const none = await call('/activate', { body: { code, deviceId: newDeviceId() }, origin: null });
     expect(none.status).toBe(403);
-    const pre = await call('/activate', { method: 'OPTIONS', origin: 'https://www.calo.ca' });
+    const pre = await call('/activate', { method: 'OPTIONS', origin: 'https://www.caloplanner.com' });
     expect(pre.status).toBe(204);
-    expect(pre.headers.get('access-control-allow-origin')).toBe('https://www.calo.ca');
-    expect((await call('/activate', { body: { code, deviceId: newDeviceId() }, origin: 'https://calo.ca' })).status).toBe(200);
+    expect(pre.headers.get('access-control-allow-origin')).toBe('https://www.caloplanner.com');
+    expect((await call('/activate', { body: { code, deviceId: newDeviceId() }, origin: 'https://caloplanner.com' })).status).toBe(200);
   });
 
   it('rejects a missing or junk device id without counting a wrong try', async () => {
@@ -197,5 +203,21 @@ describe('admin', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('content-security-policy')).toContain("frame-ancestors 'none'");
     expect(await res.text()).toContain('Calo codes admin');
+  });
+});
+
+describe('ipBucket', () => {
+  it('groups IPv6 addresses by /64 and leaves IPv4 alone', () => {
+    expect(ipBucket('203.0.113.9')).toBe('203.0.113.9');
+    expect(ipBucket('2a09:bac5:1602:4aa::77:e6')).toBe('2a09:bac5:1602:4aa::/64');
+    expect(ipBucket('2a09:bac5:1602:04aa:0:0:77:2e')).toBe('2a09:bac5:1602:4aa::/64');
+    expect(ipBucket('2001:db8::1')).toBe('2001:db8:0:0::/64');
+  });
+
+  it('counts wrong guesses from one IPv6 /64 together', async () => {
+    for (let i = 0; i < 5; i += 1) {
+      expect((await activate(generateCode(), newDeviceId(), `2001:db8:aa:bb::${i + 1}`)).status).toBe(404);
+    }
+    expect((await activate(generateCode(), newDeviceId(), '2001:db8:aa:bb::99')).status).toBe(429);
   });
 });
